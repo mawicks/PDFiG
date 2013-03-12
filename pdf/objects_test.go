@@ -11,7 +11,7 @@ func toString (object Object) string {
 }
 
 func TestNull(t *testing.T) {
-	if s := toString(new(Null)); s != "null" {
+	if s := toString(&Null{}); s != "null" {
 		t.Errorf ("null.Serialize() produced \"%s\"", s)
 	}
 }

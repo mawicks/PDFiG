@@ -14,24 +14,26 @@ type Object interface {
 
 
 // PDF "Null" object
+// Implements: pdf.Object
 type Null struct {}
 
-func (n Null) Serialize (f io.Writer) {
+func (n *Null) Serialize (f io.Writer) {
 	fmt.Fprint (f, "null")
 	return
 }
 
 // PDF "Boolean" object
+// Implements: pdf.Object
 type Boolean struct {
 	value bool
 }
 
 // Constructor for Boolean object
-func NewBoolean (v bool) Boolean {
-	return Boolean{v}
+func NewBoolean (v bool) *Boolean {
+	return &Boolean{v}
 }
 
-func  (b Boolean) Serialize (f io.Writer) {
+func  (b *Boolean) Serialize (f io.Writer) {
 	if b.value {
 		fmt.Fprint (f, "true")
 	} else {
@@ -40,7 +42,7 @@ func  (b Boolean) Serialize (f io.Writer) {
 }
 
 // PDF "Numeric" object
-
+// Implements: pdf.Object
 type FloatNumeric struct {
 	value float32
 }
@@ -49,11 +51,11 @@ type IntNumeric struct {
 	value int32
 }
 
-func  (n FloatNumeric) Serialize (f io.Writer) {
+func  (n *FloatNumeric) Serialize (f io.Writer) {
 	fmt.Fprint (f, n.value);
 }
 
-func  (n IntNumeric) Serialize (f io.Writer) {
+func  (n *IntNumeric) Serialize (f io.Writer) {
 	fmt.Fprint (f, n.value);
 }
 
@@ -84,9 +86,9 @@ func NewNumeric (v float64) (result Object) {
 	// If value can be stored as int32, use int32;
 	// otherwise use float32
 	if float64(intValue) == v {
-		result = IntNumeric{intValue}
+		result = &IntNumeric{intValue}
 	} else {
-		result = FloatNumeric{adjustFloatRange(v)}
+		result = &FloatNumeric{adjustFloatRange(v)}
 	}
 
 	return result
