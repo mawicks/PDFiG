@@ -83,8 +83,8 @@ func adjustFloatRange (v float64) (float32Value float32) {
 func NewNumeric (v float64) (result Object) {
 	var intValue = int32(v)
 
-	// If value can be stored as int32, use int32;
-	// otherwise use float32
+	// Use IntNumeric if value can be represented as int32;
+	// otherwise use FloatNumeric, which uses float32 internally
 	if float64(intValue) == v {
 		result = &IntNumeric{intValue}
 	} else {
@@ -94,4 +94,20 @@ func NewNumeric (v float64) (result Object) {
 	return result
 }
 
-	
+type Name struct {
+	name string
+}
+
+func NewName (s string) (* Name) {
+	return &Name{s}
+}
+
+func (n *Name) Serialize (f io.Writer) {
+	// All "string" types, including n.name, are assumed to be
+	// encoded in UTF-8, so printing with "%s" format just works.
+	fmt.Fprintf (f, "/")
+	for _,b := range []byte(n.name) {
+		f.Write ([]byte{b})
+	}
+	return
+}
