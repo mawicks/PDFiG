@@ -31,6 +31,30 @@ func testOneName (t *testing.T, name, expect string) {
 	}
 }
 
+func testOneString (t *testing.T, testValue, expect string) {
+	if s := toString(NewString(testValue)); s != expect {
+		t.Errorf (`NewString(%s) produced "%s"`, testValue, s)
+	}
+}
+
+func testOneStringAsHex (t *testing.T, testValue, expect string) {
+	s := NewString(testValue)
+	s.SetHexOutput()
+	hex := toString(s)
+	if hex != expect {
+		t.Errorf (`NewString(%s) produced "%s"`, testValue, hex)
+	}
+}
+
+func testOneStringAsAscii (t *testing.T, testValue, expect string) {
+	s := NewString(testValue)
+	s.SetAsciiOutput()
+	output := toString(s)
+	if output != expect {
+		t.Errorf (`NewString(%s) produced "%s"`, testValue, output)
+	}
+}
+
 // Unit tests follow
 
 func TestNull(t *testing.T) {
@@ -71,9 +95,23 @@ func TestNumeric(t *testing.T) {
 	testOneNumeric(t, -1.175e-38, "0")
 }
 
-func TestOneName (t *testing.T) {
+func TestName (t *testing.T) {
 	testOneName (t, "foo", "/foo")
 	testOneName (t, "résumé", "/résumé")
-	testOneName (t, "foo bar", "/foo#20bar")
+	testOneName (t, "#foo", "/#23foo")
+	testOneName (t, " foo", "/#20foo")
+	testOneName (t, "(foo)", "/#28foo#29")
 }
 
+func TestString (t *testing.T) {
+	testOneString (t, "foo", "(foo)")
+	testOneString (t, "()\\", "(\\(\\)\\\\)")
+	testOneString (t, "[]", "([])")
+	testOneString (t, "", "()")
+	testOneStringAsHex (t, "[]", "<5B5D>")
+	testOneStringAsHex (t, "0123", "<30313233>")
+	testOneStringAsHex (t, "", "<>")
+	testOneStringAsAscii (t, "foo", "(foo)")
+	testOneStringAsAscii (t, "\200", "(\\200)")
+	testOneStringAsAscii (t, "\n\r\t\b\f", "(\\n\\r\\t\\b\\f)")
+}
