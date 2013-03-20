@@ -42,32 +42,6 @@ func NewDynamicArray (clusterSize uint) *DynamicArray {
 	return &DynamicArray{clusterSize, clusterSize, 0, make([]interface{}, clusterSize)}
 }
 
-func recursiveAt (i uint, tree []interface{}, capacity uint, clusterSize uint) (result *interface{}) {
-	if capacity <= clusterSize {
-		result = &tree[i]
-	} else {
-		subtreeCapacity := capacity / clusterSize
-		whichSubtree := i/subtreeCapacity
-		// Create a subtree if necessary
-		if tree[whichSubtree] == nil {
-			tree[whichSubtree] =  make([]interface{}, clusterSize)
-		}
-		result = recursiveAt (i%subtreeCapacity, tree[whichSubtree].([]interface{}), subtreeCapacity, clusterSize)
-	}
-	return result
-}
-
-func recursiveRelease (size uint, tree[]interface{}, capacity uint, clusterSize uint) {
-	subtreeCapacity := capacity / clusterSize
-	lastPartialSubtree := size/subtreeCapacity
-	for i:=lastPartialSubtree+1; i<clusterSize; i++ {
-		tree[i] = nil
-	}
-	if subtreeCapacity > 1 && lastPartialSubtree < clusterSize && tree[lastPartialSubtree] != nil {
-		recursiveRelease (size%subtreeCapacity, tree[lastPartialSubtree].([]interface{}), subtreeCapacity, clusterSize)
-	}
-}
-
 func (da *DynamicArray) shrinkOrGrow (newSize uint) {
 	shrunk := false
 	// Shrink...
@@ -83,7 +57,20 @@ func (da *DynamicArray) shrinkOrGrow (newSize uint) {
 		da.tree = newArray
 	}
 	if shrunk {
-		recursiveRelease (newSize, da.tree, da.capacity, da.clusterSize)
+		var release func (size uint, tree[]interface{}, capacity uint)
+
+		release = func (size uint, tree[]interface{}, capacity uint) {
+			subtreeCapacity := capacity / da.clusterSize
+			lastPartialSubtree := size/subtreeCapacity
+			for i:=lastPartialSubtree+1; i<da.clusterSize; i++ {
+				tree[i] = nil
+			}
+			if subtreeCapacity > 1 && lastPartialSubtree < da.clusterSize && tree[lastPartialSubtree] != nil {
+				release (size%subtreeCapacity, tree[lastPartialSubtree].([]interface{}), subtreeCapacity)
+			}
+		}
+
+		release (newSize, da.tree, da.capacity)
 	}
 }
 
@@ -91,7 +78,24 @@ func (da *DynamicArray) At (i uint) *interface{} {
 	if i > da.size {
 		panic ("DynamicArray.At(): Value out of range")
 	}
-	return recursiveAt (i, da.tree, da.capacity, da.clusterSize)
+	var at func (i uint, tree []interface{}, capacity uint) (result *interface{})
+
+	at = func (i uint, tree []interface{}, capacity uint) (result *interface{}) {
+		if capacity <= da.clusterSize {
+			result = &tree[i]
+		} else {
+			subtreeCapacity := capacity / da.clusterSize
+			whichSubtree := i/subtreeCapacity
+			// Create a subtree if necessary
+			if tree[whichSubtree] == nil {
+				tree[whichSubtree] =  make([]interface{}, da.clusterSize)
+			}
+			result = at (i%subtreeCapacity, tree[whichSubtree].([]interface{}), subtreeCapacity)
+		}
+		return result
+	}
+	
+	return at (i, da.tree, da.capacity)
 }
 
 func (da *DynamicArray) Size() uint {
