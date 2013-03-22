@@ -3,7 +3,7 @@
 */
 package containers
 
-import "fmt"
+// import "fmt"
 
 // All PDF objects implement the pdf.Object inteface
 type Array interface {
@@ -45,8 +45,8 @@ func NewDynamicArray (clusterSize uint) *DynamicArray {
 }
 
 func (da *DynamicArray) SetSize (newSize uint) {
-	fmt.Printf ("\nshrinkOrGrow: newSize=%v, da.capacity=%v, da.clusterSize=%v, da.tree=%v\n",
-		newSize, da.capacity,da.clusterSize,da.tree)
+//	fmt.Printf ("\nshrinkOrGrow: newSize=%v, da.capacity=%v, da.clusterSize=%v, da.tree=%v\n",
+//		newSize, da.capacity,da.clusterSize,da.tree)
 	// Shrink if necessary
 	for newCap := da.capacity/da.clusterSize; newCap >= newSize && newCap > 1; newCap /= da.clusterSize {
 		da.tree = da.tree[0].([]interface{})
@@ -77,7 +77,7 @@ func (da *DynamicArray) SetSize (newSize uint) {
 		release (newSize-1, da.tree, da.capacity)
 	}
 	da.size = newSize
-	fmt.Printf ("Shrink or grow returning: size=%v, tree=%v, capacity=%v\n", da.size, da.tree, da.capacity)
+//	fmt.Printf ("Shrink or grow returning: size=%v, tree=%v, capacity=%v\n", da.size, da.tree, da.capacity)
 }
 
 func (da *DynamicArray) At (i uint) *interface{} {
