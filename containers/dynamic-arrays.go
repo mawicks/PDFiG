@@ -9,8 +9,8 @@ package containers
 // a sparse array.  Portions of the array are allocated chunks of the
 // "clusterSize" parameter passed to the constructor.  The larger the
 // cluster size, the faster the access.  Currently, shrinking is not
-// very efficient for large cluster sizes.  Currently, PopBack() is
-// not very efficient.
+// very efficient for large cluster sizes; therefore, PopBack() also
+// is not very efficient.
 
 type DynamicArray struct {
 	// Cluster size
@@ -88,7 +88,7 @@ func (da *DynamicArray) SetSize (newSize uint) {
 	}
 	// Release unused elements after shrinking
 	if newSize < da.size {
-		var release func (size uint, tree[]interface{}, capacity uint)
+		var release func (size uint, tree []interface{}, capacity uint)
 
 		release = func (lastKeepItem uint, tree[]interface{}, capacity uint) {
 			subtreeCapacity := capacity/da.clusterSize
