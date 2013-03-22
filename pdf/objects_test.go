@@ -12,9 +12,23 @@ func toString (object Object) string {
 	return buffer.String()
 }
 
-func testOneObject (t *testing.T, d string, o Object, expect string) {
-	if s := toString(o); s != expect {
-		t.Errorf (`%s produced "%s"; expected "%s"`, d, s, expect)
+// TestOneObject requires that the serialization of object matches
+// *one* of the elements of expect.
+func testOneObject (t *testing.T, d string, o Object, expect... string) {
+	matched := false
+	s := toString(o);
+	for _,e := range expect {
+		if s == e {
+			matched = true
+			break;
+		}
+	}
+	if !matched {
+		if len(expect) == 1 {
+			t.Errorf (`%s produced "%s"; expected "%s"`, d, s, expect[0])
+		} else {
+			t.Errorf (`%s produced "%s"; expected *one* element of %v`, d, s, expect)
+		}
 	}
 }
 
@@ -118,9 +132,12 @@ func TestDictionary (t *testing.T) {
 	d.Add ("fee", NewNumeric(3.14))
 	testOneObject (t, "Dictionary.Add() test", d, "<</fee 3.14>>");
 
-	// Can't test beyond one entry reliably because order of entries is not defined
-	// We can add a new entry and remove one of the earlier entries.
+	// Can't test beyond three entries very easily because the order of entries is not specified
+	// and the number of permutations makes it not worth the effort with our simple testOneObject() function.
 	d.Add ("fi", NewNumeric(2.718))
+	testOneObject (t, "Dictionary.Remove() test", d, "<</fee 3.14 /fi 2.718>>", "<</fi 2.718 /fee 3.14>>")
+
+	// Begin removing entries to test Remove() method.
 	d.Remove ("fee")
 	testOneObject (t, "Dictionary.Remove() test", d, "<</fi 2.718>>")
 
