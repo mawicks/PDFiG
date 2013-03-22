@@ -3,7 +3,6 @@ package pdf
 import "bytes"
 import "testing"
 
-
 // First define some helper functions
 
 func toString (object Object) string {
@@ -13,27 +12,9 @@ func toString (object Object) string {
 	return buffer.String()
 }
 
-func testOneBoolean (t *testing.T, value bool, expect string) {
-	if s := toString(NewBoolean(value)); s != expect {
-		t.Errorf (`NewBoolean(%v) produced "%s"; expected "%s"`, value, s, expect)
-	}
-}
-
-func testOneNumeric (t *testing.T, testvalue float64, expect string) {
-	if s := toString(NewNumeric(testvalue)); s != expect {
-		t.Errorf (`NewNumeric(%g) produced "%s"; expected "%s"`, testvalue, s, expect)
-	}
-}
-
-func testOneName (t *testing.T, name, expect string) {
-	if s := toString(NewName(name)); s != expect {
-		t.Errorf (`NewName(%s) produced "%s"`, name, s)
-	}
-}
-
-func testOneString (t *testing.T, testValue, expect string) {
-	if s := toString(NewString(testValue)); s != expect {
-		t.Errorf (`NewString(%s) produced "%s"`, testValue, s)
+func testOneObject (t *testing.T, d string, o Object, expect string) {
+	if s := toString(o); s != expect {
+		t.Errorf (`%s produced "%s"; expected "%s"`, d, s, expect)
 	}
 }
 
@@ -66,19 +47,19 @@ func TestNull(t *testing.T) {
 
 
 func TestBoolean(t *testing.T) {
-	testOneBoolean (t, false, "false")
-	testOneBoolean (t, true, "true")
+	testOneObject (t, "NewBoolean(false)", NewBoolean(false), "false")
+	testOneObject (t, "NewBoolean(true)", NewBoolean(true), "true")
 }
 
 
 func TestNumeric(t *testing.T) {
-	testOneNumeric(t, 1, "1")
-	testOneNumeric(t, 3.14159, "3.14159")
-	testOneNumeric(t, 0.1, "0.1")
-	testOneNumeric(t, 2147483647,  "2147483647")
-	testOneNumeric(t, -2147483648, "-2147483648")
-	testOneNumeric(t, 3.403e+38,   "3.4028235e+38")
-	testOneNumeric(t, -3.403e+38,  "-3.4028235e+38")
+	testOneObject(t, "NewNumeric(1)", NewNumeric(1), "1")
+	testOneObject(t, "NewNumeric(3.14159)", NewNumeric(3.14159), "3.14159")
+	testOneObject(t, "NewNumeric(0.1)", NewNumeric(0.1), "0.1")
+	testOneObject(t, "NewNumeric(2147483647)", NewNumeric(2147483647), "2147483647")
+	testOneObject(t, "NewNumeric(-2147483648)", NewNumeric(-2147483648), "-2147483648")
+	testOneObject(t, "NewNumeric(3.403e+38)", NewNumeric(3.403e+38), "3.4028235e+38")
+	testOneObject(t, "NewNumeric(-3.403e+38)", NewNumeric(-3.403e+38), "-3.4028235e+38")
 
 	// The PDF spec recommends setting anything below +/-
 	// 1.175e-38 to 0 in case a conforming reader uses 32 bit
@@ -89,29 +70,43 @@ func TestNumeric(t *testing.T) {
 	// numbers to zero is better than accepting a representable
 	// number with a loss of precision.
 
-	testOneNumeric(t, 1.176e-38, "1.176e-38")
-	testOneNumeric(t, -1.176e-38, "-1.176e-38")
-	testOneNumeric(t, 1.175e-38, "0")
-	testOneNumeric(t, -1.175e-38, "0")
+	testOneObject(t, "NewNumeric(1.176e-38)", NewNumeric(1.176e-38), "1.176e-38")
+	testOneObject(t, "NewNumeric(-1.176e-38)", NewNumeric(-1.176e-38), "-1.176e-38")
+	testOneObject(t, "NewNumeric(1.175e-38)", NewNumeric(1.175e-38), "0")
+	testOneObject(t, "NewNumeric(-1.175e-38)", NewNumeric(-1.175e-38), "0")
 }
 
 func TestName (t *testing.T) {
-	testOneName (t, "foo", "/foo")
-	testOneName (t, "résumé", "/résumé")
-	testOneName (t, "#foo", "/#23foo")
-	testOneName (t, " foo", "/#20foo")
-	testOneName (t, "(foo)", "/#28foo#29")
+	testOneObject (t, `NewName("foo")`, NewName("foo"), "/foo")
+	testOneObject (t, `NewName("résumé")`, NewName("résumé"), "/résumé")
+	testOneObject (t, `NewName("#foo")`, NewName("#foo"), "/#23foo")
+	testOneObject (t, `NewName(" foo")`, NewName(" foo"), "/#20foo")
+	testOneObject (t, `NewName("(foo)")`, NewName("(foo)"), "/#28foo#29")
 }
 
 func TestString (t *testing.T) {
-	testOneString (t, "foo", "(foo)")
-	testOneString (t, "()\\", "(\\(\\)\\\\)")
-	testOneString (t, "[]", "([])")
-	testOneString (t, "", "()")
+	testOneObject (t, `NewString("foo")`, NewString("foo"), "(foo)")
+	testOneObject (t, `NewString("()\\"`, NewString("()\\"), "(\\(\\)\\\\)")
+	testOneObject (t, `NewString("[]")`, NewString("[]"), "([])")
+	testOneObject (t, `NewString("")`, NewString(""), "()")
 	testOneStringAsHex (t, "[]", "<5B5D>")
 	testOneStringAsHex (t, "0123", "<30313233>")
 	testOneStringAsHex (t, "", "<>")
 	testOneStringAsAscii (t, "foo", "(foo)")
 	testOneStringAsAscii (t, "\200", "(\\200)")
 	testOneStringAsAscii (t, "\n\r\t\b\f", "(\\n\\r\\t\\b\\f)")
+}
+
+func TestArray (t *testing.T) {
+	a := NewArray()
+	testOneObject (t, "NewArray()", a, "[]");
+
+	a.Add (NewNumeric(3.14))
+	testOneObject (t, "NewArray() with NewNumeric(3.14)", a, "[3.14]");
+
+	a.Add (NewNumeric(2.718))
+	testOneObject (t, "Array test", a, "[3.14 2.718]");
+
+	a.Add (NewName("f o o"))
+	testOneObject (t, "Array test", a, "[3.14 2.718 /f#20o#20o]");
 }
