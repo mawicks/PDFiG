@@ -44,5 +44,17 @@ func TestDynamicArray (t *testing.T) {
 			checkArrayForNull (t, "Shrink didn't clear unused values", d, size, 64)
 		}
 	}
+
+	d = NewDynamicArray (3)
+	for i:=0; i<10; i++ {
+		d.PushBack(i+1);
+	}
+
+	for i:=10; i>0; i-- {
+		v := d.PopBack()
+		if v != i {
+			t.Errorf ("PushBack/PopBack: PopBack() == %v; expected %v", v, i)
+		}
+	}
 }
 

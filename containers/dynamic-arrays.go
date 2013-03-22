@@ -3,21 +3,14 @@
 */
 package containers
 
-// import "fmt"
+// DynamicArray implements the containters.Array interface. 
 
-// All PDF objects implement the pdf.Object inteface
-type Array interface {
-	// Return element at specified position
-	At (uint) interface {}	
-	// Add element at end, growing the array by one
-	PushBack (interface{})	
-	// Return last element after shrinking the array by one
-	PopBack () interface {}
-	// Return size (number of elements)
-	Size() uint		
-	// Set the size
-	SetSize(uint)
-}
+// Resizing a DynamicArray does not involve copying.  DynamicArray is
+// a sparse array.  Portions of the array are allocated chunks of the
+// "clusterSize" parameter passed to the constructor.  The larger the
+// cluster size, the faster the access.  Currently, shrinking is not
+// very efficient for large cluster sizes.  Currently, PopBack() is
+// not very efficient.
 
 type DynamicArray struct {
 	// Cluster size
@@ -44,42 +37,6 @@ func NewDynamicArray (clusterSize uint) *DynamicArray {
 	return &DynamicArray{clusterSize, clusterSize, 0, make([]interface{}, clusterSize)}
 }
 
-func (da *DynamicArray) SetSize (newSize uint) {
-//	fmt.Printf ("\nshrinkOrGrow: newSize=%v, da.capacity=%v, da.clusterSize=%v, da.tree=%v\n",
-//		newSize, da.capacity,da.clusterSize,da.tree)
-	// Shrink if necessary
-	for newCap := da.capacity/da.clusterSize; newCap >= newSize && newCap > 1; newCap /= da.clusterSize {
-		da.tree = da.tree[0].([]interface{})
-		da.capacity = newCap
-	}
-	// Grow if necessary
-	for ; da.capacity < newSize; da.capacity *= da.clusterSize  {
-		newArray := make([]interface{}, da.clusterSize)
-		newArray[0] = da.tree
-		da.tree = newArray
-	}
-	// Release unused elements after shrinking
-	if newSize < da.size {
-		var release func (size uint, tree[]interface{}, capacity uint)
-
-		release = func (lastItem uint, tree[]interface{}, capacity uint) {
-//			fmt.Printf ("Release called: lastItem=%v, tree=%v, capacity=%v\n", lastItem, tree, capacity)
-			subtreeCapacity := capacity/da.clusterSize
-			lastOccupiedSubtree := lastItem/subtreeCapacity
-			for i:=lastOccupiedSubtree+1; i<da.clusterSize; i++ {
-				tree[i] = nil
-			}
-			if subtreeCapacity > 1 && tree[lastOccupiedSubtree] != nil {
-				release (lastItem%subtreeCapacity, tree[lastOccupiedSubtree].([]interface{}), subtreeCapacity)
-			}
-		}
-
-		release (newSize-1, da.tree, da.capacity)
-	}
-	da.size = newSize
-//	fmt.Printf ("Shrink or grow returning: size=%v, tree=%v, capacity=%v\n", da.size, da.tree, da.capacity)
-}
-
 func (da *DynamicArray) At (i uint) *interface{} {
 	if i > da.size {
 		panic ("DynamicArray.At(): Value out of range")
@@ -102,6 +59,52 @@ func (da *DynamicArray) At (i uint) *interface{} {
 	}
 	
 	return at (i, da.tree, da.capacity)
+}
+
+func (da *DynamicArray) PushBack (v interface{}) {
+	da.SetSize (da.size + 1)
+	*da.At (da.size-1) = v
+}
+
+func (da *DynamicArray) PopBack () interface{} {
+	result := *da.At(da.size-1)
+	da.SetSize(da.size-1)
+	return result
+}
+
+func (da *DynamicArray) SetSize (newSize uint) {
+//	fmt.Printf ("\nshrinkOrGrow: newSize=%v, da.capacity=%v, da.clusterSize=%v, da.tree=%v\n",
+//		newSize, da.capacity,da.clusterSize,da.tree)
+	// Shrink if necessary
+	for newCap := da.capacity/da.clusterSize; newCap >= newSize && newCap > 1; newCap /= da.clusterSize {
+		da.tree = da.tree[0].([]interface{})
+		da.capacity = newCap
+	}
+	// Grow if necessary
+	for ; da.capacity < newSize; da.capacity *= da.clusterSize  {
+		newArray := make([]interface{}, da.clusterSize)
+		newArray[0] = da.tree
+		da.tree = newArray
+	}
+	// Release unused elements after shrinking
+	if newSize < da.size {
+		var release func (size uint, tree[]interface{}, capacity uint)
+
+		release = func (lastKeepItem uint, tree[]interface{}, capacity uint) {
+			subtreeCapacity := capacity/da.clusterSize
+			lastOccupiedSubtree := lastKeepItem/subtreeCapacity
+			for i:=lastOccupiedSubtree+1; i<da.clusterSize; i++ {
+				tree[i] = nil
+			}
+			if subtreeCapacity > 1 && tree[lastOccupiedSubtree] != nil {
+				release (lastKeepItem%subtreeCapacity, tree[lastOccupiedSubtree].([]interface{}), subtreeCapacity)
+			}
+		}
+
+		release (newSize-1, da.tree, da.capacity)
+	}
+	da.size = newSize
+//	fmt.Printf ("Shrink or grow returning: size=%v, tree=%v, capacity=%v\n", da.size, da.tree, da.capacity)
 }
 
 func (da *DynamicArray) Size() uint {
