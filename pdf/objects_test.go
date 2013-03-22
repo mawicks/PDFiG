@@ -110,3 +110,21 @@ func TestArray (t *testing.T) {
 	a.Add (NewName("f o o"))
 	testOneObject (t, "Array test", a, "[3.14 2.718 /f#20o#20o]");
 }
+
+func TestDictionary (t *testing.T) {
+	d := NewDictionary()
+	testOneObject (t, "NewDictionary", d, "<<>>");
+
+	d.Add ("fee", NewNumeric(3.14))
+	testOneObject (t, "Dictionary.Add() test", d, "<</fee 3.14>>");
+
+	// Can't test beyond one entry reliably because order of entries is not defined
+	// We can add a new entry and remove one of the earlier entries.
+	d.Add ("fi", NewNumeric(2.718))
+	d.Remove ("fee")
+	testOneObject (t, "Dictionary.Remove() test", d, "<</fi 2.718>>")
+
+	d.Remove ("fi")
+	testOneObject (t, "Dictionary.Remove() test", d, "<<>>")
+}
+
