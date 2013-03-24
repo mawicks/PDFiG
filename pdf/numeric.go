@@ -8,7 +8,8 @@ import "fmt"
 import "math"
 
 // PDF "Numeric" object
-// Implements: pdf.Object
+// Implements:
+//	pdf.Object
 type FloatNumeric struct {
 	value float32
 }

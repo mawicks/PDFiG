@@ -3,7 +3,6 @@
 */
 package pdf
 
-import "fmt"
 import "io"
 
 // PDF "Boolean" object.  There is no "Boolean" type as such.
@@ -31,10 +30,10 @@ func NewBoolean (v bool) Object {
 // Since TrueBoolean and FalseBoolean are empty structs, value targets
 // should be efficient.
 func  (b TrueBoolean) Serialize (f io.Writer) {
-	fmt.Fprint (f, "true")
+	f.Write ([]byte("true"))
 }
 
 func  (b FalseBoolean) Serialize (f io.Writer) {
-	fmt.Fprint (f, "false")
+	f.Write ([]byte("false"))
 }
 

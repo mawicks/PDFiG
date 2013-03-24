@@ -8,16 +8,17 @@ import "io"
 import "fmt"
 import "unicode"
 
-type HString struct {
+// PDF "String" object
+// Implements:
+//	pdf.Object
+type String struct {
 	value string
-	serializer func (t String, f io.Writer)
+	serializer func (t *String, f io.Writer)
 }
 
-type String struct { *HString }
-
 // Constructor for Name object
-func NewString (s string) String {
-	return String{&HString{s,normalSerializer}}
+func NewString (s string) *String {
+	return &String{s,normalSerializer}
 }
 
 func stringMinimalEscapeByte (b byte) (result []byte) {
@@ -30,7 +31,7 @@ func stringMinimalEscapeByte (b byte) (result []byte) {
 	return result
 }
 
-func normalSerializer (s String, f io.Writer) {
+func normalSerializer (s *String, f io.Writer) {
 	f.Write ([]byte{'('})
 	for _,b := range []byte(s.value) {
  		f.Write (stringMinimalEscapeByte(b))
@@ -69,7 +70,7 @@ func stringAsciiEscapeByte (b byte) (result []byte) {
 	return result
 }
 
-func asciiSerializer (s String, f io.Writer) {
+func asciiSerializer (s *String, f io.Writer) {
 	f.Write ([]byte{'('})
 	for _,b := range []byte(s.value) {
 		f.Write (stringAsciiEscapeByte(b))
@@ -78,7 +79,7 @@ func asciiSerializer (s String, f io.Writer) {
 	return
 }
 
-func hexSerializer (s String, f io.Writer) {
+func hexSerializer (s *String, f io.Writer) {
 	f.Write ([]byte{'<'})
 	for _,b := range []byte(s.value) {
 		f.Write ([]byte{HexDigit(b/16), HexDigit(b%16)})
@@ -86,18 +87,18 @@ func hexSerializer (s String, f io.Writer) {
 	f.Write ([]byte{'>'})
 }
 
-func (s String) Serialize (f io.Writer) {
+func (s *String) Serialize (f io.Writer) {
 	s.serializer(s, f)
 }
 
-func (s String) SetNormalOutput () {
+func (s *String) SetNormalOutput () {
 	s.serializer = normalSerializer
 }
 
-func (s String) SetHexOutput () {
+func (s *String) SetHexOutput () {
 	s.serializer = hexSerializer
 }
 
-func (s String) SetAsciiOutput () {
+func (s *String) SetAsciiOutput () {
 	s.serializer = asciiSerializer
 }

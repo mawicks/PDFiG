@@ -16,7 +16,7 @@ func removeIf (f func (b byte) bool, s string) string {
 		s)
 }
 
-func TestAlt (t *testing.T) {
+func TestCharacterSets (t *testing.T) {
 	arrayOfAllLatin1Runes := make([]rune, 256, 256)
 
 	for i,_ := range arrayOfAllLatin1Runes {

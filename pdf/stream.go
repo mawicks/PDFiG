@@ -6,14 +6,15 @@ package pdf
 import "bytes"
 import "io"
 
-// Implements the pdf.Object interface
-
+// Implements:
+// 	pdf.Object
+//	io.Writer
 type Stream struct {
 	dictionary *Dictionary
 	buffer bytes.Buffer
 }
 
-// Constructor for Name object
+// Constructor for Stream object
 func NewStream () *Stream {
 	return &Stream{NewDictionary(),bytes.Buffer{}}
 }
