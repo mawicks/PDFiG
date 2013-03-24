@@ -20,8 +20,8 @@ type Name struct {
 }
 
 // Constructor for Name object
-func NewName (s string) (* Name) {
-	return &Name{s}
+func NewName (s string) Name {
+	return Name{s}
 }
 
 func nameEscapeByte (b byte) (result []byte) {
@@ -34,7 +34,7 @@ func nameEscapeByte (b byte) (result []byte) {
 	return result
 }
 
-func (n *Name) Serialize (f io.Writer) {
+func (n Name) Serialize (f io.Writer) {
 	f.Write ([]byte{'/'})
 	for _,b := range []byte(n.name) {
 		f.Write (nameEscapeByte(b))

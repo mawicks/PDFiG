@@ -1,16 +1,13 @@
 package pdf
 
-import "bytes"
 import "testing"
+import "fmt"
 
 // First define some helper functions
-
 func toString (object Object) string {
-	var buffer bytes.Buffer
-
-	object.Serialize (&buffer)
-	return buffer.String()
+	return (&ObjectStringDecorator{object}).String()
 }
+
 
 // TestOneObject requires that the serialization of object matches
 // *one* of the elements of expect.
@@ -32,6 +29,13 @@ func testOneObject (t *testing.T, d string, o Object, expect... string) {
 	}
 }
 
+// Make sure ObjectStringDecorator delegats the Serialize method
+func TestObjectDecorator (t *testing.T) {
+	n := NewNull()
+	o := ObjectStringDecorator{n}
+	testOneObject (t, "ObjectStringDecorator", o, "null")
+}
+
 func testOneStringAsHex (t *testing.T, testValue, expect string) {
 	s := NewString(testValue)
 	s.SetHexOutput()
@@ -51,12 +55,8 @@ func testOneStringAsAscii (t *testing.T, testValue, expect string) {
 }
 
 // Unit tests follow
-
 func TestNull(t *testing.T) {
-	expect := "null"
-	if s := toString(&Null{}); s != expect {
-		t.Errorf (`null.Serialize() produced "%s"; expected "%s"`, s, expect)
-	}
+	testOneObject (t, "NewNull()", NewNull(), "null")
 }
 
 
@@ -143,5 +143,11 @@ func TestDictionary (t *testing.T) {
 
 	d.Remove ("fi")
 	testOneObject (t, "Dictionary.Remove() test", d, "<<>>")
+}
+
+func TestStream (t *testing.T) {
+	s := NewStream()
+	fmt.Fprint (s, "foo")
+	testOneObject (t, "NewStream", s, "<</Length 3>>\nstream\nfoo\nendstream\n")
 }
 

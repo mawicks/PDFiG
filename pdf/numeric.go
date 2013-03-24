@@ -14,7 +14,7 @@ type FloatNumeric struct {
 }
 
 type IntNumeric struct {
-	value int32
+	value int
 }
 
 func  (n *FloatNumeric) Serialize (f io.Writer) {
@@ -29,25 +29,33 @@ func adjustFloatRange (v float64) (float32Value float32) {
 	switch {
 	case v > math.MaxFloat32:
 		float32Value = math.MaxFloat32
-		
+
 	case v < - math.MaxFloat32:
 		float32Value = -math.MaxFloat32
-		
+
 	case math.Abs(v) < 1.175494351e-38:
 		// Smallest 32-bit floating point number without losing precision.
 		// PDF spec says set values below 1.175e-38 to 0 for readers using
 		// 32-bit floats
 		float32Value = 0.0
-		
+
 	default:
 		float32Value = float32(v)
 	}
 	return float32Value
 }
 
-// Constructor for Numeric object
+// Constructors for Numeric object
+func NewIntNumeric (v int) Object {
+	return &IntNumeric{v}
+}
+
+func NewFloatNumeric (v float32) Object {
+	return &FloatNumeric{v}
+}
+
 func NewNumeric (v float64) (result Object) {
-	var intValue = int32(v)
+	var intValue = int(v)
 
 	// Use IntNumeric if value can be represented as int32;
 	// otherwise use FloatNumeric, which uses float32 internally
@@ -59,4 +67,5 @@ func NewNumeric (v float64) (result Object) {
 
 	return result
 }
+
 
