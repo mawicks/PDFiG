@@ -3,7 +3,7 @@
 */
 package pdf
 
-import "io"
+import "bufio"
 import "maw/containers"
 
 type Array struct {
@@ -19,14 +19,14 @@ func (a *Array) Add (o Object) {
 	a.array.PushBack(o)
 }
 
-func (a *Array) Serialize (f io.Writer) {
-	f.Write([]byte{'['})
+func (a *Array) Serialize (f *bufio.Writer) {
+	f.WriteByte('[')
 	for i:=0; i<int(a.array.Size()); i++ {
 		if i != 0 {
-			f.Write([]byte{' '})
+			f.WriteByte(' ')
 		}
 		o := (*a.array.At(uint(i))).(Object)
 		o.Serialize(f)
 	}
-	f.Write([]byte{']'})
+	f.WriteByte(']')
 }

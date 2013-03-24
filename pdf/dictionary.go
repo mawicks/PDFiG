@@ -3,7 +3,7 @@
 */
 package pdf
 
-import "io"
+import "bufio"
 
 // Implements the pdf.Object interface
 
@@ -25,17 +25,17 @@ func (d *Dictionary) Remove (key string) {
 	delete (d.dictionary, key)
 }
 
-func (d *Dictionary) Serialize (f io.Writer) {
-	f.Write([]byte("<<"))
+func (d *Dictionary) Serialize (f *bufio.Writer) {
+	f.WriteString("<<")
 	haveAny := false;
 	for key,value := range d.dictionary {
 		if (haveAny) {
-			f.Write([]byte{' '})
+			f.WriteByte(' ')
 		}
 		NewName(key).Serialize(f)
-		f.Write([ ]byte{' '})
+		f.WriteByte(' ')
 		value.Serialize(f)
 		haveAny = true
 	}
-	f.Write([]byte(">>"))
+	f.WriteString(">>")
 }

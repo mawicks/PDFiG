@@ -4,11 +4,11 @@
 package pdf
 
 import "bytes"
-import "io"
+import "bufio"
 
 // Implements:
 // 	pdf.Object
-//	io.Writer
+//	bufio.Writer
 type Stream struct {
 	dictionary *Dictionary
 	buffer bytes.Buffer
@@ -31,10 +31,10 @@ func (s *Stream) Write(bytes []byte) (int, error) {
 	return s.buffer.Write(bytes)
 }
 
-func (s *Stream) Serialize (f io.Writer) {
+func (s *Stream) Serialize (f *bufio.Writer) {
 	s.dictionary.Add ("Length", NewIntNumeric(s.buffer.Len()))
 	s.dictionary.Serialize(f)
-	f.Write ([]byte("\nstream\n"))
+	f.WriteString ("\nstream\n")
 	f.Write (s.buffer.Bytes())
-	f.Write ([]byte("\nendstream\n"))
+	f.WriteString ("\nendstream\n")
 }

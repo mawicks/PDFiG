@@ -3,12 +3,12 @@
 */
 package pdf
 
-import "io"
+import "bufio"
 import "bytes"
 
 // All PDF objects implement the pdf.Object inteface
 type Object interface {
-	Serialize(io.Writer)	// Write a representation of object.
+	Serialize(*bufio.Writer)			// Write a representation of object.
 }
 
 // ObjectStringDecorator adds the String() method to Object; delegating all other methods to object.
@@ -18,7 +18,9 @@ type ObjectStringDecorator struct {
 
 func (o *ObjectStringDecorator) String() string {
 	var buffer bytes.Buffer
-	o.Serialize (&buffer)
+	f := bufio.NewWriter(&buffer)
+	o.Serialize (f)
+	f.Flush()
 	return buffer.String()
 }
 

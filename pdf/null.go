@@ -3,8 +3,7 @@
 */
 package pdf
 
-import "fmt"
-import "io"
+import "bufio"
 
 // PDF "Null" object
 // Implements: pdf.Object
@@ -16,8 +15,8 @@ func NewNull() Object {
 	return &nullSingleInstance
 }
 
-func (n *Null) Serialize (f io.Writer) {
-	fmt.Fprint (f, "null")
+func (n *Null) Serialize (f *bufio.Writer) {
+	f.WriteString("null")
 	return
 }
 

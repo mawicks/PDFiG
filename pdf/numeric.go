@@ -3,9 +3,9 @@
 */
 package pdf
 
-import "io"
-import "fmt"
+import "bufio"
 import "math"
+import "strconv"
 
 // PDF "Numeric" object
 // Implements:
@@ -18,12 +18,12 @@ type IntNumeric struct {
 	value int
 }
 
-func  (n *FloatNumeric) Serialize (f io.Writer) {
-	fmt.Fprint (f, n.value);
+func  (n *FloatNumeric) Serialize (f *bufio.Writer) {
+	f.WriteString(strconv.FormatFloat(float64(n.value), 'g', -1, 32))
 }
 
-func  (n *IntNumeric) Serialize (f io.Writer) {
-	fmt.Fprint (f, n.value);
+func  (n *IntNumeric) Serialize (f *bufio.Writer) {
+	f.WriteString(strconv.FormatInt(int64(n.value), 10))
 }
 
 func adjustFloatRange (v float64) (float32Value float32) {

@@ -4,7 +4,7 @@
 package pdf
 
 import "bytes"
-import "io"
+import "bufio"
 import "fmt"
 import "unicode"
 
@@ -13,7 +13,7 @@ import "unicode"
 //	pdf.Object
 type String struct {
 	value string
-	serializer func (t *String, f io.Writer)
+	serializer func (t *String, f *bufio.Writer)
 }
 
 // Constructor for Name object
@@ -31,12 +31,12 @@ func stringMinimalEscapeByte (b byte) (result []byte) {
 	return result
 }
 
-func normalSerializer (s *String, f io.Writer) {
-	f.Write ([]byte{'('})
+func normalSerializer (s *String, f *bufio.Writer) {
+	f.WriteByte ('(')
 	for _,b := range []byte(s.value) {
  		f.Write (stringMinimalEscapeByte(b))
 	}
-	f.Write ([]byte{')'})
+	f.WriteByte (')')
 	return
 }
 
@@ -49,18 +49,18 @@ func stringAsciiEscapeByte (b byte) (result []byte) {
 			result = []byte{b}
 		} else {
 			var buffer bytes.Buffer
-			buffer.Write([]byte{'\\'})
+			buffer.WriteByte('\\')
 			switch b {
 			case '\n':
-				buffer.Write([]byte{'n'})
+				buffer.WriteByte('n')
 			case '\r':
-				buffer.Write([]byte{'r'})
+				buffer.WriteByte('r')
 			case '\t':
-				buffer.Write([]byte{'t'})
+				buffer.WriteByte('t')
 			case '\b':
-				buffer.Write([]byte{'b'})
+				buffer.WriteByte('b')
 			case '\f':
-				buffer.Write([]byte{'f'})
+				buffer.WriteByte('f')
 			default:
 				fmt.Fprintf (&buffer, "%03o", b)
 			}
@@ -70,24 +70,25 @@ func stringAsciiEscapeByte (b byte) (result []byte) {
 	return result
 }
 
-func asciiSerializer (s *String, f io.Writer) {
-	f.Write ([]byte{'('})
+func asciiSerializer (s *String, f *bufio.Writer) {
+	f.WriteByte ('(')
 	for _,b := range []byte(s.value) {
 		f.Write (stringAsciiEscapeByte(b))
 	}
-	f.Write ([]byte{')'})
+	f.WriteByte (')')
 	return
 }
 
-func hexSerializer (s *String, f io.Writer) {
-	f.Write ([]byte{'<'})
+func hexSerializer (s *String, f *bufio.Writer) {
+	f.WriteByte ('<')
 	for _,b := range []byte(s.value) {
-		f.Write ([]byte{HexDigit(b/16), HexDigit(b%16)})
+		f.WriteByte(HexDigit(b/16))
+		f.WriteByte(HexDigit(b%16))
 	}
-	f.Write ([]byte{'>'})
+	f.WriteByte ('>')
 }
 
-func (s *String) Serialize (f io.Writer) {
+func (s *String) Serialize (f *bufio.Writer) {
 	s.serializer(s, f)
 }
 

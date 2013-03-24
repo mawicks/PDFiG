@@ -3,7 +3,7 @@
 */
 package pdf
 
-import "io"
+import "bufio"
 
 func HexDigit (b byte) (result byte) {
 	switch {
@@ -34,8 +34,8 @@ func nameEscapeByte (b byte) (result []byte) {
 	return result
 }
 
-func (n Name) Serialize (f io.Writer) {
-	f.Write ([]byte{'/'})
+func (n Name) Serialize (f *bufio.Writer) {
+	f.WriteByte('/')
 	for _,b := range []byte(n.name) {
 		f.Write (nameEscapeByte(b))
 	}
