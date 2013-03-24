@@ -3,7 +3,7 @@
 */
 package containers
 
-// DynamicArray implements the containters.Array interface. 
+// DynamicArray implements the containters.Array interface.
 
 // Resizing a DynamicArray does not involve copying.  DynamicArray is
 // a sparse array.  Portions of the array are allocated chunks of the
@@ -18,7 +18,7 @@ type DynamicArray struct {
 
 	// Total capacity (without a reallocation) Capacity is always
 	// a positive integral power of clusterSize
-	capacity uint	
+	capacity uint
 
 	// Number of elements stored (<= capacity)
 	size uint
@@ -30,7 +30,7 @@ type DynamicArray struct {
 	tree []interface{}
 }
 
-func NewDynamicArray (clusterSize uint) *DynamicArray {
+func NewDynamicArray (clusterSize uint) Array {
 	if clusterSize <= 1 {
 		panic ("NewDynamicArray(): clusterSize too small")
 	}
@@ -57,7 +57,7 @@ func (da *DynamicArray) At (i uint) *interface{} {
 		}
 		return result
 	}
-	
+
 	return at (i, da.tree, da.capacity)
 }
 
