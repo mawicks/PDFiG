@@ -29,11 +29,11 @@ func NewBoolean (v bool) Object {
 
 // Since TrueBoolean and FalseBoolean are empty structs, value targets
 // should be efficient.
-func  (b TrueBoolean) Serialize (f *bufio.Writer) {
+func  (b TrueBoolean) Serialize (f *bufio.Writer, file... File) {
 	f.WriteString("true")
 }
 
-func  (b FalseBoolean) Serialize (f *bufio.Writer) {
+func  (b FalseBoolean) Serialize (f *bufio.Writer, file... File) {
 	f.Write ([]byte("false"))
 }
 

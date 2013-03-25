@@ -31,7 +31,7 @@ func (s *Stream) Write(bytes []byte) (int, error) {
 	return s.buffer.Write(bytes)
 }
 
-func (s *Stream) Serialize (f *bufio.Writer) {
+func (s *Stream) Serialize (f *bufio.Writer, file... File) {
 	s.dictionary.Add ("Length", NewIntNumeric(s.buffer.Len()))
 	s.dictionary.Serialize(f)
 	f.WriteString ("\nstream\n")

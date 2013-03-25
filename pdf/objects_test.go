@@ -4,16 +4,15 @@ import "testing"
 import "fmt"
 
 // First define some helper functions
-func toString (object Object) string {
-	return (&ObjectStringDecorator{object}).String()
+func toString (object Object, file ...File) string {
+	return (&ObjectStringDecorator{object}).String(file...)
 }
-
 
 // TestOneObject requires that the serialization of object matches
 // *one* of the elements of expect.
-func testOneObject (t *testing.T, d string, o Object, expect... string) {
+func testOneObject (t *testing.T, d string, o Object, file File, expect... string) {
 	matched := false
-	s := toString(o);
+	s := toString(o, file);
 	for _,e := range expect {
 		if s == e {
 			matched = true
@@ -29,11 +28,11 @@ func testOneObject (t *testing.T, d string, o Object, expect... string) {
 	}
 }
 
-// Make sure ObjectStringDecorator delegats the Serialize method
+// Make sure ObjectStringDecorator delegates the Serialize method
 func TestObjectDecorator (t *testing.T) {
 	n := NewNull()
 	o := ObjectStringDecorator{n}
-	testOneObject (t, "ObjectStringDecorator", o, "null")
+	testOneObject (t, "ObjectStringDecorator", o, nil, "null")
 }
 
 func testOneStringAsHex (t *testing.T, testValue, expect string) {
@@ -56,24 +55,24 @@ func testOneStringAsAscii (t *testing.T, testValue, expect string) {
 
 // Unit tests follow
 func TestNull(t *testing.T) {
-	testOneObject (t, "NewNull()", NewNull(), "null")
+	testOneObject (t, "NewNull()", NewNull(), nil, "null")
 }
 
 
 func TestBoolean(t *testing.T) {
-	testOneObject (t, "NewBoolean(false)", NewBoolean(false), "false")
-	testOneObject (t, "NewBoolean(true)", NewBoolean(true), "true")
+	testOneObject (t, "NewBoolean(false)", NewBoolean(false), nil, "false")
+	testOneObject (t, "NewBoolean(true)", NewBoolean(true), nil, "true")
 }
 
 
 func TestNumeric(t *testing.T) {
-	testOneObject(t, "NewNumeric(1)", NewNumeric(1), "1")
-	testOneObject(t, "NewNumeric(3.14159)", NewNumeric(3.14159), "3.14159")
-	testOneObject(t, "NewNumeric(0.1)", NewNumeric(0.1), "0.1")
-	testOneObject(t, "NewNumeric(2147483647)", NewNumeric(2147483647), "2147483647")
-	testOneObject(t, "NewNumeric(-2147483648)", NewNumeric(-2147483648), "-2147483648")
-	testOneObject(t, "NewNumeric(3.403e+38)", NewNumeric(3.403e+38), "3.4028235e+38")
-	testOneObject(t, "NewNumeric(-3.403e+38)", NewNumeric(-3.403e+38), "-3.4028235e+38")
+	testOneObject(t, "NewNumeric(1)", NewNumeric(1), nil, "1")
+	testOneObject(t, "NewNumeric(3.14159)", NewNumeric(3.14159), nil, "3.14159")
+	testOneObject(t, "NewNumeric(0.1)", NewNumeric(0.1), nil, "0.1")
+	testOneObject(t, "NewNumeric(2147483647)", NewNumeric(2147483647), nil, "2147483647")
+	testOneObject(t, "NewNumeric(-2147483648)", NewNumeric(-2147483648), nil, "-2147483648")
+	testOneObject(t, "NewNumeric(3.403e+38)", NewNumeric(3.403e+38), nil, "3.4028235e+38")
+	testOneObject(t, "NewNumeric(-3.403e+38)", NewNumeric(-3.403e+38), nil, "-3.4028235e+38")
 
 	// The PDF spec recommends setting anything below +/-
 	// 1.175e-38 to 0 in case a conforming reader uses 32 bit
@@ -84,25 +83,25 @@ func TestNumeric(t *testing.T) {
 	// numbers to zero is better than accepting a representable
 	// number with a loss of precision.
 
-	testOneObject(t, "NewNumeric(1.176e-38)", NewNumeric(1.176e-38), "1.176e-38")
-	testOneObject(t, "NewNumeric(-1.176e-38)", NewNumeric(-1.176e-38), "-1.176e-38")
-	testOneObject(t, "NewNumeric(1.175e-38)", NewNumeric(1.175e-38), "0")
-	testOneObject(t, "NewNumeric(-1.175e-38)", NewNumeric(-1.175e-38), "0")
+	testOneObject(t, "NewNumeric(1.176e-38)", NewNumeric(1.176e-38), nil, "1.176e-38")
+	testOneObject(t, "NewNumeric(-1.176e-38)", NewNumeric(-1.176e-38), nil, "-1.176e-38")
+	testOneObject(t, "NewNumeric(1.175e-38)", NewNumeric(1.175e-38), nil, "0")
+	testOneObject(t, "NewNumeric(-1.175e-38)", NewNumeric(-1.175e-38), nil, "0")
 }
 
 func TestName (t *testing.T) {
-	testOneObject (t, `NewName("foo")`, NewName("foo"), "/foo")
-	testOneObject (t, `NewName("résumé")`, NewName("résumé"), "/résumé")
-	testOneObject (t, `NewName("#foo")`, NewName("#foo"), "/#23foo")
-	testOneObject (t, `NewName(" foo")`, NewName(" foo"), "/#20foo")
-	testOneObject (t, `NewName("(foo)")`, NewName("(foo)"), "/#28foo#29")
+	testOneObject (t, `NewName("foo")`, NewName("foo"), nil, "/foo")
+	testOneObject (t, `NewName("résumé")`, NewName("résumé"), nil, "/résumé")
+	testOneObject (t, `NewName("#foo")`, NewName("#foo"), nil, "/#23foo")
+	testOneObject (t, `NewName(" foo")`, NewName(" foo"), nil, "/#20foo")
+	testOneObject (t, `NewName("(foo)")`, NewName("(foo)"), nil, "/#28foo#29")
 }
 
 func TestString (t *testing.T) {
-	testOneObject (t, `NewString("foo")`, NewString("foo"), "(foo)")
-	testOneObject (t, `NewString("()\\"`, NewString("()\\"), "(\\(\\)\\\\)")
-	testOneObject (t, `NewString("[]")`, NewString("[]"), "([])")
-	testOneObject (t, `NewString("")`, NewString(""), "()")
+	testOneObject (t, `NewString("foo")`, NewString("foo"), nil, "(foo)")
+	testOneObject (t, `NewString("()\\"`, NewString("()\\"), nil, "(\\(\\)\\\\)")
+	testOneObject (t, `NewString("[]")`, NewString("[]"), nil, "([])")
+	testOneObject (t, `NewString("")`, NewString(""), nil, "()")
 	testOneStringAsHex (t, "[]", "<5B5D>")
 	testOneStringAsHex (t, "0123", "<30313233>")
 	testOneStringAsHex (t, "", "<>")
@@ -113,41 +112,64 @@ func TestString (t *testing.T) {
 
 func TestArray (t *testing.T) {
 	a := NewArray()
-	testOneObject (t, "NewArray()", a, "[]");
+	testOneObject (t, "NewArray()", a, nil, "[]");
 
 	a.Add (NewNumeric(3.14))
-	testOneObject (t, "NewArray() with NewNumeric(3.14)", a, "[3.14]");
+	testOneObject (t, "NewArray() with NewNumeric(3.14)", a, nil, "[3.14]");
 
 	a.Add (NewNumeric(2.718))
-	testOneObject (t, "Array test", a, "[3.14 2.718]");
+	testOneObject (t, "Array test", a, nil, "[3.14 2.718]");
 
 	a.Add (NewName("f o o"))
-	testOneObject (t, "Array test", a, "[3.14 2.718 /f#20o#20o]");
+	testOneObject (t, "Array test", a, nil, "[3.14 2.718 /f#20o#20o]");
 }
 
 func TestDictionary (t *testing.T) {
 	d := NewDictionary()
-	testOneObject (t, "NewDictionary", d, "<<>>");
+	testOneObject (t, "NewDictionary", d, nil, "<<>>");
 
 	d.Add ("fee", NewNumeric(3.14))
-	testOneObject (t, "Dictionary.Add() test", d, "<</fee 3.14>>");
+	testOneObject (t, "Dictionary.Add() test", d, nil, "<</fee 3.14>>");
 
 	// Can't test beyond three entries very easily because the order of entries is not specified
 	// and the number of permutations makes it not worth the effort with our simple testOneObject() function.
 	d.Add ("fi", NewNumeric(2.718))
-	testOneObject (t, "Dictionary.Remove() test", d, "<</fee 3.14 /fi 2.718>>", "<</fi 2.718 /fee 3.14>>")
+	testOneObject (t, "Dictionary.Remove() test", d, nil, "<</fee 3.14 /fi 2.718>>", "<</fi 2.718 /fee 3.14>>")
 
 	// Begin removing entries to test Remove() method.
 	d.Remove ("fee")
-	testOneObject (t, "Dictionary.Remove() test", d, "<</fi 2.718>>")
+	testOneObject (t, "Dictionary.Remove() test", d, nil, "<</fi 2.718>>")
 
 	d.Remove ("fi")
-	testOneObject (t, "Dictionary.Remove() test", d, "<<>>")
+	testOneObject (t, "Dictionary.Remove() test", d, nil, "<<>>")
 }
 
 func TestStream (t *testing.T) {
 	s := NewStream()
 	fmt.Fprint (s, "foo")
-	testOneObject (t, "NewStream", s, "<</Length 3>>\nstream\nfoo\nendstream\n")
+	testOneObject (t, "NewStream", s, nil, "<</Length 3>>\nstream\nfoo\nendstream\n")
+}
+
+func TestIndirect (t *testing.T) {
+	// Two objects
+	i1 := NewIndirect()
+	i2 := NewIndirect()
+
+	// Two files
+	f1 := NewTestFile(21,37)
+	f2 := NewTestFile(42,23)
+
+	// Test all four combinations
+	testOneObject (t, "Indirect test", i1, f1, "21 37 R");
+	testOneObject (t, "Indirect test", i1, f2, "42 23 R");
+	testOneObject (t, "Indirect test", i2, f1, "22 38 R");
+	testOneObject (t, "Indirect test", i2, f2, "43 24 R");
+
+	// Repeat test to make sure object-file associations have been
+	// cached.
+	testOneObject (t, "Indirect test", i1, f1, "21 37 R");
+	testOneObject (t, "Indirect test", i1, f2, "42 23 R");
+	testOneObject (t, "Indirect test", i2, f1, "22 38 R");
+	testOneObject (t, "Indirect test", i2, f2, "43 24 R");
 }
 

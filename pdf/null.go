@@ -15,7 +15,7 @@ func NewNull() Object {
 	return &nullSingleInstance
 }
 
-func (n *Null) Serialize (f *bufio.Writer) {
+func (n *Null) Serialize (f *bufio.Writer, file... File) {
 	f.WriteString("null")
 	return
 }

@@ -88,7 +88,7 @@ func hexSerializer (s *String, f *bufio.Writer) {
 	f.WriteByte ('>')
 }
 
-func (s *String) Serialize (f *bufio.Writer) {
+func (s *String) Serialize (f *bufio.Writer, file... File) {
 	s.serializer(s, f)
 }
 

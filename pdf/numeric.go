@@ -18,11 +18,11 @@ type IntNumeric struct {
 	value int
 }
 
-func  (n *FloatNumeric) Serialize (f *bufio.Writer) {
+func  (n *FloatNumeric) Serialize (f *bufio.Writer, file... File) {
 	f.WriteString(strconv.FormatFloat(float64(n.value), 'g', -1, 32))
 }
 
-func  (n *IntNumeric) Serialize (f *bufio.Writer) {
+func  (n *IntNumeric) Serialize (f *bufio.Writer, file... File) {
 	f.WriteString(strconv.FormatInt(int64(n.value), 10))
 }
 

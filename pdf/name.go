@@ -34,7 +34,7 @@ func nameEscapeByte (b byte) (result []byte) {
 	return result
 }
 
-func (n Name) Serialize (f *bufio.Writer) {
+func (n Name) Serialize (f *bufio.Writer, file... File) {
 	f.WriteByte('/')
 	for _,b := range []byte(n.name) {
 		f.Write (nameEscapeByte(b))
