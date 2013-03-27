@@ -3,7 +3,6 @@
 */
 package pdf
 
-import "bufio"
 import "strconv"
 
 // Implements:
@@ -93,15 +92,15 @@ better would be a weak-reference to the object, but weak references
 are non-standard in Scheme.
 */
 
-func (i *Indirect) Serialize (f *bufio.Writer, file... File) {
+func (i *Indirect) Serialize (w Writer, file... File) {
 	if (len(file) == 0) {
 		panic ("File parameter required for pdf.Indirect.Serialize()")
 	}
 	n := i.getObjectNumber (file[0])
-	f.WriteString (strconv.FormatInt(int64(n.number), 10))
-	f.WriteByte (' ')
-	f.WriteString (strconv.FormatInt(int64(n.generation), 10))
-	f.WriteString (" R")
+	w.WriteString (strconv.FormatInt(int64(n.number), 10))
+	w.WriteByte (' ')
+	w.WriteString (strconv.FormatInt(int64(n.generation), 10))
+	w.WriteString (" R")
 }
 
 func (i *Indirect) Finalize (o Object) {

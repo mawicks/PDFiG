@@ -3,8 +3,6 @@
 */
 package pdf
 
-import "bufio"
-
 // PDF "Null" object
 // Implements: pdf.Object
 type Null struct {}
@@ -15,8 +13,8 @@ func NewNull() Object {
 	return &nullSingleInstance
 }
 
-func (n *Null) Serialize (f *bufio.Writer, file... File) {
-	f.WriteString("null")
+func (n *Null) Serialize (w Writer, file... File) {
+	w.WriteString("null")
 	return
 }
 

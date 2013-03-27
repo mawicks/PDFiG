@@ -4,7 +4,6 @@
 package pdf
 
 import "bytes"
-import "bufio"
 
 // Implements:
 // 	pdf.Object
@@ -31,10 +30,10 @@ func (s *Stream) Write(bytes []byte) (int, error) {
 	return s.buffer.Write(bytes)
 }
 
-func (s *Stream) Serialize (f *bufio.Writer, file... File) {
+func (s *Stream) Serialize (w Writer, file... File) {
 	s.dictionary.Add ("Length", NewIntNumeric(s.buffer.Len()))
-	s.dictionary.Serialize(f)
-	f.WriteString ("\nstream\n")
-	f.Write (s.buffer.Bytes())
-	f.WriteString ("\nendstream\n")
+	s.dictionary.Serialize(w)
+	w.WriteString ("\nstream\n")
+	w.Write (s.buffer.Bytes())
+	w.WriteString ("\nendstream\n")
 }

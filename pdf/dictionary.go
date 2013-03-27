@@ -3,8 +3,6 @@
 */
 package pdf
 
-import "bufio"
-
 // Implements the pdf.Object interface
 
 type Dictionary struct {
@@ -24,17 +22,17 @@ func (d *Dictionary) Remove (key string) {
 	delete (d.dictionary, key)
 }
 
-func (d *Dictionary) Serialize (f *bufio.Writer, file... File) {
-	f.WriteString("<<")
+func (d *Dictionary) Serialize (w Writer, file... File) {
+	w.WriteString("<<")
 	haveAny := false;
 	for key,value := range d.dictionary {
 		if (haveAny) {
-			f.WriteByte(' ')
+			w.WriteByte(' ')
 		}
-		NewName(key).Serialize(f)
-		f.WriteByte(' ')
-		value.Serialize(f)
+		NewName(key).Serialize(w)
+		w.WriteByte(' ')
+		value.Serialize(w)
 		haveAny = true
 	}
-	f.WriteString(">>")
+	w.WriteString(">>")
 }

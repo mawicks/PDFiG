@@ -3,7 +3,6 @@
 */
 package pdf
 
-import "bufio"
 import "math"
 import "strconv"
 
@@ -18,12 +17,12 @@ type IntNumeric struct {
 	value int
 }
 
-func  (n *FloatNumeric) Serialize (f *bufio.Writer, file... File) {
-	f.WriteString(strconv.FormatFloat(float64(n.value), 'g', -1, 32))
+func  (n *FloatNumeric) Serialize (w Writer, file... File) {
+	w.WriteString(strconv.FormatFloat(float64(n.value), 'g', -1, 32))
 }
 
-func  (n *IntNumeric) Serialize (f *bufio.Writer, file... File) {
-	f.WriteString(strconv.FormatInt(int64(n.value), 10))
+func  (n *IntNumeric) Serialize (w Writer, file... File) {
+	w.WriteString(strconv.FormatInt(int64(n.value), 10))
 }
 
 func adjustFloatRange (v float64) (float32Value float32) {

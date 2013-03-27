@@ -3,8 +3,6 @@
 */
 package pdf
 
-import "bufio"
-
 // PDF "Boolean" object.  There is no "Boolean" type as such.
 // Implements: pdf.Object
 
@@ -29,11 +27,11 @@ func NewBoolean (v bool) Object {
 
 // Since TrueBoolean and FalseBoolean are empty structs, value targets
 // should be efficient.
-func  (b TrueBoolean) Serialize (f *bufio.Writer, file... File) {
-	f.WriteString("true")
+func  (b TrueBoolean) Serialize (w Writer, file... File) {
+	w.WriteString("true")
 }
 
-func  (b FalseBoolean) Serialize (f *bufio.Writer, file... File) {
-	f.Write ([]byte("false"))
+func  (b FalseBoolean) Serialize (w Writer, file... File) {
+	w.Write ([]byte("false"))
 }
 

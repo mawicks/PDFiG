@@ -4,7 +4,6 @@
 package pdf
 
 import "bytes"
-import "bufio"
 import "fmt"
 import "unicode"
 
@@ -13,7 +12,7 @@ import "unicode"
 //	pdf.Object
 type String struct {
 	value string
-	serializer func (t *String, f *bufio.Writer)
+	serializer func (t *String, w Writer)
 }
 
 // Constructor for Name object
@@ -31,12 +30,12 @@ func stringMinimalEscapeByte (b byte) (result []byte) {
 	return result
 }
 
-func normalSerializer (s *String, f *bufio.Writer) {
-	f.WriteByte ('(')
+func normalSerializer (s *String, w Writer) {
+	w.WriteByte ('(')
 	for _,b := range []byte(s.value) {
- 		f.Write (stringMinimalEscapeByte(b))
+ 		w.Write (stringMinimalEscapeByte(b))
 	}
-	f.WriteByte (')')
+	w.WriteByte (')')
 	return
 }
 
@@ -70,26 +69,26 @@ func stringAsciiEscapeByte (b byte) (result []byte) {
 	return result
 }
 
-func asciiSerializer (s *String, f *bufio.Writer) {
-	f.WriteByte ('(')
+func asciiSerializer (s *String, w Writer) {
+	w.WriteByte ('(')
 	for _,b := range []byte(s.value) {
-		f.Write (stringAsciiEscapeByte(b))
+		w.Write (stringAsciiEscapeByte(b))
 	}
-	f.WriteByte (')')
+	w.WriteByte (')')
 	return
 }
 
-func hexSerializer (s *String, f *bufio.Writer) {
-	f.WriteByte ('<')
+func hexSerializer (s *String, w Writer) {
+	w.WriteByte ('<')
 	for _,b := range []byte(s.value) {
-		f.WriteByte(HexDigit(b/16))
-		f.WriteByte(HexDigit(b%16))
+		w.WriteByte(HexDigit(b/16))
+		w.WriteByte(HexDigit(b%16))
 	}
-	f.WriteByte ('>')
+	w.WriteByte ('>')
 }
 
-func (s *String) Serialize (f *bufio.Writer, file... File) {
-	s.serializer(s, f)
+func (s *String) Serialize (w Writer, file... File) {
+	s.serializer(s, w)
 }
 
 func (s *String) SetNormalOutput () {
