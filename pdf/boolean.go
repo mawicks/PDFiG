@@ -1,6 +1,3 @@
-/*
-	Package for creating, reading, and editing PDF files.
-*/
 package pdf
 
 // PDF "Boolean" object.  There is no "Boolean" type as such.

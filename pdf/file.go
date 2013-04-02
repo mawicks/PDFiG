@@ -1,6 +1,3 @@
-/*
-	Package for creating, reading, and editing PDF files.
-*/
 package pdf
 
 import "bufio"
@@ -9,31 +6,36 @@ import "os"
 import "maw/containers"
 
 // TestFile is a simple file implementing the File interface for use in unit tests.
-type TestFile struct {
+type testFile struct {
 	nextObjectNumber uint32
 	nextGenerationNumber uint16
 }
 
-// Constructor for Stream object
+// Constructor for testFile object
 func NewTestFile (obj uint32, gen uint16) File {
-	return &TestFile{obj,gen}
+	return &testFile{obj,gen}
 }
 
 // Public methods
 
-func (f *TestFile) Close() {}
+// Implements Close() in File interface
+func (f *testFile) Close() {}
 
-func (f *TestFile) AddObjectAt (ObjectNumber, Object) {}
+// Implements AddObjectAt() in File interface
+func (f *testFile) AddObjectAt (ObjectNumber, Object) {}
 
-func (f *TestFile) AddObject (object Object) (objectNumber ObjectNumber) {
+// Implements AddObject() in File interface
+func (f *testFile) AddObject (object Object) (objectNumber ObjectNumber) {
 	objectNumber = f.ReserveObjectNumber (object)
 	f.AddObjectAt (objectNumber, object)
 	return objectNumber
 }
 
-func (f *TestFile) DeleteObject (on ObjectNumber) {}
+// Implements DeleteObject() in File interface
+func (f *testFile) DeleteObject (on ObjectNumber) {}
 
-func (f *TestFile) ReserveObjectNumber (o Object) ObjectNumber {
+// Implements ReserveObjectNumber() in File interface
+func (f *testFile) ReserveObjectNumber (o Object) ObjectNumber {
 	result := ObjectNumber{f.nextObjectNumber,f.nextGenerationNumber}
 	f.nextObjectNumber += 1
 	f.nextGenerationNumber += 1
@@ -51,6 +53,7 @@ type xrefEntry struct {
 	dirty bool
 }
 
+// Write xrefEntry to output stream using Writer.
 func (entry *xrefEntry) Serialize (w Writer) {
 	fmt.Fprintf (w,
 		"%010d %05d %c \n",
@@ -78,6 +81,7 @@ type file struct {
 	writer *bufio.Writer
 }
 
+// Constructor for File object
 func NewFile (filename string) File {
 	var result *file
 	f, error := os.Create (filename)
@@ -99,13 +103,14 @@ func NewFile (filename string) File {
 }
 
 // Public methods
-
+// Implements Close() in File interface
 func (f *file) Close () {
 	f.writeXref()
 	f.writer.Flush()
 	f.file.Close()
 }
 
+// Implements AddObjectAt() in File interface
 func (f *file) AddObjectAt (object ObjectNumber, o Object) {
 	entry := (*f.xref.At(uint(object.number))).(*xrefEntry)
 	if (entry.byteOffset !=  0) {
@@ -124,12 +129,14 @@ func (f *file) AddObjectAt (object ObjectNumber, o Object) {
 	fmt.Fprintf(f.writer, "\nendobj\n")
 }
 
+// Implements AddObject() in File interface
 func (f *file) AddObject (object Object) (objectNumber ObjectNumber) {
 	objectNumber = f.ReserveObjectNumber (object)
 	f.AddObjectAt (objectNumber, object)
 	return objectNumber
 }
 
+// Implements DeleteObject() in File interface
 func (f *file) DeleteObject (object ObjectNumber) {
 	entry := (*f.xref.At(uint(object.number))).(*xrefEntry)
 	if (object.generation != entry.generation) {
@@ -147,6 +154,7 @@ func (f *file) DeleteObject (object ObjectNumber) {
 	entry.dirty = true
 }
 
+// Implements ReserveObjectNumber() in File interface
 func (f *file) ReserveObjectNumber (o Object) ObjectNumber {
 	var nextUnused uint
 	var generation uint16
@@ -213,4 +221,3 @@ func (f *file) writeXref() {
 		}
 	}
 }
-

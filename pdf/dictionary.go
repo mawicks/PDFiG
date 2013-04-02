@@ -1,6 +1,3 @@
-/*
-	Package for creating, reading, and editing PDF files.
-*/
 package pdf
 
 // Implements the pdf.Object interface
@@ -9,7 +6,7 @@ type Dictionary struct {
 	dictionary map[string] Object
 }
 
-// Constructor for Name object
+// Constructor for Dictionary object
 func NewDictionary () (* Dictionary) {
 	return &Dictionary{make(map[string] Object, 16)}
 }
