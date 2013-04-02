@@ -9,6 +9,11 @@ type ObjectNumber struct {
 }
 
 type File interface {
-	AssignObjectNumber (o Object) ObjectNumber
+	// Reserve an object number for Object in File.
+	AddObjectAt (ObjectNumber, Object)
+	AddObject (object Object) (objectNumber ObjectNumber)
+	ReserveObjectNumber (Object) ObjectNumber
+	DeleteObject (ObjectNumber)
+	Close ()
 }
 

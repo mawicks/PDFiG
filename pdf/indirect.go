@@ -65,16 +65,16 @@ references in memory.  Until parsing is implemented, Serialize()ing a
 pdf.Indirect to a file after calling Finalize() will generate an
 error.
 
-USE-CASE 2: A pdf.Indirect is constructed from a finished
-direct object.  This is essentially the same as use-case 1.  An object
-is constructed and immediately Finalize()'d.  Subsequent invocations of
-Serialize() on files where it doesn't already exist cause it to be added
-to that file.  As with USE-CASE 1, this requires either retaining a
-reference in memory indefinitely (bad) or reading from one of the
-files where it is known to exist (not yet implemented).  For the time
-being, we elect not to keep references in memory. Until parsing is
-implemented, Serialize()ing a pdf.Indirect to a file after
-calling Finalize() is an error.
+USE-CASE 2: A pdf.Indirect is constructed from a finished direct
+object.  This is essentially the same as use-case 1.  An object is
+constructed and immediately Finalize()'d.  Subsequent invocations of
+Serialize() on files where it doesn't already exist cause it to be
+added to that file.  As with USE-CASE 1, this requires either
+retaining a reference in memory indefinitely (bad) or reading from one
+of the files where it is known to exist (not yet implemented).  For
+the time being, we elect not to keep references in memory. Until
+parsing is implemented, so Serialize()ing a pdf.Indirect to a file
+after calling Finalize() is an error.
 
 USE-CASE 3: A pdf.Indirect is constructed when a token of the
 form "10 1 R" is read from file X.  The underlying direct object is
@@ -96,6 +96,9 @@ func (i *Indirect) Serialize (w Writer, file... File) {
 	if (len(file) == 0) {
 		panic ("File parameter required for pdf.Indirect.Serialize()")
 	}
+	if (i.isFinal) {
+		panic ("Serializing a finalized object is not yet allowed")
+	}
 	n := i.getObjectNumber (file[0])
 	w.WriteString (strconv.FormatInt(int64(n.number), 10))
 	w.WriteByte (' ')
@@ -104,6 +107,12 @@ func (i *Indirect) Serialize (w Writer, file... File) {
 }
 
 func (i *Indirect) Finalize (o Object) {
+	if (i.isFinal) {
+		panic ("Finalize() called on a final object")
+	}
+	for file,objectNumber := range i.fileBindings {
+		file.AddObjectAt (objectNumber, o)
+	}
 	i.isFinal = true
 	return
 }
@@ -111,7 +120,7 @@ func (i *Indirect) Finalize (o Object) {
 func (i *Indirect) getObjectNumber (f File) ObjectNumber {
 	result, ok := i.fileBindings[f]
 	if !ok {
-		result = f.AssignObjectNumber(i)
+		result = f.ReserveObjectNumber(i)
 		i.fileBindings[f] = result
 	}
 	return result
