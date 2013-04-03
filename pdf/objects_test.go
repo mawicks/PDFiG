@@ -4,66 +4,64 @@ import "testing"
 import "fmt"
 
 // First define some helper functions
-func toString (object Object, file ...File) string {
+func toString(object Object, file ...File) string {
 	return (&ObjectStringDecorator{object}).String(file...)
 }
 
 // TestOneObject requires that the serialization of object matches
 // *one* of the elements of expect.
-func testOneObject (t *testing.T, d string, o Object, file File, expect... string) {
+func testOneObject(t *testing.T, d string, o Object, file File, expect ...string) {
 	matched := false
-	s := toString(o, file);
-	for _,e := range expect {
+	s := toString(o, file)
+	for _, e := range expect {
 		if s == e {
 			matched = true
-			break;
+			break
 		}
 	}
 	if !matched {
 		if len(expect) == 1 {
-			t.Errorf (`%s produced "%s"; expected "%s"`, d, s, expect[0])
+			t.Errorf(`%s produced "%s"; expected "%s"`, d, s, expect[0])
 		} else {
-			t.Errorf (`%s produced "%s"; expected *one* element of %v`, d, s, expect)
+			t.Errorf(`%s produced "%s"; expected *one* element of %v`, d, s, expect)
 		}
 	}
 }
 
 // Make sure ObjectStringDecorator delegates the Serialize method
-func TestObjectDecorator (t *testing.T) {
+func TestObjectDecorator(t *testing.T) {
 	n := NewNull()
 	o := ObjectStringDecorator{n}
-	testOneObject (t, "ObjectStringDecorator", o, nil, "null")
+	testOneObject(t, "ObjectStringDecorator", o, nil, "null")
 }
 
-func testOneStringAsHex (t *testing.T, testValue, expect string) {
+func testOneStringAsHex(t *testing.T, testValue, expect string) {
 	s := NewString(testValue)
 	s.SetHexOutput()
 	hex := toString(s)
 	if hex != expect {
-		t.Errorf (`NewString(%s) produced "%s"`, testValue, hex)
+		t.Errorf(`NewString(%s) produced "%s"`, testValue, hex)
 	}
 }
 
-func testOneStringAsAscii (t *testing.T, testValue, expect string) {
+func testOneStringAsAscii(t *testing.T, testValue, expect string) {
 	s := NewString(testValue)
 	s.SetAsciiOutput()
 	output := toString(s)
 	if output != expect {
-		t.Errorf (`NewString(%s) produced "%s"`, testValue, output)
+		t.Errorf(`NewString(%s) produced "%s"`, testValue, output)
 	}
 }
 
 // Unit tests follow
 func TestNull(t *testing.T) {
-	testOneObject (t, "NewNull()", NewNull(), nil, "null")
+	testOneObject(t, "NewNull()", NewNull(), nil, "null")
 }
-
 
 func TestBoolean(t *testing.T) {
-	testOneObject (t, "NewBoolean(false)", NewBoolean(false), nil, "false")
-	testOneObject (t, "NewBoolean(true)", NewBoolean(true), nil, "true")
+	testOneObject(t, "NewBoolean(false)", NewBoolean(false), nil, "false")
+	testOneObject(t, "NewBoolean(true)", NewBoolean(true), nil, "true")
 }
-
 
 func TestNumeric(t *testing.T) {
 	testOneObject(t, "NewNumeric(1)", NewNumeric(1), nil, "1")
@@ -89,87 +87,86 @@ func TestNumeric(t *testing.T) {
 	testOneObject(t, "NewNumeric(-1.175e-38)", NewNumeric(-1.175e-38), nil, "0")
 }
 
-func TestName (t *testing.T) {
-	testOneObject (t, `NewName("foo")`, NewName("foo"), nil, "/foo")
-	testOneObject (t, `NewName("résumé")`, NewName("résumé"), nil, "/résumé")
-	testOneObject (t, `NewName("#foo")`, NewName("#foo"), nil, "/#23foo")
-	testOneObject (t, `NewName(" foo")`, NewName(" foo"), nil, "/#20foo")
-	testOneObject (t, `NewName("(foo)")`, NewName("(foo)"), nil, "/#28foo#29")
+func TestName(t *testing.T) {
+	testOneObject(t, `NewName("foo")`, NewName("foo"), nil, "/foo")
+	testOneObject(t, `NewName("résumé")`, NewName("résumé"), nil, "/résumé")
+	testOneObject(t, `NewName("#foo")`, NewName("#foo"), nil, "/#23foo")
+	testOneObject(t, `NewName(" foo")`, NewName(" foo"), nil, "/#20foo")
+	testOneObject(t, `NewName("(foo)")`, NewName("(foo)"), nil, "/#28foo#29")
 }
 
-func TestString (t *testing.T) {
-	testOneObject (t, `NewString("foo")`, NewString("foo"), nil, "(foo)")
-	testOneObject (t, `NewString("()\\"`, NewString("()\\"), nil, "(\\(\\)\\\\)")
-	testOneObject (t, `NewString("[]")`, NewString("[]"), nil, "([])")
-	testOneObject (t, `NewString("")`, NewString(""), nil, "()")
-	testOneStringAsHex (t, "[]", "<5B5D>")
-	testOneStringAsHex (t, "0123", "<30313233>")
-	testOneStringAsHex (t, "", "<>")
-	testOneStringAsAscii (t, "foo", "(foo)")
-	testOneStringAsAscii (t, "\200", "(\\200)")
-	testOneStringAsAscii (t, "\n\r\t\b\f", "(\\n\\r\\t\\b\\f)")
+func TestString(t *testing.T) {
+	testOneObject(t, `NewString("foo")`, NewString("foo"), nil, "(foo)")
+	testOneObject(t, `NewString("()\\"`, NewString("()\\"), nil, "(\\(\\)\\\\)")
+	testOneObject(t, `NewString("[]")`, NewString("[]"), nil, "([])")
+	testOneObject(t, `NewString("")`, NewString(""), nil, "()")
+	testOneStringAsHex(t, "[]", "<5B5D>")
+	testOneStringAsHex(t, "0123", "<30313233>")
+	testOneStringAsHex(t, "", "<>")
+	testOneStringAsAscii(t, "foo", "(foo)")
+	testOneStringAsAscii(t, "\200", "(\\200)")
+	testOneStringAsAscii(t, "\n\r\t\b\f", "(\\n\\r\\t\\b\\f)")
 }
 
-func TestArray (t *testing.T) {
+func TestArray(t *testing.T) {
 	a := NewArray()
-	testOneObject (t, "NewArray()", a, nil, "[]");
+	testOneObject(t, "NewArray()", a, nil, "[]")
 
-	a.Add (NewNumeric(3.14))
-	testOneObject (t, "NewArray() with NewNumeric(3.14)", a, nil, "[3.14]");
+	a.Add(NewNumeric(3.14))
+	testOneObject(t, "NewArray() with NewNumeric(3.14)", a, nil, "[3.14]")
 
-	a.Add (NewNumeric(2.718))
-	testOneObject (t, "Array test", a, nil, "[3.14 2.718]");
+	a.Add(NewNumeric(2.718))
+	testOneObject(t, "Array test", a, nil, "[3.14 2.718]")
 
-	a.Add (NewName("f o o"))
-	testOneObject (t, "Array test", a, nil, "[3.14 2.718 /f#20o#20o]");
+	a.Add(NewName("f o o"))
+	testOneObject(t, "Array test", a, nil, "[3.14 2.718 /f#20o#20o]")
 }
 
-func TestDictionary (t *testing.T) {
+func TestDictionary(t *testing.T) {
 	d := NewDictionary()
-	testOneObject (t, "NewDictionary", d, nil, "<<>>");
+	testOneObject(t, "NewDictionary", d, nil, "<<>>")
 
-	d.Add ("fee", NewNumeric(3.14))
-	testOneObject (t, "Dictionary.Add() test", d, nil, "<</fee 3.14>>");
+	d.Add("fee", NewNumeric(3.14))
+	testOneObject(t, "Dictionary.Add() test", d, nil, "<</fee 3.14>>")
 
 	// Can't test beyond three entries very easily because the order of entries is not specified
 	// and the number of permutations makes it not worth the effort with our simple testOneObject() function.
-	d.Add ("fi", NewNumeric(2.718))
-	testOneObject (t, "Dictionary.Remove() test", d, nil, "<</fee 3.14 /fi 2.718>>", "<</fi 2.718 /fee 3.14>>")
+	d.Add("fi", NewNumeric(2.718))
+	testOneObject(t, "Dictionary.Remove() test", d, nil, "<</fee 3.14 /fi 2.718>>", "<</fi 2.718 /fee 3.14>>")
 
 	// Begin removing entries to test Remove() method.
-	d.Remove ("fee")
-	testOneObject (t, "Dictionary.Remove() test", d, nil, "<</fi 2.718>>")
+	d.Remove("fee")
+	testOneObject(t, "Dictionary.Remove() test", d, nil, "<</fi 2.718>>")
 
-	d.Remove ("fi")
-	testOneObject (t, "Dictionary.Remove() test", d, nil, "<<>>")
+	d.Remove("fi")
+	testOneObject(t, "Dictionary.Remove() test", d, nil, "<<>>")
 }
 
-func TestStream (t *testing.T) {
+func TestStream(t *testing.T) {
 	s := NewStream()
-	fmt.Fprint (s, "foo")
-	testOneObject (t, "NewStream", s, nil, "<</Length 3>>\nstream\nfoo\nendstream\n")
+	fmt.Fprint(s, "foo")
+	testOneObject(t, "NewStream", s, nil, "<</Length 3>>\nstream\nfoo\nendstream\n")
 }
 
-func TestIndirect (t *testing.T) {
+func TestIndirect(t *testing.T) {
 	// Two objects
 	i1 := NewIndirect()
 	i2 := NewIndirect()
 
 	// Two files
-	f1 := NewTestFile(21,37)
-	f2 := NewTestFile(42,23)
+	f1 := NewTestFile(21, 37)
+	f2 := NewTestFile(42, 23)
 
 	// Test all four combinations
-	testOneObject (t, "Indirect test", i1, f1, "21 37 R");
-	testOneObject (t, "Indirect test", i1, f2, "42 23 R");
-	testOneObject (t, "Indirect test", i2, f1, "22 38 R");
-	testOneObject (t, "Indirect test", i2, f2, "43 24 R");
+	testOneObject(t, "Indirect test", i1, f1, "21 37 R")
+	testOneObject(t, "Indirect test", i1, f2, "42 23 R")
+	testOneObject(t, "Indirect test", i2, f1, "22 38 R")
+	testOneObject(t, "Indirect test", i2, f2, "43 24 R")
 
 	// Repeat test to make sure object-file associations have been
 	// cached.
-	testOneObject (t, "Indirect test", i1, f1, "21 37 R");
-	testOneObject (t, "Indirect test", i1, f2, "42 23 R");
-	testOneObject (t, "Indirect test", i2, f1, "22 38 R");
-	testOneObject (t, "Indirect test", i2, f2, "43 24 R");
+	testOneObject(t, "Indirect test", i1, f1, "21 37 R")
+	testOneObject(t, "Indirect test", i1, f2, "42 23 R")
+	testOneObject(t, "Indirect test", i2, f1, "22 38 R")
+	testOneObject(t, "Indirect test", i2, f2, "43 24 R")
 }
-

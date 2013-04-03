@@ -8,16 +8,16 @@ import "unicode"
 // Implements:
 //	pdf.Object
 type String struct {
-	value string
-	serializer func (t *String, w Writer)
+	value      string
+	serializer func(t *String, w Writer)
 }
 
 // Constructor for Name object
-func NewString (s string) *String {
-	return &String{s,normalSerializer}
+func NewString(s string) *String {
+	return &String{s, normalSerializer}
 }
 
-func stringMinimalEscapeByte (b byte) (result []byte) {
+func stringMinimalEscapeByte(b byte) (result []byte) {
 	switch b {
 	case '(', ')', '\\':
 		result = []byte{'\\', b}
@@ -27,16 +27,16 @@ func stringMinimalEscapeByte (b byte) (result []byte) {
 	return result
 }
 
-func normalSerializer (s *String, w Writer) {
-	w.WriteByte ('(')
-	for _,b := range []byte(s.value) {
- 		w.Write (stringMinimalEscapeByte(b))
+func normalSerializer(s *String, w Writer) {
+	w.WriteByte('(')
+	for _, b := range []byte(s.value) {
+		w.Write(stringMinimalEscapeByte(b))
 	}
-	w.WriteByte (')')
+	w.WriteByte(')')
 	return
 }
 
-func stringAsciiEscapeByte (b byte) (result []byte) {
+func stringAsciiEscapeByte(b byte) (result []byte) {
 	switch b {
 	case '(', ')', '\\':
 		result = []byte{'\\', b}
@@ -58,7 +58,7 @@ func stringAsciiEscapeByte (b byte) (result []byte) {
 			case '\f':
 				buffer.WriteByte('f')
 			default:
-				fmt.Fprintf (&buffer, "%03o", b)
+				fmt.Fprintf(&buffer, "%03o", b)
 			}
 			result = buffer.Bytes()
 		}
@@ -66,36 +66,36 @@ func stringAsciiEscapeByte (b byte) (result []byte) {
 	return result
 }
 
-func asciiSerializer (s *String, w Writer) {
-	w.WriteByte ('(')
-	for _,b := range []byte(s.value) {
-		w.Write (stringAsciiEscapeByte(b))
+func asciiSerializer(s *String, w Writer) {
+	w.WriteByte('(')
+	for _, b := range []byte(s.value) {
+		w.Write(stringAsciiEscapeByte(b))
 	}
-	w.WriteByte (')')
+	w.WriteByte(')')
 	return
 }
 
-func hexSerializer (s *String, w Writer) {
-	w.WriteByte ('<')
-	for _,b := range []byte(s.value) {
-		w.WriteByte(HexDigit(b/16))
-		w.WriteByte(HexDigit(b%16))
+func hexSerializer(s *String, w Writer) {
+	w.WriteByte('<')
+	for _, b := range []byte(s.value) {
+		w.WriteByte(HexDigit(b / 16))
+		w.WriteByte(HexDigit(b % 16))
 	}
-	w.WriteByte ('>')
+	w.WriteByte('>')
 }
 
-func (s *String) Serialize (w Writer, file... File) {
+func (s *String) Serialize(w Writer, file ...File) {
 	s.serializer(s, w)
 }
 
-func (s *String) SetNormalOutput () {
+func (s *String) SetNormalOutput() {
 	s.serializer = normalSerializer
 }
 
-func (s *String) SetHexOutput () {
+func (s *String) SetHexOutput() {
 	s.serializer = hexSerializer
 }
 
-func (s *String) SetAsciiOutput () {
+func (s *String) SetAsciiOutput() {
 	s.serializer = asciiSerializer
 }

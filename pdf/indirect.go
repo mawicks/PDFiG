@@ -6,13 +6,13 @@ import "strconv"
 // 	pdf.Object
 //	bufio.Writer
 type Indirect struct {
-	fileBindings map[File] ObjectNumber
-	isFinal bool
+	fileBindings map[File]ObjectNumber
+	isFinal      bool
 }
 
 // Constructor for Indirect object
-func NewIndirect () *Indirect {
-	return &Indirect{make(map[File] ObjectNumber,1000), false}
+func NewIndirect() *Indirect {
+	return &Indirect{make(map[File]ObjectNumber, 1000), false}
 }
 
 /*
@@ -39,27 +39,37 @@ stream is completed when the length is known with certainty.  This
 particular example is somewhat contrived.  With the size of memory in
 modern computers it's difficult to imagine a scenario where a stream
 cannot be written to a buffer in its entirely and written as an atomic
-stream object.  Nonetheless, pdf.IndirectS supports this programming
-style where object references are written to a file before the objects
-they refer to have been completely defined.  We do *not* support this
-model with streams, however, and *do* require streams to be completed
-in memory before any portion of the strean is written to a file.  A
-pdf.Indirect can be written before the direct object it references has
-been defined.  A pdf.Indirect obtains and reserves an object number
-whenever it is written to a file, whether or not the object being
-referenced has been specified.  Eventually, the Finalize() method must
-be called passing the object being referenced.  At that moment, the
-object being referenced is written to all files to which the
-pdf.Indirect was written.  If the pdf.Indirect is subsequently added
-to additional files, the Finalize()ed object must also written to
-those files.  This, however, requires either retaining a reference in
-memory indefinitely (bad) or reading it from one of the files where it
-is known to exist (reading is not yet implemented; it must be read as
-opposed to just copied because any indirect references contained
-within it also need to be read and added to the file accordingly.  For
-the time being, we elect not to keep references in memory.  Until
-parsing is implemented, Serialize()ing a pdf.Indirect to a file after
-calling Finalize() will generate an error.
+stream object.  Nonetheless, a pdf.Indirect object supports this
+programming style where object references are written to a file before
+the objects they refer to have been completely defined.  We do *not*
+support this model with streams, however, and *do* require streams to
+be completed in memory before any portion of the strean is written to
+a file.  A pdf.Indirect can be written before the direct object it
+references has been defined.  A pdf.Indirect obtains and reserves an
+object number whenever it is written to a file, whether or not the
+object being referenced has yet been specified.  Eventually, the
+Finalize() method must be called passing the object being referenced.
+At that moment, the object being referenced is written to all files to
+which the pdf.Indirect was written.  If the pdf.Indirect is
+subsequently added to additional files, the Finalize()ed object must
+also written to those files.  This, however, would require either
+retaining a reference in memory indefinitely (bad) or reading it from
+one of the files where it is known to exist (reading is not yet
+implemented; it must be read as opposed to just copied because any
+indirect references contained within it also need to be read and added
+to the file accordingly).  For the time being, we elect not to keep
+references in memory.  Until parsing is implemented, indirect objects
+may be explicitly bound to files using BindToFile() prior to calling
+finalize.  Serialize()ing a pdf.Indirect to a new file after calling
+Finalize() without a call to Serialize() or BindToFile() *prior* to
+the call to Finalize() will generate an error.  The complete list of
+files that will contain the refence must be known when Finalize() is
+called.
+
+The call to BindToFile() is handled transparently and automatically
+for forward references.  The client need not call it explicitly.  A
+call to BindToFile() is required, however, for indirect objects that
+are backward references.
 
 USE-CASE 2: A pdf.Indirect is created based on a finished direct
 object.  This is essentially the same as use-case 1.  An object is
@@ -76,8 +86,8 @@ USE-CASE 3: A pdf.Indirect is constructed when a token of the form "10
 1 R" is read from file X.  The underlying direct object is unknown at
 that moment, but it exists in X.  Since the object exists statically
 in X, it is considered to have been finalized.  If the same object is
-Serialize()'ed to file Y, then it should immediately added to file Y.
-The objects contents are obtained from X.
+Serialize()'ed to file Y, then it should immediately be added to file
+Y.  The objects contents are obtained from X.
 
 POSSIBLE TEMPORARY BEHAVIOR: The referenced object is retained by the
 pdf.Indirect so that it can be "dereferenced" or written to additional
@@ -89,36 +99,47 @@ implemented in Go.
 
 */
 
-func (i *Indirect) Serialize (w Writer, file... File) {
-	if (len(file) == 0) {
-		panic ("File parameter required for pdf.Indirect.Serialize()")
+func (i *Indirect) Serialize(w Writer, file ...File) {
+	if len(file) == 0 {
+		panic("File parameter required for pdf.Indirect.Serialize()")
 	}
-	if (i.isFinal) {
-		panic ("Serializing a finalized object is not yet allowed")
+	if i.isFinal && !i.existsInFile(file[0]) {
+		panic("Serializing a finalized object to a new file is not yet allowed. Try calling BindToFile() before Finalize().")
 	}
-	n := i.getObjectNumber (file[0])
-	w.WriteString (strconv.FormatInt(int64(n.number), 10))
-	w.WriteByte (' ')
-	w.WriteString (strconv.FormatInt(int64(n.generation), 10))
-	w.WriteString (" R")
+	n := i.BindToFile(file[0])
+	w.WriteString(strconv.FormatInt(int64(n.number), 10))
+	w.WriteByte(' ')
+	w.WriteString(strconv.FormatInt(int64(n.generation), 10))
+	w.WriteString(" R")
 }
 
-func (i *Indirect) Finalize (o Object) {
-	if (i.isFinal) {
-		panic ("Finalize() called on a final object")
+func (i *Indirect) Finalize(o Object) {
+	if i.isFinal {
+		panic("Finalize() called on a final object")
 	}
-	for file,objectNumber := range i.fileBindings {
-		file.AddObjectAt (objectNumber, o)
+	for file, objectNumber := range i.fileBindings {
+		file.AddObjectAt(objectNumber, o)
 	}
 	i.isFinal = true
 	return
 }
 
-func (i *Indirect) getObjectNumber (f File) ObjectNumber {
+// BindToFile() binds its object to the passed pdf.File object.
+// Normally it is called automatically whever an indirect reference is
+// written to a file.  Client code must call BindToFile() explicitly
+// if the underlying direct object is finalized before an indirect
+// reference is actually written.  In that case, the caller should
+// call BindToFile() *before* calling Finalize().
+func (i *Indirect) BindToFile(f File) ObjectNumber {
 	result, ok := i.fileBindings[f]
 	if !ok {
 		result = f.ReserveObjectNumber(i)
 		i.fileBindings[f] = result
 	}
 	return result
+}
+
+func (i *Indirect) existsInFile(f File) bool {
+	_, ok := i.fileBindings[f]
+	return ok
 }

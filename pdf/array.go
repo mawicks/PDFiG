@@ -7,17 +7,17 @@ type Array struct {
 }
 
 // Constructor for Name object
-func NewArray () (* Array) {
+func NewArray() *Array {
 	return &Array{containers.NewDynamicArray(4)}
 }
 
-func (a *Array) Add (o Object) {
+func (a *Array) Add(o Object) {
 	a.array.PushBack(o)
 }
 
-func (a *Array) Serialize (w Writer, file... File) {
+func (a *Array) Serialize(w Writer, file ...File) {
 	w.WriteByte('[')
-	for i:=0; i<int(a.array.Size()); i++ {
+	for i := 0; i < int(a.array.Size()); i++ {
 		if i != 0 {
 			w.WriteByte(' ')
 		}

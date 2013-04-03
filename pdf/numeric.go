@@ -14,20 +14,20 @@ type IntNumeric struct {
 	value int
 }
 
-func  (n *FloatNumeric) Serialize (w Writer, file... File) {
+func (n *FloatNumeric) Serialize(w Writer, file ...File) {
 	w.WriteString(strconv.FormatFloat(float64(n.value), 'g', -1, 32))
 }
 
-func  (n *IntNumeric) Serialize (w Writer, file... File) {
+func (n *IntNumeric) Serialize(w Writer, file ...File) {
 	w.WriteString(strconv.FormatInt(int64(n.value), 10))
 }
 
-func adjustFloatRange (v float64) (float32Value float32) {
+func adjustFloatRange(v float64) (float32Value float32) {
 	switch {
 	case v > math.MaxFloat32:
 		float32Value = math.MaxFloat32
 
-	case v < - math.MaxFloat32:
+	case v < -math.MaxFloat32:
 		float32Value = -math.MaxFloat32
 
 	case math.Abs(v) < 1.175494351e-38:
@@ -43,15 +43,15 @@ func adjustFloatRange (v float64) (float32Value float32) {
 }
 
 // Constructors for Numeric object
-func NewIntNumeric (v int) Object {
+func NewIntNumeric(v int) Object {
 	return &IntNumeric{v}
 }
 
-func NewFloatNumeric (v float32) Object {
+func NewFloatNumeric(v float32) Object {
 	return &FloatNumeric{v}
 }
 
-func NewNumeric (v float64) (result Object) {
+func NewNumeric(v float64) (result Object) {
 	var intValue = int(v)
 
 	// Use IntNumeric if value can be represented as int32;
@@ -64,5 +64,3 @@ func NewNumeric (v float64) (result Object) {
 
 	return result
 }
-
-
