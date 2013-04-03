@@ -105,10 +105,23 @@ func NewFile (filename string) File {
 // Public methods
 // Implements Close() in File interface
 func (f *file) Close () {
+	xrefPosition := f.Tell()
 	f.writeXref()
+	f.writeTrailer(xrefPosition)
 	f.writer.Flush()
 	f.file.Close()
 }
+
+func (f *file) Seek(position int64, whence int) (int64,error) {
+	f.writer.Flush()
+	return f.file.Seek(position, whence)
+}
+
+func (f *file) Tell() (int64) {
+	position,_ := f.Seek(0, 1)
+	return position
+}
+
 
 // Implements AddObjectAt() in File interface
 func (f *file) AddObjectAt (object ObjectNumber, o Object) {
@@ -120,9 +133,7 @@ func (f *file) AddObjectAt (object ObjectNumber, o Object) {
 		panic ("Generation number mismatch")
 	}
 
-	f.writer.Flush()
-	position,_ := f.file.Seek(0,1)
-	entry.byteOffset = uint64(position)
+	entry.byteOffset = uint64(f.Tell())
 
 	fmt.Fprintf(f.writer, "%d %d obj\n", object.number, object.generation)
 	o.Serialize(f.writer, f);
@@ -227,4 +238,12 @@ func (f *file) writeXref() {
 			entry.Serialize(f.writer)
 		}
 	}
+}
+
+func (f *file) writeTrailer(xrefPosition int64) {
+	f.writer.WriteString ("trailer\n")
+	f.trailerDictionary.Serialize (f.writer)
+	f.writer.WriteString ("\nstartxref\n")
+	fmt.Fprintf (f.writer, "%d\n", xrefPosition)
+	f.writer.WriteString ("%%EOF\n")
 }
