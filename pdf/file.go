@@ -125,7 +125,7 @@ func (f *file) AddObjectAt (object ObjectNumber, o Object) {
 	entry.byteOffset = uint64(position)
 
 	fmt.Fprintf(f.writer, "%d %d obj\n", object.number, object.generation)
-	o.Serialize(f.writer);
+	o.Serialize(f.writer, f);
 	fmt.Fprintf(f.writer, "\nendobj\n")
 }
 
@@ -142,12 +142,16 @@ func (f *file) DeleteObject (object ObjectNumber) {
 	if (object.generation != entry.generation) {
 		panic ("Generation number mismatch")
 	}
-	entry.byteOffset = (*f.xref.At(0)).(*xrefEntry).byteOffset
-	(*f.xref.At(0)).(*xrefEntry).byteOffset = uint64(object.number)
 
-	// Increment the generation count for the next use.
 	if (entry.generation < 65535) {
+		// Increment the generation count for the next use
+		// and link into free list.
 		entry.generation += 1;
+		entry.byteOffset = (*f.xref.At(0)).(*xrefEntry).byteOffset
+		(*f.xref.At(0)).(*xrefEntry).byteOffset = uint64(object.number)
+	} else {
+		// Don't link into free list.  Just set byte offset to 0
+		entry.byteOffset = 0
 	}
 
 	entry.inUse = false
@@ -167,7 +171,7 @@ func (f *file) ReserveObjectNumber (o Object) ObjectNumber {
 		    (*f.xref.At(nextUnused)).(*xrefEntry).generation < 65535 &&
 		    (*f.xref.At(nextUnused)).(*xrefEntry).inUse;
 	    nextUnused++ {
-		// Do nothing
+		// Empty loop
 	}
 
 	if (nextUnused >= f.xref.Size()) {
@@ -199,9 +203,8 @@ func (f *file) writePdfHeader () {
 
 func nextSegment (xref containers.Array, start uint) (nextStart, length uint) {
 	var i uint
-	for i = start; i<xref.Size() && !(*xref.At(i)).(*xrefEntry).dirty; i++ {
-		// Do nothing.
-	}
+	// Skip "clean" entries.
+	for i = start; i<xref.Size() && !(*xref.At(i)).(*xrefEntry).dirty; i++ {}
 
 	nextStart = i
 	for i = nextStart; i<xref.Size() && (*xref.At(i)).(*xrefEntry).dirty; i++ {
@@ -217,7 +220,11 @@ func (f *file) writeXref() {
 	for s,l:=nextSegment(f.xref,0); s<f.xref.Size(); s,l=nextSegment(f.xref, s+l) {
 		fmt.Fprintf (f.writer, "%d %d\n", s, l)
 		for i:=s; i<s+l; i++ {
-			(*f.xref.At(uint(i))).(*xrefEntry).Serialize(f.writer)
+			entry := (*f.xref.At(uint(i))).(*xrefEntry)
+			if (entry.byteOffset == 0 && entry.inUse) {
+				panic (fmt.Sprintf ("Object %d reserved but never added or finalized", i))
+			}
+			entry.Serialize(f.writer)
 		}
 	}
 }

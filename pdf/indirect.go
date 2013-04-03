@@ -11,7 +11,7 @@ type Indirect struct {
 }
 
 // Constructor for Indirect object
-func NewIndirect () Object {
+func NewIndirect () *Indirect {
 	return &Indirect{make(map[File] ObjectNumber,1000), false}
 }
 
