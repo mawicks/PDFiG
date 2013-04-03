@@ -59,17 +59,19 @@ implemented; it must be read as opposed to just copied because any
 indirect references contained within it also need to be read and added
 to the file accordingly).  For the time being, we elect not to keep
 references in memory.  Until parsing is implemented, indirect objects
-may be explicitly bound to files using BindToFile() prior to calling
-finalize.  Serialize()ing a pdf.Indirect to a new file after calling
-Finalize() without a call to Serialize() or BindToFile() *prior* to
-the call to Finalize() will generate an error.  The complete list of
-files that will contain the refence must be known when Finalize() is
-called.
+may be explicitly bound to files either (1) by using ObjectNumber()
+prior to calling Finalize or (2) by calling pdf.File.AddObject().
+Serialize()ing a pdf.Indirect to a new file after calling Finalize()
+without an earlier call to Serialize() or ObjectNumber() will
+generate an error.  The complete list of files that will contain the
+refence must be known when Finalize() is called.
 
-The call to BindToFile() is handled transparently and automatically
+The call to ObjectNumber() is handled transparently and automatically
 for forward references.  The client need not call it explicitly.  A
-call to BindToFile() is required, however, for indirect objects that
-are backward references.
+call to ObjectNumber() is required, however, for indirect objects that
+are backward references.  An alternative way to obtain a backward
+reference is using the return value from pdf.File.AddObject().  The
+reference returned by pdf.File.AddObject() is bound only to one file.
 
 USE-CASE 2: A pdf.Indirect is created based on a finished direct
 object.  This is essentially the same as use-case 1.  An object is
@@ -104,9 +106,10 @@ func (i *Indirect) Serialize(w Writer, file ...File) {
 		panic("File parameter required for pdf.Indirect.Serialize()")
 	}
 	if i.isFinal && !i.existsInFile(file[0]) {
-		panic("Serializing a finalized object to a new file is not yet allowed. Try calling BindToFile() before Finalize().")
+		panic("Serializing a finalized object to a new file is not yet allowed. " +
+			"Try calling pdf.Indirect.ObjectNumber() before pdf.Indirect.Finalize() or use pdf.File.AddObject")
 	}
-	n := i.BindToFile(file[0])
+	n := i.ObjectNumber(file[0])
 	w.WriteString(strconv.FormatInt(int64(n.number), 10))
 	w.WriteByte(' ')
 	w.WriteString(strconv.FormatInt(int64(n.generation), 10))
@@ -124,13 +127,18 @@ func (i *Indirect) Finalize(o Object) {
 	return
 }
 
-// BindToFile() binds its object to the passed pdf.File object.
+// ObjectNumber() binds its object to the passed pdf.File object and
+// returns the resulting object number associated with that file.
 // Normally it is called automatically whever an indirect reference is
-// written to a file.  Client code must call BindToFile() explicitly
-// if the underlying direct object is finalized before an indirect
-// reference is actually written.  In that case, the caller should
-// call BindToFile() *before* calling Finalize().
-func (i *Indirect) BindToFile(f File) ObjectNumber {
+// written to a file.  Client code may call ObjectNumber() explicitly
+// if the underlying direct object is to be finalized before an
+// indirect reference is actually written.  In that case, the caller
+// should call ObjectNumber() one or more times *before* calling
+// Finalize().  Alternatively, client code may call File.AddObject(),
+// which returns an Indirect* that may be used for backward
+// references.  In the latter case, the reference will only be bound
+// to one file.
+func (i *Indirect) ObjectNumber(f File) ObjectNumber {
 	result, ok := i.fileBindings[f]
 	if !ok {
 		result = f.ReserveObjectNumber(i)
@@ -143,3 +151,4 @@ func (i *Indirect) existsInFile(f File) bool {
 	_, ok := i.fileBindings[f]
 	return ok
 }
+

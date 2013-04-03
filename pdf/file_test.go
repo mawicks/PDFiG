@@ -5,16 +5,19 @@ import "testing"
 func TestTestFile(t *testing.T) {
 	f := NewFile("/tmp/foo.pdf")
 	o1 := NewIndirect()
-	direct1 := f.AddObject(o1)
+	indirect1 := f.AddObject(o1)
+	o1.Finalize(NewNumeric(3.14))
 
-	o2 := NewNumeric(3.14)
-	o1.Finalize(o2)
+	indirect2 := f.AddObject(NewNumeric(2.718))
 
-	o3 := NewNumeric(2.718)
-	direct2 := f.AddObject(o3)
+	f.AddObject(NewName("foo"))
 
-	f.DeleteObject(direct1)
+
+	// Delete the *indirect reference* to the 3.14 numeric
+	f.DeleteObject(indirect1.ObjectNumber(f))
 	f.AddObject(NewNumeric(3))
-	f.DeleteObject(direct2)
+
+	// Delete the 2.718 numeric itself
+	f.DeleteObject(indirect2.ObjectNumber(f))
 	f.Close()
 }

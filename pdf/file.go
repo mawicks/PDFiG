@@ -25,10 +25,11 @@ func (f *testFile) Close() {}
 func (f *testFile) AddObjectAt(ObjectNumber, Object) {}
 
 // Implements AddObject() in File interface
-func (f *testFile) AddObject(object Object) (objectNumber ObjectNumber) {
-	objectNumber = f.ReserveObjectNumber(object)
-	f.AddObjectAt(objectNumber, object)
-	return objectNumber
+func (f *testFile) AddObject(object Object) (reference* Indirect) {
+	reference = NewIndirect()
+	reference.ObjectNumber(f)
+	reference.Finalize(object)
+	return reference
 }
 
 // Implements DeleteObject() in File interface
@@ -114,7 +115,7 @@ func (f *file) Close() {
 	// add it to the trailer dictionary, and write out the trailer dictionary.
 	catalogIndirect := NewIndirect()
 	f.trailerDictionary.Add("Root", catalogIndirect)
-	catalogIndirect.BindToFile(f)
+	catalogIndirect.ObjectNumber(f)
 	catalogIndirect.Finalize(f.catalog)
 
 	xrefPosition := f.Tell()
@@ -153,10 +154,11 @@ func (f *file) AddObjectAt(object ObjectNumber, o Object) {
 }
 
 // Implements AddObject() in File interface
-func (f *file) AddObject(object Object) (objectNumber ObjectNumber) {
-	objectNumber = f.ReserveObjectNumber(object)
-	f.AddObjectAt(objectNumber, object)
-	return objectNumber
+func (f *file) AddObject(object Object) (reference* Indirect) {
+	reference = NewIndirect()
+	reference.ObjectNumber(f)
+	reference.Finalize(object)
+	return reference
 }
 
 // Implements DeleteObject() in File interface
