@@ -19,14 +19,12 @@ func TestFile(t *testing.T) {
 	// Delete the 2.718 numeric object itself
 	f.DeleteObject(indirect2.ObjectNumber(f))
 
-	p := NewPage()
-	p.BindToFile(f)
+	p := NewPage(f)
 	p.SetParent(indirect1)
 	p.SetMediaBox(0, 0, 612, 792)
 	p.Finalize()
 
-	catalogIndirect := NewIndirect()
-	catalogIndirect.ObjectNumber(f)
+	catalogIndirect := NewIndirect(f)
 	f.SetCatalog(catalogIndirect)
 
 	catalog := NewDictionary()

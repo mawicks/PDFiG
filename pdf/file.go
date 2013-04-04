@@ -26,8 +26,7 @@ func (f *testFile) AddObjectAt(ObjectNumber, Object) {}
 
 // Implements AddObject() in File interface
 func (f *testFile) AddObject(object Object) (reference *Indirect) {
-	reference = NewIndirect()
-	reference.ObjectNumber(f)
+	reference = NewIndirect(f)
 	reference.Finalize(object)
 	return reference
 }
@@ -112,6 +111,13 @@ func (f *file) SetCatalog(catalog *Indirect) {
 	f.catalogIndirect = catalog
 }
 
+func (f *file) release() {
+	f.xref.SetSize(0)
+	f.catalogIndirect = nil
+	f.trailerDictionary = nil
+	f.file = nil
+}
+
 // Implements Close() in File interface
 func (f *file) Close() {
 	f.trailerDictionary.Add("Size", NewIntNumeric(int(f.xref.Size())))
@@ -130,6 +136,8 @@ func (f *file) Close() {
 	f.writeTrailer(xrefPosition)
 	f.writer.Flush()
 	f.file.Close()
+
+	f.release()
 }
 
 func (f *file) Seek(position int64, whence int) (int64, error) {
@@ -161,8 +169,7 @@ func (f *file) AddObjectAt(object ObjectNumber, o Object) {
 
 // Implements AddObject() in File interface
 func (f *file) AddObject(object Object) (reference *Indirect) {
-	reference = NewIndirect()
-	reference.ObjectNumber(f)
+	reference = NewIndirect(f)
 	reference.Finalize(object)
 	return reference
 }

@@ -13,6 +13,8 @@ type Document struct {
 
 	pageTreeRoot         *Dictionary
 	pageTreeRootIndirect *Indirect
+
+	procSetIndirect *Indirect
 }
 
 func NewDocument(filename string) *Document {
@@ -23,23 +25,32 @@ func NewDocument(filename string) *Document {
 	d.catalog = NewDictionary()
 	d.catalog.Add("Type", NewName("Catalog"))
 
-	d.catalogIndirect = NewIndirect()
-	d.catalogIndirect.ObjectNumber(d.file)
+	d.catalogIndirect = NewIndirect(d.file)
 	d.file.SetCatalog(d.catalogIndirect)
 
 	d.pages = NewArray()
 
-	d.pageTreeRootIndirect = NewIndirect()
-	d.pageTreeRootIndirect.ObjectNumber(d.file)
+	d.pageTreeRootIndirect = NewIndirect(d.file)
 
 	d.pageTreeRoot = NewDictionary()
 	d.pageTreeRoot.Add("Type", NewName("Pages"))
+
+	d.procSetIndirect = NewIndirect(d.file)
 
 	// For now, this is a default to be sure a box is set somewhere.
 	// Clients can reset with their own call to SetMediaBox().
 	d.SetMediaBox(0, 0, 612, 792)
 
 	return d
+}
+
+func (d *Document) release() {
+	d.catalog = nil
+	d.catalogIndirect = nil
+	d.pages = nil
+	d.currentPage = nil
+	d.pageTreeRoot = nil
+	d.pageTreeRootIndirect = nil
 }
 
 func (d *Document) finishCurrentPage() {
@@ -54,6 +65,18 @@ func (d *Document) finishPageTree() {
 	d.pageTreeRootIndirect.Finalize(d.pageTreeRoot)
 }
 
+func (d *Document) finishProcSet() {
+	// Procset is option for PDF versions >= 1.4
+	// The following full set is recommended, however, for maximal compatibility.
+	procsetArray := NewArray()
+	procsetArray.Add (NewName("PDF"))
+	procsetArray.Add (NewName("Text"))
+	procsetArray.Add (NewName("ImageB"))
+	procsetArray.Add (NewName("ImageC"))
+	procsetArray.Add (NewName("ImageI"))
+	d.procSetIndirect.Finalize(procsetArray)
+}
+
 func (d *Document) finishCatalog() {
 	d.catalog.Add("Pages", d.pageTreeRootIndirect)
 	d.catalogIndirect.Finalize(d.catalog)
@@ -63,17 +86,20 @@ func (d *Document) NewPage() *Page {
 	if d.currentPage != nil {
 		d.finishCurrentPage()
 	}
-	d.currentPage = NewPage()
-	d.currentPage.BindToFile(d.file)
+	d.currentPage = NewPage(d.file)
 	d.currentPage.SetParent(d.pageTreeRootIndirect)
+	d.currentPage.SetProcSet(d.procSetIndirect)
 	return d.currentPage
 }
 
 func (d *Document) Close() {
 	d.finishCurrentPage()
+	d.finishProcSet()
 	d.finishPageTree()
 	d.finishCatalog()
 	d.file.Close()
+
+	d.release()
 }
 
 func (d *Document) SetMediaBox(llx, lly, urx, ury float64) {

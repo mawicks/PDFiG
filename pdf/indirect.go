@@ -10,10 +10,6 @@ type Indirect struct {
 	isFinal      bool
 }
 
-// Constructor for Indirect object
-func NewIndirect() *Indirect {
-	return &Indirect{make(map[File]ObjectNumber, 1000), false}
-}
 
 /*
 pdf.Indirect is one of the most important and most complex
@@ -100,6 +96,24 @@ would be a weak-reference to the object, but weak references are not
 implemented in Go.
 
 */
+
+// NewIndirect is the constructor for Indirect objects.  For
+// convenience, if the files to which this indirect object should be
+// bound are known at construction time, they may be provided as
+// optional arguments.  Instead of providing these at construction,
+// the client may call Indirect.ObjectNumber() after construction, but
+// prior to finalization.
+func NewIndirect(file... File) *Indirect {
+	result := new(Indirect)
+	result.fileBindings = make(map[File]ObjectNumber,5)
+	result.isFinal = false
+
+	for _,f := range file {
+		result.ObjectNumber(f)
+	}
+
+	return result
+}
 
 func (i *Indirect) Serialize(w Writer, file ...File) {
 	if len(file) == 0 {

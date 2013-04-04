@@ -9,17 +9,19 @@ type Page struct {
 
 	dictionaryIndirect *Indirect
 	resourcesIndirect  *Indirect
+	contentsIndirect *Indirect
 }
 
-func NewPage() *Page {
+func NewPage(file... File) *Page {
 	p := new(Page)
 	p.contents = NewStream()
 
 	p.dictionary = NewDictionary()
 	p.resources = NewDictionary()
 
-	p.dictionaryIndirect = NewIndirect()
-	p.resourcesIndirect = NewIndirect()
+	p.dictionaryIndirect = NewIndirect(file...)
+	p.resourcesIndirect = NewIndirect(file...)
+	p.contentsIndirect = NewIndirect(file...)
 
 	return p
 }
@@ -34,22 +36,29 @@ func (p *Page) BindToFile(f File) {
 	// these objects to the File.
 	p.dictionaryIndirect.ObjectNumber(f)
 	p.resourcesIndirect.ObjectNumber(f)
+	p.contentsIndirect.ObjectNumber(f)
 }
 
 func (p *Page) Finalize() {
 	p.dictionary.Add("Resources", p.resourcesIndirect)
 	p.dictionary.Add("Type", NewName("Page"))
+	p.dictionary.Add("Contents", p.contentsIndirect)
 	if p.parent == nil {
 		panic("No parent specified")
 	}
 	p.dictionary.Add("Parent", p.parent)
 
 	p.dictionaryIndirect.Finalize(p.dictionary)
+	p.contentsIndirect.Finalize(p.contents)
 	p.resourcesIndirect.Finalize(p.resources)
 }
 
 func (p *Page) SetParent(i *Indirect) {
 	p.parent = i
+}
+
+func (p *Page) SetProcSet(i *Indirect) {
+	p.resources.Add("ProcSet", i)
 }
 
 func (p *Page) SetMediaBox(llx, lly, urx, ury float64) {
@@ -70,4 +79,8 @@ func (p *Page) SetTrimBox(llx, lly, urx, ury float64) {
 
 func (p *Page) SetArtBox(llx, lly, urx, ury float64) {
 	p.dictionary.Add("ArtBox", NewRectangle(llx, lly, urx, ury))
+}
+
+func (p *Page) Write(b []byte) (int, error) {
+	return p.contents.Write(b)
 }
