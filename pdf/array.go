@@ -22,7 +22,7 @@ func (a *Array) Serialize(w Writer, file ...File) {
 			w.WriteByte(' ')
 		}
 		o := (*a.array.At(uint(i))).(Object)
-		o.Serialize(w)
+		o.Serialize(w, file...)
 	}
 	w.WriteByte(']')
 }

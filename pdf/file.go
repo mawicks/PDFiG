@@ -25,7 +25,7 @@ func (f *testFile) Close() {}
 func (f *testFile) AddObjectAt(ObjectNumber, Object) {}
 
 // Implements AddObject() in File interface
-func (f *testFile) AddObject(object Object) (reference* Indirect) {
+func (f *testFile) AddObject(object Object) (reference *Indirect) {
 	reference = NewIndirect()
 	reference.ObjectNumber(f)
 	reference.Finalize(object)
@@ -41,6 +41,9 @@ func (f *testFile) ReserveObjectNumber(o Object) ObjectNumber {
 	f.nextObjectNumber += 1
 	f.nextGenerationNumber += 1
 	return result
+}
+
+func (f *testFile) SetCatalog(i *Indirect) {
 }
 
 // xrefEntry type
@@ -73,7 +76,7 @@ func (entry *xrefEntry) Serialize(w Writer) {
 type file struct {
 	xref              containers.Array
 	trailerDictionary *Dictionary
-	catalog           *Dictionary
+	catalogIndirect   *Indirect
 	file              *os.File
 
 	// "writer" is a wrapper around "file".
@@ -95,7 +98,6 @@ func NewFile(filename string) File {
 		result.writer = bufio.NewWriter(f)
 		result.xref = containers.NewDynamicArray(1024)
 		result.trailerDictionary = NewDictionary()
-		result.catalog = NewDictionary()
 
 		result.writePdfHeader()
 		result.createInitialXref()
@@ -106,6 +108,10 @@ func NewFile(filename string) File {
 }
 
 // Public methods
+func (f *file) SetCatalog(catalog *Indirect) {
+	f.catalogIndirect = catalog
+}
+
 // Implements Close() in File interface
 func (f *file) Close() {
 	f.trailerDictionary.Add("Size", NewIntNumeric(int(f.xref.Size())))
@@ -113,10 +119,10 @@ func (f *file) Close() {
 	// The catalog appearing in the trailer must be indirect
 	// object.  Create an indirect object pointed at the catalog,
 	// add it to the trailer dictionary, and write out the trailer dictionary.
-	catalogIndirect := NewIndirect()
-	f.trailerDictionary.Add("Root", catalogIndirect)
-	catalogIndirect.ObjectNumber(f)
-	catalogIndirect.Finalize(f.catalog)
+	if f.catalogIndirect == nil {
+		panic("No document catalog has been specified.  Use File.SetCatalog() to set one.")
+	}
+	f.trailerDictionary.Add("Root", f.catalogIndirect)
 
 	xrefPosition := f.Tell()
 	f.writeXref()
@@ -154,7 +160,7 @@ func (f *file) AddObjectAt(object ObjectNumber, o Object) {
 }
 
 // Implements AddObject() in File interface
-func (f *file) AddObject(object Object) (reference* Indirect) {
+func (f *file) AddObject(object Object) (reference *Indirect) {
 	reference = NewIndirect()
 	reference.ObjectNumber(f)
 	reference.Finalize(object)

@@ -170,3 +170,7 @@ func TestIndirect(t *testing.T) {
 	testOneObject(t, "Indirect test", i2, f1, "22 38 R")
 	testOneObject(t, "Indirect test", i2, f2, "43 24 R")
 }
+
+func TestRectangle(t *testing.T) {
+	testOneObject(t, "Rectangle test", NewRectangle(1, 2, 3, 4), nil, "[1 2 3 4]")
+}

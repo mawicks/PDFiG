@@ -14,11 +14,13 @@ type File interface {
 	// AddObject() adds the passed object to the File.  The
 	// returned indirect reference may be used for backward
 	// references to the object.
-	AddObject(object Object) (reference* Indirect)
+	AddObject(object Object) (reference *Indirect)
 
 	// ReserveObjectNumber() reserves a position (ObjectNumber)
 	// for the passed object in the File.
 	ReserveObjectNumber(Object) ObjectNumber
+
+	SetCatalog(*Indirect)
 
 	// DeleteObject() deletes the specified object from the file.
 	DeleteObject(ObjectNumber)

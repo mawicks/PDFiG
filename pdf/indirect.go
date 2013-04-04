@@ -151,4 +151,3 @@ func (i *Indirect) existsInFile(f File) bool {
 	_, ok := i.fileBindings[f]
 	return ok
 }
-

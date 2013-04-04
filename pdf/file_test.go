@@ -2,7 +2,7 @@ package pdf
 
 import "testing"
 
-func TestTestFile(t *testing.T) {
+func TestFile(t *testing.T) {
 	f := NewFile("/tmp/foo.pdf")
 	o1 := NewIndirect()
 	indirect1 := f.AddObject(o1)
@@ -12,12 +12,26 @@ func TestTestFile(t *testing.T) {
 
 	f.AddObject(NewName("foo"))
 
-
 	// Delete the *indirect reference* to the 3.14 numeric
 	f.DeleteObject(indirect1.ObjectNumber(f))
 	f.AddObject(NewNumeric(3))
 
-	// Delete the 2.718 numeric itself
+	// Delete the 2.718 numeric object itself
 	f.DeleteObject(indirect2.ObjectNumber(f))
+
+	p := NewPage()
+	p.BindToFile(f)
+	p.SetParent(indirect1)
+	p.SetMediaBox(0, 0, 612, 792)
+	p.Finalize()
+
+	catalogIndirect := NewIndirect()
+	catalogIndirect.ObjectNumber(f)
+	f.SetCatalog(catalogIndirect)
+
+	catalog := NewDictionary()
+	catalog.Add("Type", NewName("Catalog"))
+	catalogIndirect.Finalize(catalog)
+
 	f.Close()
 }
