@@ -1,9 +1,10 @@
 package pdf
 
-import "bufio"
-import "fmt"
-import "os"
-import "maw/containers"
+import (
+	"bufio"
+	"fmt"
+	"os"
+	"github.com/mawicks/goPDF/containers" )
 
 // TestFile is a simple file implementing the File interface for use in unit tests.
 type testFile struct {
