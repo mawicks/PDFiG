@@ -23,35 +23,20 @@ const ( TimesRoman StandardFont = iota
 	CourierBoldOblique )
 
 func StandardFontToName (font StandardFont)  (result string) {
-	switch (font) {
-	case Helvetica:
-		result = "Helvetica"
-	case Courier:
-		result = "Courier"
-	case Symbol:
-		result = "Symbol"
-	case TimesBold:
-		result = "Times-Bold"
-	case HelveticaBold:
-		result = "Helvetica-Bold"
-	case CourierBold:
-		result = "Courier-Bold"
-	case ZapfDingbats:
-		result = "ZapfDingbats"
-	case TimesItalic:
-		result = "Times-Italic"
-	case HelveticaOblique:
-		result = "Helvetica-Oblique"
-	case CourierOblique:
-		result = "Courier-Oblique"
-	case TimesBoldItalic:
-		result = "Times-BoldItalic"
-	case HelveticaBoldOblique:
-		result = "Helvetica-BoldOblique"
-	case CourierBoldOblique:
-		result = "Courier-BoldOblique"
-	}
-	return result
+	return map[StandardFont] string {
+		Helvetica: "Helvetica",
+		Courier: "Courier",
+		Symbol: "Symbol",
+		TimesBold: "Times-Bold",
+		HelveticaBold: "Helvetica-Bold",
+		CourierBold: "Courier-Bold",
+		ZapfDingbats: "ZapfDingbats",
+		TimesItalic: "Times-Italic",
+		HelveticaOblique: "Helvetica-Oblique",
+		CourierOblique: "Courier-Oblique",
+		TimesBoldItalic: "Times-BoldItalic",
+		HelveticaBoldOblique: "Helvetica-BoldOblique",
+		CourierBoldOblique: "Courier-BoldOblique" } [font]
 }
 
 type standardFont struct {
