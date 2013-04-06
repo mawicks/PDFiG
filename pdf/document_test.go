@@ -1,10 +1,9 @@
 package pdf
 
 import "fmt"
-import "testing"
 
-func TestDocument(t *testing.T) {
-	doc := NewDocument("/tmp/foo-document.pdf")
+func ExampleDocument() {
+	doc := NewDocument("/tmp/test-document.pdf")
 
 	var page *Page
 

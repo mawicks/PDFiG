@@ -1,9 +1,7 @@
 package pdf
 
-import "testing"
-
-func TestFile(t *testing.T) {
-	f := NewFile("/tmp/foo.pdf")
+func ExampleFile() {
+	f := NewFile("/tmp/test-file.pdf")
 	o1 := NewIndirect()
 	indirect1 := f.AddObject(o1)
 	o1.Finalize(NewNumeric(3.14))
