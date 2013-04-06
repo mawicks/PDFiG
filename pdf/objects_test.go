@@ -145,7 +145,7 @@ func TestDictionary(t *testing.T) {
 func TestStream(t *testing.T) {
 	s := NewStream()
 	fmt.Fprint(s, "foo")
-	testOneObject(t, "NewStream", s, nil, "<</Length 3>>\nstream\nfoo\nendstream\n")
+	testOneObject(t, "NewStream", s, nil, "<</Length 3>>\nstream\nfoo\nendstream")
 }
 
 func TestIndirect(t *testing.T) {

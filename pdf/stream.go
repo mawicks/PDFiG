@@ -32,5 +32,5 @@ func (s *Stream) Serialize(w Writer, file ...File) {
 	s.dictionary.Serialize(w)
 	w.WriteString("\nstream\n")
 	w.Write(s.buffer.Bytes())
-	w.WriteString("\nendstream\n")
+	w.WriteString("\nendstream")
 }

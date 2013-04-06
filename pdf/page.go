@@ -1,11 +1,13 @@
 package pdf
 
 type Page struct {
+	fileList []File
 	contents *Stream
 	parent   *Indirect
 
 	dictionary *Dictionary
 	resources  *Dictionary
+	fontResources* Dictionary
 
 	dictionaryIndirect *Indirect
 	resourcesIndirect  *Indirect
@@ -14,6 +16,7 @@ type Page struct {
 
 func NewPage(file... File) *Page {
 	p := new(Page)
+	p.fileList = file
 	p.contents = NewStream()
 
 	p.dictionary = NewDictionary()
@@ -46,11 +49,26 @@ func (p *Page) Finalize() {
 	if p.parent == nil {
 		panic("No parent specified")
 	}
-	p.dictionary.Add("Parent", p.parent)
 
+	p.dictionary.Add("Parent", p.parent)
 	p.dictionaryIndirect.Finalize(p.dictionary)
+
 	p.contentsIndirect.Finalize(p.contents)
+
+	if (p.fontResources != nil) {
+		p.resources.Add("Font", p.fontResources)
+	}
 	p.resourcesIndirect.Finalize(p.resources)
+}
+
+func (p *Page) AddFont (font Font) {
+	if (p.fontResources == nil) {
+		p.fontResources = NewDictionary()
+	}
+
+	for _,file := range p.fileList {
+		p.fontResources.Add(font.Name(), font.Indirect(file))
+	}
 }
 
 func (p *Page) SetParent(i *Indirect) {
