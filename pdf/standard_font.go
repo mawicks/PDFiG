@@ -2,7 +2,6 @@ package pdf
 
 type Font interface {
 	Indirect(f File) *Indirect
-	Name() string
 }
 
 type StandardFont uint8
@@ -24,6 +23,7 @@ const ( TimesRoman StandardFont = iota
 
 func StandardFontToName (font StandardFont)  (result string) {
 	return map[StandardFont] string {
+		TimesRoman: "Times-Roman",
 		Helvetica: "Helvetica",
 		Courier: "Courier",
 		Symbol: "Symbol",
@@ -41,33 +41,29 @@ func StandardFontToName (font StandardFont)  (result string) {
 
 type standardFont struct {
 	fileBindings map[File]*Indirect
-	name string
-	descriptor *Dictionary
+	dictionary *Dictionary
 }
 
-func NewStandardFont(font StandardFont, name string) Font {
+func NewStandardFont(font StandardFont) Font {
 	result := new(standardFont)
 	result.fileBindings = make(map[File]*Indirect,5)
-	result.name = name
-	result.descriptor = NewDictionary()
-	result.descriptor.Add ("Type", NewName("Font"))
-	result.descriptor.Add ("Subtype", NewName("Type1"))
-	result.descriptor.Add ("Name", NewName(result.name))
-	result.descriptor.Add ("BaseFont", NewName(StandardFontToName(font)))
-	result.descriptor.Add ("Encoding", NewName("MacRomanEncoding"))
+	result.dictionary = NewDictionary()
+	result.dictionary.Add ("Type", NewName("Font"))
+	result.dictionary.Add ("Subtype", NewName("Type1"))
+	result.dictionary.Add ("BaseFont", NewName(StandardFontToName(font)))
+
+	// Note: Internal encoding is used; no encoding is specified.
+	// Note: Use of a /Name entry (not included here) is required
+	// in PDF 1.0 and deprecated in later versions.
 	return result
 }
 
 func (font *standardFont) Indirect(file File) *Indirect {
-	i,ok := font.fileBindings[file]
-	if (!ok) {
-		i = file.AddObject (font.descriptor)
+	i,exists := font.fileBindings[file]
+	if (!exists) {
+		i = file.AddObject (font.dictionary)
 		font.fileBindings[file] = i
 	}
 	return i
-}
-
-func (font *standardFont) Name() string {
-	return font.name
 }
 

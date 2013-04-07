@@ -9,7 +9,7 @@ func ExampleDocument() {
 
 	// Page 1
 	page := doc.NewPage()
-	f1 := pdf.NewStandardFont(pdf.Helvetica, "F1")
+	f1 := pdf.NewStandardFont(pdf.Helvetica)
 	page.AddFont(f1)
 	fmt.Fprintf (page, "BT /F1 24 Tf 250 528 Td (Hello World!) Tj ET")
 

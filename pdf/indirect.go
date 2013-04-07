@@ -153,8 +153,8 @@ func (i *Indirect) Finalize(o Object) {
 // references.  In the latter case, the reference will only be bound
 // to one file.
 func (i *Indirect) ObjectNumber(f File) ObjectNumber {
-	result, ok := i.fileBindings[f]
-	if !ok {
+	result,exists := i.fileBindings[f]
+	if !exists {
 		result = f.ReserveObjectNumber(i)
 		i.fileBindings[f] = result
 	}
@@ -162,6 +162,6 @@ func (i *Indirect) ObjectNumber(f File) ObjectNumber {
 }
 
 func (i *Indirect) existsInFile(f File) bool {
-	_, ok := i.fileBindings[f]
-	return ok
+	_,exists := i.fileBindings[f]
+	return exists
 }

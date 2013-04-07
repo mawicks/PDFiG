@@ -1,5 +1,7 @@
 package pdf
 
+import "strconv"
+
 type Page struct {
 	fileList []File
 	contents *Stream
@@ -12,6 +14,8 @@ type Page struct {
 	dictionaryIndirect *Indirect
 	resourcesIndirect  *Indirect
 	contentsIndirect *Indirect
+
+	fontMap map[Font] string
 }
 
 func NewPage(file... File) *Page {
@@ -26,6 +30,7 @@ func NewPage(file... File) *Page {
 	p.resourcesIndirect = NewIndirect(file...)
 	p.contentsIndirect = NewIndirect(file...)
 
+	p.fontMap = make(map[Font]string, 15)
 	return p
 }
 
@@ -61,14 +66,28 @@ func (p *Page) Finalize() {
 	p.resourcesIndirect.Finalize(p.resources)
 }
 
-func (p *Page) AddFont (font Font) {
+func (p *Page) AddFont (font Font) string {
+	fontCount := len(p.fontMap)
+
+	if fontCount >= (1<<20) {
+		panic("Too many fonts on one page")
+	}
+
 	if (p.fontResources == nil) {
 		p.fontResources = NewDictionary()
 	}
 
-	for _,file := range p.fileList {
-		p.fontResources.Add(font.Name(), font.Indirect(file))
+	name,exists := p.fontMap[font]
+
+	if (!exists) {
+		name = "F" + strconv.Itoa(fontCount + 1)
+		for _,file := range p.fileList {
+			p.fontResources.Add(name, font.Indirect(file))
+		}
+		p.fontMap[font] = name
 	}
+
+	return name
 }
 
 func (p *Page) SetParent(i *Indirect) {
