@@ -95,7 +95,7 @@ func (p *Page) SetParent(i *Indirect) {
 	p.parent = i
 }
 
-func (p *Page) SetProcSet(i *Indirect) {
+func (p *Page) setProcSet(i *Indirect) {
 	p.resources.Add("ProcSet", i)
 }
 

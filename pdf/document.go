@@ -25,10 +25,8 @@ func NewDocument(filename string) *Document {
 
 	d.pages = NewArray()
 
-	d.pageTreeRootIndirect = NewIndirect(d.file)
-
 	d.pageTreeRoot = NewDictionary()
-	d.pageTreeRoot.Add("Type", NewName("Pages"))
+	d.pageTreeRootIndirect = NewIndirect(d.file)
 
 	d.procSetIndirect = NewIndirect(d.file)
 
@@ -37,6 +35,7 @@ func NewDocument(filename string) *Document {
 	d.SetMediaBox(0, 0, 612, 792)
 
 	d.DocumentInfo = NewDocumentInfo()
+	// Set a default producer field.  Clients calls to SetProducer() override this.
 	d.SetProducer("goPDF")
 
 	return d
@@ -57,6 +56,7 @@ func (d *Document) finishCurrentPage() {
 }
 
 func (d *Document) finishPageTree() {
+	d.pageTreeRoot.Add("Type", NewName("Pages"))
 	d.pageTreeRoot.Add("Count", NewIntNumeric(int(d.pageCount)))
 	d.pageTreeRoot.Add("Kids", d.pages)
 	d.pageTreeRootIndirect.Finalize(d.pageTreeRoot)
@@ -84,9 +84,11 @@ func (d *Document) finishCatalog() {
 }
 
 func (d *Document) finishDocumentInfo() {
-	documentInfoIndirect := NewIndirect(d.file)
-	d.file.SetInfo (documentInfoIndirect)
-	documentInfoIndirect.Finalize(d.DocumentInfo)
+	if d.DocumentInfo.Size() != 0 {
+		documentInfoIndirect := NewIndirect(d.file)
+		d.file.SetInfo (documentInfoIndirect)
+		documentInfoIndirect.Finalize(d.DocumentInfo)
+	}
 }
 
 func (d *Document) NewPage() *Page {
@@ -95,7 +97,7 @@ func (d *Document) NewPage() *Page {
 	}
 	d.currentPage = NewPage(d.file)
 	d.currentPage.SetParent(d.pageTreeRootIndirect)
-	d.currentPage.SetProcSet(d.procSetIndirect)
+	d.currentPage.setProcSet(d.procSetIndirect)
 	return d.currentPage
 }
 

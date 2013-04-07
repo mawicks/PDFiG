@@ -33,3 +33,9 @@ func (d *Dictionary) Serialize(w Writer, file ...File) {
 	}
 	w.WriteString(">>")
 }
+
+// Size() returns the number of key-value pairs
+func (d *Dictionary) Size() int {
+	return len(d.dictionary)
+}
+
