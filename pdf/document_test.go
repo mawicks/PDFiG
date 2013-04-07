@@ -6,6 +6,8 @@ import (
 
 func ExampleDocument() {
 	doc := pdf.NewDocument("/tmp/test-document.pdf")
+	doc.SetAuthor("Mark Wicks")
+	doc.SetTitle("Test Document")
 
 	// Page 1
 	page := doc.NewPage()

@@ -46,6 +46,9 @@ func (f *testFile) ReserveObjectNumber(o Object) ObjectNumber {
 func (f *testFile) SetCatalog(i *Indirect) {
 }
 
+func (f *testFile) SetInfo(i *Indirect) {
+}
+
 // xrefEntry type
 type xrefEntry struct {
 	byteOffset uint64
@@ -110,6 +113,10 @@ func NewFile(filename string) File {
 // Public methods
 func (f *file) SetCatalog(catalog *Indirect) {
 	f.catalogIndirect = catalog
+}
+
+func (f *file) SetInfo(i *Indirect) {
+	f.trailerDictionary.Add("Info", i)
 }
 
 func (f *file) release() {

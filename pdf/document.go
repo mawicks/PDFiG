@@ -2,8 +2,7 @@ package pdf
 
 type Document struct {
 	file            File
-	catalog         *Dictionary
-	catalogIndirect *Indirect
+
 	// Each element in the pages array is a Indirect reference to a Page dictionary
 	// returned by Page.Indirect().
 	pages *Array
@@ -15,18 +14,14 @@ type Document struct {
 	pageTreeRootIndirect *Indirect
 
 	procSetIndirect *Indirect
+
+	DocumentInfo
 }
 
 func NewDocument(filename string) *Document {
 	d := new(Document)
 
 	d.file = NewFile(filename)
-
-	d.catalog = NewDictionary()
-	d.catalog.Add("Type", NewName("Catalog"))
-
-	d.catalogIndirect = NewIndirect(d.file)
-	d.file.SetCatalog(d.catalogIndirect)
 
 	d.pages = NewArray()
 
@@ -41,16 +36,18 @@ func NewDocument(filename string) *Document {
 	// Clients can reset with their own call to SetMediaBox().
 	d.SetMediaBox(0, 0, 612, 792)
 
+	d.DocumentInfo = NewDocumentInfo()
+	d.SetProducer("goPDF")
+
 	return d
 }
 
 func (d *Document) release() {
-	d.catalog = nil
-	d.catalogIndirect = nil
 	d.pages = nil
 	d.currentPage = nil
 	d.pageTreeRoot = nil
 	d.pageTreeRootIndirect = nil
+	d.procSetIndirect = nil
 }
 
 func (d *Document) finishCurrentPage() {
@@ -78,8 +75,18 @@ func (d *Document) finishProcSet() {
 }
 
 func (d *Document) finishCatalog() {
-	d.catalog.Add("Pages", d.pageTreeRootIndirect)
-	d.catalogIndirect.Finalize(d.catalog)
+	catalog := NewDictionary()
+	catalog.Add("Type", NewName("Catalog"))
+	catalogIndirect := NewIndirect(d.file)
+	d.file.SetCatalog(catalogIndirect)
+	catalog.Add("Pages", d.pageTreeRootIndirect)
+	catalogIndirect.Finalize(catalog)
+}
+
+func (d *Document) finishDocumentInfo() {
+	documentInfoIndirect := NewIndirect(d.file)
+	d.file.SetInfo (documentInfoIndirect)
+	documentInfoIndirect.Finalize(d.DocumentInfo)
 }
 
 func (d *Document) NewPage() *Page {
@@ -97,6 +104,8 @@ func (d *Document) Close() {
 	d.finishProcSet()
 	d.finishPageTree()
 	d.finishCatalog()
+	d.finishDocumentInfo()
+
 	d.file.Close()
 
 	d.release()

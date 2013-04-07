@@ -31,6 +31,7 @@ func NewPage(file... File) *Page {
 	p.contentsIndirect = NewIndirect(file...)
 
 	p.fontMap = make(map[Font]string, 15)
+
 	return p
 }
 

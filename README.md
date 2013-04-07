@@ -9,7 +9,7 @@ writing is supported, but the architecture has been designed with
 reading in mind.  For example, object references read from one PDF
 file will be transparently translated and renumbered for use in
 another PDF file.  The project has the goal of being able to read
-arbitrary objects from one PDF file and use write them to another PDF
+arbitrary objects from one PDF file and write them to another PDF
 file.  It has an additional goal of being able to make append-only,
 incremental revisions to existing PDF files.  The design of the
 Portable Document Format specifically provides for such revisions.

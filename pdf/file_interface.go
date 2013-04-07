@@ -20,7 +20,11 @@ type File interface {
 	// for the passed object in the File.
 	ReserveObjectNumber(Object) ObjectNumber
 
+	// Set the catalog object
 	SetCatalog(*Indirect)
+
+	// Set the Info object
+	SetInfo(*Indirect)
 
 	// DeleteObject() deletes the specified object from the file.
 	DeleteObject(ObjectNumber)
