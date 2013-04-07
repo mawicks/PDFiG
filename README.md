@@ -1,4 +1,4 @@
-mgoPDF
+goPDF
 =====
 
 Generate and manipulate PDF files using the Go programming language
