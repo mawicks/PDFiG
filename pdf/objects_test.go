@@ -35,21 +35,39 @@ func TestObjectDecorator(t *testing.T) {
 	testOneObject(t, "ObjectStringDecorator", o, nil, "null")
 }
 
-func testOneStringAsHex(t *testing.T, testValue, expect string) {
-	s := NewString(testValue)
+func testOneTextStringAsHex(t *testing.T, testValue, expect string) {
+	s := NewTextString(testValue)
 	s.SetHexOutput()
 	hex := toString(s)
 	if hex != expect {
-		t.Errorf(`NewString(%s) produced "%s"`, testValue, hex)
+		t.Errorf(`NewTextString(%s) produced "%s"`, testValue, hex)
 	}
 }
 
-func testOneStringAsAscii(t *testing.T, testValue, expect string) {
-	s := NewString(testValue)
+func testOneBinaryStringAsHex(t *testing.T, testValue, expect string) {
+	s := NewBinaryString([]byte(testValue))
+	s.SetHexOutput()
+	hex := toString(s)
+	if hex != expect {
+		t.Errorf(`NewTextString(%s) produced "%s"`, testValue, hex)
+	}
+}
+
+func testOneTextStringAsAscii(t *testing.T, testValue, expect string) {
+	s := NewTextString(testValue)
 	s.SetAsciiOutput()
 	output := toString(s)
 	if output != expect {
-		t.Errorf(`NewString(%s) produced "%s"`, testValue, output)
+		t.Errorf(`NewTextString(%s) produced "%s"`, testValue, output)
+	}
+}
+
+func testOneBinaryStringAsAscii(t *testing.T, testValue, expect string) {
+	s := NewBinaryString([]byte(testValue))
+	s.SetAsciiOutput()
+	output := toString(s)
+	if output != expect {
+		t.Errorf(`NewTextString(%s) produced "%s"`, testValue, output)
 	}
 }
 
@@ -96,16 +114,18 @@ func TestName(t *testing.T) {
 }
 
 func TestString(t *testing.T) {
-	testOneObject(t, `NewString("foo")`, NewString("foo"), nil, "(foo)")
-	testOneObject(t, `NewString("()\\"`, NewString("()\\"), nil, "(\\(\\)\\\\)")
-	testOneObject(t, `NewString("[]")`, NewString("[]"), nil, "([])")
-	testOneObject(t, `NewString("")`, NewString(""), nil, "()")
-	testOneStringAsHex(t, "[]", "<5B5D>")
-	testOneStringAsHex(t, "0123", "<30313233>")
-	testOneStringAsHex(t, "", "<>")
-	testOneStringAsAscii(t, "foo", "(foo)")
-	testOneStringAsAscii(t, "\200", "(\\200)")
-	testOneStringAsAscii(t, "\n\r\t\b\f", "(\\n\\r\\t\\b\\f)")
+	testOneObject(t, `NewTextString("foo")`, NewTextString("foo"), nil, "(foo)")
+	testOneObject(t, `NewTextString("()\\"`, NewTextString("()\\"), nil, "(\\(\\)\\\\)")
+	testOneObject(t, `NewTextString("[]")`, NewTextString("[]"), nil, "([])")
+	testOneObject(t, `NewTextString("")`, NewTextString(""), nil, "()")
+	testOneTextStringAsHex(t, "[]", "<5B5D>")
+	testOneTextStringAsHex(t, "0123", "<30313233>")
+	testOneTextStringAsHex(t, "", "<>")
+	testOneTextStringAsAscii(t, "foo", "(foo)")
+	testOneTextStringAsAscii(t, "\n\r\t", "(\\n\\r\\t)")
+	testOneTextStringAsAscii(t, "\n\r\t\b\f", "(\\376\\377\\000\\n\\000\\r\\000\\t\\000\\b\\000\\f)")
+	testOneBinaryStringAsAscii(t, "\200", "(\\200)")
+	testOneBinaryStringAsHex(t, "\200", "<80>")
 }
 
 func TestArray(t *testing.T) {

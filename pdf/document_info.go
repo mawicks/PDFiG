@@ -9,25 +9,25 @@ func NewDocumentInfo() DocumentInfo {
 }
 
 func (d DocumentInfo) SetTitle(s string) {
-	d.Add("Title", NewString(s))
+	d.Add("Title", NewTextString(s))
 }
 
 func (d DocumentInfo) SetAuthor(s string) {
-	d.Add("Author", NewString(s))
+	d.Add("Author", NewTextString(s))
 }
 
 func (d DocumentInfo) SetSubject(s string) {
-	d.Add("Subject", NewString(s))
+	d.Add("Subject", NewTextString(s))
 }
 
 func (d DocumentInfo) SetKeywords(s string) {
-	d.Add("Keywords", NewString(s))
+	d.Add("Keywords", NewTextString(s))
 }
 
 func (d DocumentInfo) SetCreator(s string) {
-	d.Add("Creator", NewString(s))
+	d.Add("Creator", NewTextString(s))
 }
 
 func (d DocumentInfo) SetProducer(s string) {
-	d.Add("Producer", NewString(s))
+	d.Add("Producer", NewTextString(s))
 }

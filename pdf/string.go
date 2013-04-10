@@ -3,19 +3,36 @@ package pdf
 import "bytes"
 import "fmt"
 import "unicode"
+import "unicode/utf16"
 
 // PDF "String" object
 // Implements:
 //	pdf.Object
 type String struct {
-	value      string
+	value      []byte
 	serializer func(t *String, w Writer)
 }
 
 // Constructor for Name object
-func NewString(s string) *String {
+func NewTextString(s string) *String {
+	// If PDFDocEncoding works, use that
+	result,ok := PDFDocEncoding ([]rune(s))
+	// Otherwise use UTF16-BE
+	if !ok {
+		utf16result := utf16.Encode([]rune(s))
+		result = make([]byte,0)
+		result = append(result, 0xfe, 0xff)
+		for _,w := range utf16result {
+			result = append(result, byte(w>>8), byte(w&0xff))
+		}
+	}
+	return &String{result, normalSerializer}
+}
+
+func NewBinaryString(s []byte) *String {
 	return &String{s, normalSerializer}
 }
+
 
 func stringMinimalEscapeByte(b byte) (result []byte) {
 	switch b {
@@ -29,7 +46,7 @@ func stringMinimalEscapeByte(b byte) (result []byte) {
 
 func normalSerializer(s *String, w Writer) {
 	w.WriteByte('(')
-	for _, b := range []byte(s.value) {
+	for _, b := range s.value {
 		w.Write(stringMinimalEscapeByte(b))
 	}
 	w.WriteByte(')')
