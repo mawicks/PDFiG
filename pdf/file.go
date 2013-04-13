@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"regexp"
+	"strconv"
 	"github.com/mawicks/goPDF/containers"
 	"github.com/mawicks/goPDF/readers" )
 
@@ -82,7 +83,7 @@ type file struct {
 	file *os.File
 	originalSize int64
 	mode int
-	xrefLocation [2]int64
+	xrefLocation int64
 	xref containers.Array
 	trailerDictionary *Dictionary
 	catalogIndirect *Indirect
@@ -120,33 +121,45 @@ func NewFile(filename string) File {
 		result = new(file)
 		result.file = f
 		result.mode = mode
-		result.originalSize,_ = f.Seek(0,os.SEEK_END)
-		result.xrefLocation = getXrefLocation(f)
-		result.writer = bufio.NewWriter(f)
-		result.xref = containers.NewDynamicArray(1024)
 		result.trailerDictionary = NewDictionary()
 
-		result.writePdfHeader()
-		result.createInitialXref()
-		result.writer.Flush()
+		result.xref = containers.NewDynamicArray(1024)
+		result.xref.PushBack(&xrefEntry{0, 65535, false, true})
+
+		result.originalSize,_ = f.Seek(0,os.SEEK_END)
+
+		if (result.originalSize != 0) {
+			result.xrefLocation = getXrefLocation(f)
+		}
+
+		result.writer = bufio.NewWriter(f)
+		if (result.originalSize == 0) {
+			writeHeader(result.writer)
+		}
 	}
 
 	return result
 }
 
-func getXrefLocation(f *os.File) (result [2]int64) {
-	end,_ := f.Seek(0,os.SEEK_END)
+// Parse the file for the file for the xref location, leaving the file position unchanged.
+func getXrefLocation(f *os.File) (result int64) {
+	save,_ := f.Seek(0,os.SEEK_END)
 	regexp,_ := regexp.Compile (`\s*FOE%%\s*(\d+)(\s*ferxtrats)`)
 	reader := bufio.NewReader(readers.NewReverseReader(f))
 	indexes := regexp.FindReaderSubmatchIndex(reader)
 
 	if (indexes != nil) {
-		s1,s2 := indexes[2],indexes[3]
-		fmt.Printf ("xrefloc=%d,%d\n", end-int64(s2),end-int64(s1))
-		result = [2]int64{end-int64(s2),end-int64(s1)}
+		f.Seek(-int64(indexes[3]),os.SEEK_END)
+		b := make([]byte,indexes[3]-indexes[2])
+		_,err := f.Read(b)
+		if (err == nil) {
+			result,_ = strconv.ParseInt(string(b),10,64)
+			fmt.Printf ("Xref location is %d\n", result)
+		}
 	}
+	// Restore file position
+	f.Seek(save,os.SEEK_SET)
 	return result
-	
 }
 
 func (f *file) SetCatalog(catalog *Indirect) {
@@ -274,12 +287,8 @@ func (f *file) parseExistingFile() {
 	panic("Not implemented")
 }
 
-func (f *file) createInitialXref() {
-	f.xref.PushBack(&xrefEntry{0, 65535, false, true})
-}
-
-func (f *file) writePdfHeader() {
-	_,err := f.writer.WriteString("%PDF-1.4\n")
+func writeHeader(w *bufio.Writer) {
+	_,err := w.WriteString("%PDF-1.4\n")
 	if (err != nil) {
 		panic("Unable to write PDF header")
 	}
