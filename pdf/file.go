@@ -9,49 +9,6 @@ import (
 	"github.com/mawicks/goPDF/containers"
 	"github.com/mawicks/goPDF/readers" )
 
-// TestFile is a simple file implementing the File interface for use in unit tests.
-type testFile struct {
-	nextObjectNumber     uint32
-	nextGenerationNumber uint16
-}
-
-// Constructor for testFile object
-func NewTestFile(obj uint32, gen uint16) File {
-	return &testFile{obj, gen}
-}
-
-// Public methods
-
-// Implements Close() in File interface
-func (f *testFile) Close() {}
-
-// Implements AddObjectAt() in File interface
-func (f *testFile) AddObjectAt(ObjectNumber, Object) {}
-
-// Implements AddObject() in File interface
-func (f *testFile) AddObject(object Object) (reference *Indirect) {
-	reference = NewIndirect(f)
-	reference.Finalize(object)
-	return reference
-}
-
-// Implements DeleteObject() in File interface
-func (f *testFile) DeleteObject(on ObjectNumber) {}
-
-// Implements ReserveObjectNumber() in File interface
-func (f *testFile) ReserveObjectNumber(o Object) ObjectNumber {
-	result := ObjectNumber{f.nextObjectNumber, f.nextGenerationNumber}
-	f.nextObjectNumber += 1
-	f.nextGenerationNumber += 1
-	return result
-}
-
-func (f *testFile) SetCatalog(i *Indirect) {
-}
-
-func (f *testFile) SetInfo(i *Indirect) {
-}
-
 // xrefEntry type
 type xrefEntry struct {
 	byteOffset uint64
@@ -130,6 +87,7 @@ func NewFile(filename string) File {
 
 		if (result.originalSize != 0) {
 			result.xrefLocation = getXrefLocation(f)
+			getXref(f, result.xrefLocation)
 		}
 
 		result.writer = bufio.NewWriter(f)
@@ -160,6 +118,10 @@ func getXrefLocation(f *os.File) (result int64) {
 	// Restore file position
 	f.Seek(save,os.SEEK_SET)
 	return result
+}
+
+func getXref (f* os.File, location int64) {
+	
 }
 
 func (f *file) SetCatalog(catalog *Indirect) {

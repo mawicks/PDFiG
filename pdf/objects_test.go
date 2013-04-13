@@ -174,8 +174,8 @@ func TestIndirect(t *testing.T) {
 	i2 := NewIndirect()
 
 	// Two files
-	f1 := NewTestFile(21, 37)
-	f2 := NewTestFile(42, 23)
+	f1 := NewMockFile(21, 37)
+	f2 := NewMockFile(42, 23)
 
 	// Test all four combinations
 	testOneObject(t, "Indirect test", i1, f1, "21 37 R")
