@@ -4,7 +4,9 @@ import (
 	"bufio"
 	"fmt"
 	"os"
-	"github.com/mawicks/goPDF/containers" )
+	"regexp"
+	"github.com/mawicks/goPDF/containers"
+	"github.com/mawicks/goPDF/readers" )
 
 // TestFile is a simple file implementing the File interface for use in unit tests.
 type testFile struct {
@@ -77,10 +79,13 @@ func (entry *xrefEntry) Serialize(w Writer) {
 }
 
 type file struct {
-	xref              containers.Array
+	file *os.File
+	originalSize int64
+	mode int
+	xrefLocation [2]int64
+	xref containers.Array
 	trailerDictionary *Dictionary
-	catalogIndirect   *Indirect
-	file              *os.File
+	catalogIndirect *Indirect
 
 	// "writer" is a wrapper around "file".
 	// Note: Do not use "file" as a writer.  Use "writer" instead.
@@ -89,15 +94,34 @@ type file struct {
 	writer *bufio.Writer
 }
 
+// Public methods
+
 // Constructor for File object
 func NewFile(filename string) File {
 	var result *file
-	f, error := os.Create(filename)
-	if error != nil {
-		panic("Failed to create file")
+
+	success := false
+	modes := [...]int {os.O_RDWR|os.O_CREATE, os.O_RDONLY}
+	var f *os.File
+	var err error
+	var mode int
+	for _,m := range modes {
+		f, err = os.OpenFile(filename, m, 0777)
+		if (err == nil) {
+			mode = m
+			success = true
+			break;
+		}
+	}
+	if !success {
+		panic("Failed to open or create file")
+
 	} else {
 		result = new(file)
 		result.file = f
+		result.mode = mode
+		result.originalSize,_ = f.Seek(0,os.SEEK_END)
+		result.xrefLocation = getXrefLocation(f)
 		result.writer = bufio.NewWriter(f)
 		result.xref = containers.NewDynamicArray(1024)
 		result.trailerDictionary = NewDictionary()
@@ -110,7 +134,21 @@ func NewFile(filename string) File {
 	return result
 }
 
-// Public methods
+func getXrefLocation(f *os.File) (result [2]int64) {
+	end,_ := f.Seek(0,os.SEEK_END)
+	regexp,_ := regexp.Compile (`\s*FOE%%\s*(\d+)(\s*ferxtrats)`)
+	reader := bufio.NewReader(readers.NewReverseReader(f))
+	indexes := regexp.FindReaderSubmatchIndex(reader)
+
+	if (indexes != nil) {
+		s1,s2 := indexes[2],indexes[3]
+		fmt.Printf ("xrefloc=%d,%d\n", end-int64(s2),end-int64(s1))
+		result = [2]int64{end-int64(s2),end-int64(s1)}
+	}
+	return result
+	
+}
+
 func (f *file) SetCatalog(catalog *Indirect) {
 	f.catalogIndirect = catalog
 }
@@ -154,7 +192,7 @@ func (f *file) Seek(position int64, whence int) (int64, error) {
 }
 
 func (f *file) Tell() int64 {
-	position, _ := f.Seek(0, 1)
+	position, _ := f.Seek(0, os.SEEK_CUR)
 	return position
 }
 
@@ -241,7 +279,10 @@ func (f *file) createInitialXref() {
 }
 
 func (f *file) writePdfHeader() {
-	f.writer.WriteString("%PDF-1.4\n")
+	_,err := f.writer.WriteString("%PDF-1.4\n")
+	if (err != nil) {
+		panic("Unable to write PDF header")
+	}
 }
 
 func nextSegment(xref containers.Array, start uint) (nextStart, length uint) {
