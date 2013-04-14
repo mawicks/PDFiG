@@ -1,6 +1,7 @@
 package pdf
 
 import (
+	"fmt"
 	"io"
 	"errors"
 	"strconv" )
@@ -13,6 +14,7 @@ type Scanner interface {
 
 
 var parsingError = errors.New("Parsing Error")
+var expectingName = errors.New("Expecting Name")
 
 type Parser struct {
 }
@@ -47,26 +49,26 @@ func scanKeyword (scanner Scanner, b byte) (string,error) {
 	return string(buffer),err
 }
 
-func scanKeywordObject (scanner Scanner, b byte) (Object,error) {
+func scanKeywordObject (scanner Scanner, b byte) Object {
 	keyword,err := scanKeyword(scanner, b)
 	if err == nil {
 		switch (keyword) {
 		case "null":
-			return NewNull(),nil
+			return NewNull()
 		case "true":
-			return NewBoolean(true),nil
+			return NewBoolean(true)
 		case "false":
-			return NewBoolean(false),nil
+			return NewBoolean(false)
 		}
 	}
-	return nil,parsingError
+	panic(parsingError)
 }
 
-func scanNumeric (scanner Scanner, b byte) (Object,error) {
+func scanNumeric (scanner Scanner, b byte) Object {
 	var buffer[]byte = make([]byte, 0, 5)
 	var err error
 
-	atLeastOneDigit := false
+	hasAtLeastDigit := false
 	float := false
 
 	if (b == '+' || b == '-') {
@@ -76,7 +78,7 @@ func scanNumeric (scanner Scanner, b byte) (Object,error) {
 
 	for ; err==nil && IsDigit(b); b,err=scanner.ReadByte() {
 		buffer = append(buffer,b)
-		atLeastOneDigit = true
+		hasAtLeastDigit = true
 	}
 
 	if (err == nil && b == '.') {
@@ -87,26 +89,26 @@ func scanNumeric (scanner Scanner, b byte) (Object,error) {
 
 	for ; err==nil && IsDigit(b); b,err=scanner.ReadByte() {
 		buffer = append(buffer,b)
-		atLeastOneDigit = true
+		hasAtLeastDigit = true
 	}
 
 	if err==nil {
 		scanner.UnreadByte()
 	}
 
-	if err != nil && err!=io.EOF || !atLeastOneDigit {
-		return nil,parsingError
+	if err != nil && err!=io.EOF || !hasAtLeastDigit {
+		panic(parsingError)
 	}
 
 	if float {
 		number,_ := strconv.ParseFloat(string(buffer),32)
-		return NewFloatNumeric(float32(number)),nil
+		return NewFloatNumeric(float32(number))
 	}
 	number,_ := strconv.ParseInt(string(buffer),10,32)
-	return NewIntNumeric(int(number)),nil
+	return NewIntNumeric(int(number))
 }
 
-func scanName (scanner Scanner) (Object, error) {
+func scanName (scanner Scanner) Object {
 	var buffer[]byte = make([]byte, 0, 8)
 	b,err := scanner.ReadByte()
 	for ; err == nil && IsRegular(b); b,err=scanner.ReadByte() {
@@ -114,15 +116,11 @@ func scanName (scanner Scanner) (Object, error) {
 			buffer = append(buffer, b)
 		} else {
 			r := byte(0)
-			var digit byte
 			for i:=0; i<2; i++ {
 				if b,err = scanner.ReadByte(); err != nil {
-					return nil,parsingError
+					panic(parsingError)
 				}
-				if digit, err = ParseHexDigit(b); err != nil {
-					return nil,parsingError
-				}
-				r = 16*r + digit
+				r = 16*r + ParseHexDigit(b)
 			}
 			buffer = append(buffer, r)
 		}
@@ -131,29 +129,26 @@ func scanName (scanner Scanner) (Object, error) {
 		scanner.UnreadByte()
 	}
 	if err == nil || err == io.EOF {
-		return NewName(string(buffer)),nil
+		return NewName(string(buffer))
 	}
-	return nil,parsingError
+	panic (parsingError)
 }
 
-func scanEscape (scanner Scanner) (b byte,err error) {
+func scanEscape (scanner Scanner) (b byte) {
+	var err error
 	if b,err =scanner.ReadByte(); err != nil {
-		return b,err
+		panic (parsingError)
 	}
 
 	if IsOctalDigit(b) {
-		r,err := ParseOctalDigit(b)
-		var digit byte
+		r := ParseOctalDigit(b)
 		for i:=0; i<2; i++ {
 			if b,err=scanner.ReadByte(); err != nil {
-				return 0,parsingError
+				panic(parsingError)
 			}
-			if digit,err=ParseOctalDigit(b); err != nil {
-				return 0,parsingError
-			}
-			r = 8*r + digit
+			r = 8*r + ParseOctalDigit(b)
 		}
-		return r,nil
+		return r
 	}
 
 	switch b {
@@ -171,7 +166,7 @@ func scanEscape (scanner Scanner) (b byte,err error) {
 	return
 }
 
-func scanNormalString (scanner Scanner) (*String, error) {
+func scanNormalString (scanner Scanner) *String {
 	var openCount = 1
 	var buffer[]byte = make([]byte, 0, 128)
 	b,err :=scanner.ReadByte()
@@ -186,99 +181,86 @@ func scanNormalString (scanner Scanner) (*String, error) {
 				buffer = append(buffer, b)
 			}
 		case '\\':
-			v,err := scanEscape (scanner)
-			if err != nil {
-				return nil,err
-			}
+			v := scanEscape (scanner)
 			buffer = append(buffer, v)
 		default:
 			buffer = append(buffer, b)
 		}
 	}
 	if err != nil {
-		return nil,parsingError
+		panic (parsingError)
 	}
-	return NewBinaryString(buffer),nil
+	return NewBinaryString(buffer)
 }
 
-func scanHexString (scanner Scanner,b byte) (Object, error) {
+func scanHexString (scanner Scanner,b byte) *String {
 	var buffer[]byte = make([]byte, 0, 128)
 	var err error
 	for ; err == nil && b != '>'; b,err=scanner.ReadByte() {
 		scanner.UnreadByte()
-		var digit byte
 		r := byte(0)
 		for i:=0; i<2; i++ {
 			if b,err = scanner.ReadByte(); err != nil {
-				return nil,parsingError
+				panic(parsingError)
 			}
-			if digit, err = ParseHexDigit(b); err != nil {
-				return nil,parsingError
-			}
-			r = 16*r + digit
+			r = 16*r + ParseHexDigit(b)
 		}
 		buffer = append(buffer, r)
 	}
-	if err == nil {
-		return NewBinaryString(buffer),nil
+	if err != nil {
+		panic(parsingError)
 	}
-	return nil,parsingError
+	return NewBinaryString(buffer)
 }
 
-func scanArray (scanner Scanner) (*Array, error) {
+func scanArray (scanner Scanner) *Array {
 	var array *Array = NewArray()
 
 	b,err := nextNonWhiteByte(scanner)
 	for ; err == nil && b != ']'; b,err=scanner.ReadByte() {
 		scanner.UnreadByte()
-		nextElement,err := scanObject(scanner)
-		if err != nil {
-			return nil,err
-		}
+		nextElement := scanObject(scanner)
 		array.Add(nextElement)
 	}
 
 	if err != nil {
-		return nil,parsingError
+		panic(parsingError)
 	}
-	return array,nil
+	return array
 }
 
-func scanDictionary(scanner Scanner) (*Dictionary, error) {
+func scanDictionary(scanner Scanner) *Dictionary {
 	var d *Dictionary = NewDictionary()
 
 	b,err := nextNonWhiteByte(scanner)
 	for ; err == nil && b != '>'; b,err=scanner.ReadByte() {
 		scanner.UnreadByte()
-		var name *Name
-		object,err := scanObject(scanner)
-		if err != nil {
-			return nil,err
+		name := scanObject(scanner).(*Name)
+		if (name == nil) {
+			panic(expectingName)
 		}
-		name = object.(*Name)
-		object,err = scanObject(scanner)
-		if err != nil {
-			return nil,err
-		}
+		object := scanObject(scanner)
 		d.Add(name.String(),object)
 	}
 
 	if err != nil {
-		return nil,parsingError
+		panic(parsingError)
 	}
 
 	b,err = nextNonWhiteByte(scanner)
 	if (b != '>') {
-		return d,parsingError
+		panic(parsingError)
 	}
-	return d,nil
+	return d
 }
 
-func scanDictionaryOrStream (scanner Scanner) (Object, error) {
-	dictionary,err := scanDictionary(scanner)
+func scanDictionaryOrStream (scanner Scanner) Object {
+	var err error
+
+	dictionary := scanDictionary(scanner)
 
 	if err != nil {
-		return nil,err
+		panic(parsingError)
 	}
 
 	var b byte
@@ -299,10 +281,10 @@ func scanDictionaryOrStream (scanner Scanner) (Object, error) {
 			scanner.Read(contents)
 		}
 	}
-	return dictionary,nil
+	return dictionary
 }
 
-func scanObject(scanner Scanner) (Object,error) {
+func scanObject(scanner Scanner) Object {
 	b,err := nextNonWhiteByte(scanner)
 	if err == nil {
 		switch  {
@@ -325,9 +307,16 @@ func scanObject(scanner Scanner) (Object,error) {
 			return scanArray(scanner)
 		}
 	}
-	return nil,err
+	panic(parsingError)
 }
 
-func Scan(scanner Scanner) (Object,error) {
-	return scanObject (scanner)
+func Scan(scanner Scanner) (o Object,err error) {
+	defer func() {
+		if x := recover(); x!= nil {
+			fmt.Printf ("An error occurred while parsing: %v\n", x)
+			err = x.(error)
+		}
+	}()
+	o = scanObject(scanner)
+	return
 }
