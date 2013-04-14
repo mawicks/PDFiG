@@ -1,6 +1,8 @@
 package pdf_test
 
 import (
+	"testing"
+	"strings"
 	"github.com/mawicks/goPDF/pdf" )
 
 func ExampleFile() {
@@ -34,3 +36,17 @@ func ExampleFile() {
 
 	f.Close()
 }
+
+func TestPDFReadLine (t *testing.T) {
+	teststring := "abc\ndef\rghi\r\njkl\n\r\n\r123\n\r\r\n456\n\n789"
+	lines := [...]string{
+		"abc", "def", "ghi", "jkl", "", "123", "", "456", "", "789"}
+	reader := strings.NewReader(teststring)
+	for _,line := range lines {
+		s,err := pdf.ReadLine(reader)
+		if err != nil || s != line {
+			t.Errorf (`Got "%s"; expected "%s" (err=%v)`, s, line, err)
+		}
+	}
+}
+

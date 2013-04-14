@@ -3,6 +3,7 @@ package pdf
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"os"
 	"regexp"
 	"strconv"
@@ -99,6 +100,33 @@ func NewFile(filename string) File {
 	return result
 }
 
+// Read a line from a PDF file interpreting end-of-line characters
+// according to the PDF specification.  In contexts where you would be
+// likely to use pdf.ReadLine() are where the line consists of ASCII
+// characters.  Therefore ReadLine() returns a string rather than a
+// []byte.
+func ReadLine(r io.ByteScanner) (result string, err error) {
+	bytes := make([]byte, 0, 512)
+	var byte byte
+	for byte,err=r.ReadByte(); err==nil && byte!='\r' && byte!='\n'; byte,err=r.ReadByte() {
+		bytes = append(bytes, byte)
+	}
+	// Gobble up a second end-of-line character, if present.
+	// Don't gobble up two identical end-of-line-characters as
+	// logically they represent two separate lines.
+	if err==nil {
+		secondbyte,err2:=r.ReadByte()
+		if err2==nil && (secondbyte==byte || (secondbyte!='\r' && secondbyte!='\n')) {
+			r.UnreadByte()
+		}
+	}
+	if err==io.EOF {
+		err = nil
+	}
+	result = string(bytes)
+	return
+}
+
 // Parse the file for the file for the xref location, leaving the file position unchanged.
 func getXrefLocation(f *os.File) (result int64) {
 	save,_ := f.Seek(0,os.SEEK_END)
@@ -121,7 +149,15 @@ func getXrefLocation(f *os.File) (result int64) {
 }
 
 func getXref (f* os.File, location int64) {
-	
+	fmt.Printf ("in getXref()\n")
+	if _,err := f.Seek (location, os.SEEK_SET); err == nil {
+		r := bufio.NewReader(f)
+		if header,_ := ReadLine(r); header == "xref" {
+			fmt.Printf ("Found xref!\n")
+		} else {
+			fmt.Printf ("Didn't find xref\n")
+		}
+	}
 }
 
 func (f *file) SetCatalog(catalog *Indirect) {

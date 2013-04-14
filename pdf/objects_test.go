@@ -1,16 +1,18 @@
-package pdf
+package pdf_test
 
-import "testing"
-import "fmt"
+import (
+	"github.com/mawicks/goPDF/pdf"
+	"testing"
+	"fmt" )
 
 // First define some helper functions
-func toString(object Object, file ...File) string {
-	return (&ObjectStringDecorator{object}).String(file...)
+func toString(object pdf.Object, file ...pdf.File) string {
+	return (&pdf.ObjectStringDecorator{object}).String(file...)
 }
 
 // TestOneObject requires that the serialization of object matches
 // *one* of the elements of expect.
-func testOneObject(t *testing.T, d string, o Object, file File, expect ...string) {
+func testOneObject(t *testing.T, d string, o pdf.Object, file pdf.File, expect ...string) {
 	matched := false
 	s := toString(o, file)
 	for _, e := range expect {
@@ -30,13 +32,13 @@ func testOneObject(t *testing.T, d string, o Object, file File, expect ...string
 
 // Make sure ObjectStringDecorator delegates the Serialize method
 func TestObjectDecorator(t *testing.T) {
-	n := NewNull()
-	o := ObjectStringDecorator{n}
+	n := pdf.NewNull()
+	o := pdf.ObjectStringDecorator{n}
 	testOneObject(t, "ObjectStringDecorator", o, nil, "null")
 }
 
 func testOneTextStringAsHex(t *testing.T, testValue, expect string) {
-	s := NewTextString(testValue)
+	s := pdf.NewTextString(testValue)
 	s.SetHexOutput()
 	hex := toString(s)
 	if hex != expect {
@@ -45,7 +47,7 @@ func testOneTextStringAsHex(t *testing.T, testValue, expect string) {
 }
 
 func testOneBinaryStringAsHex(t *testing.T, testValue, expect string) {
-	s := NewBinaryString([]byte(testValue))
+	s := pdf.NewBinaryString([]byte(testValue))
 	s.SetHexOutput()
 	hex := toString(s)
 	if hex != expect {
@@ -54,7 +56,7 @@ func testOneBinaryStringAsHex(t *testing.T, testValue, expect string) {
 }
 
 func testOneTextStringAsAscii(t *testing.T, testValue, expect string) {
-	s := NewTextString(testValue)
+	s := pdf.NewTextString(testValue)
 	s.SetAsciiOutput()
 	output := toString(s)
 	if output != expect {
@@ -63,7 +65,7 @@ func testOneTextStringAsAscii(t *testing.T, testValue, expect string) {
 }
 
 func testOneBinaryStringAsAscii(t *testing.T, testValue, expect string) {
-	s := NewBinaryString([]byte(testValue))
+	s := pdf.NewBinaryString([]byte(testValue))
 	s.SetAsciiOutput()
 	output := toString(s)
 	if output != expect {
@@ -73,22 +75,22 @@ func testOneBinaryStringAsAscii(t *testing.T, testValue, expect string) {
 
 // Unit tests follow
 func TestNull(t *testing.T) {
-	testOneObject(t, "NewNull()", NewNull(), nil, "null")
+	testOneObject(t, "NewNull()", pdf.NewNull(), nil, "null")
 }
 
 func TestBoolean(t *testing.T) {
-	testOneObject(t, "NewBoolean(false)", NewBoolean(false), nil, "false")
-	testOneObject(t, "NewBoolean(true)", NewBoolean(true), nil, "true")
+	testOneObject(t, "NewBoolean(false)", pdf.NewBoolean(false), nil, "false")
+	testOneObject(t, "NewBoolean(true)", pdf.NewBoolean(true), nil, "true")
 }
 
 func TestNumeric(t *testing.T) {
-	testOneObject(t, "NewNumeric(1)", NewNumeric(1), nil, "1")
-	testOneObject(t, "NewNumeric(3.14159)", NewNumeric(3.14159), nil, "3.14159")
-	testOneObject(t, "NewNumeric(0.1)", NewNumeric(0.1), nil, "0.1")
-	testOneObject(t, "NewNumeric(2147483647)", NewNumeric(2147483647), nil, "2147483647")
-	testOneObject(t, "NewNumeric(-2147483648)", NewNumeric(-2147483648), nil, "-2147483648")
-	testOneObject(t, "NewNumeric(3.403e+38)", NewNumeric(3.403e+38), nil, "3.4028235e+38")
-	testOneObject(t, "NewNumeric(-3.403e+38)", NewNumeric(-3.403e+38), nil, "-3.4028235e+38")
+	testOneObject(t, "NewNumeric(1)", pdf.NewNumeric(1), nil, "1")
+	testOneObject(t, "NewNumeric(3.14159)", pdf.NewNumeric(3.14159), nil, "3.14159")
+	testOneObject(t, "NewNumeric(0.1)", pdf.NewNumeric(0.1), nil, "0.1")
+	testOneObject(t, "NewNumeric(2147483647)", pdf.NewNumeric(2147483647), nil, "2147483647")
+	testOneObject(t, "NewNumeric(-2147483648)", pdf.NewNumeric(-2147483648), nil, "-2147483648")
+	testOneObject(t, "NewNumeric(3.403e+38)", pdf.NewNumeric(3.403e+38), nil, "3.4028235e+38")
+	testOneObject(t, "NewNumeric(-3.403e+38)", pdf.NewNumeric(-3.403e+38), nil, "-3.4028235e+38")
 
 	// The PDF spec recommends setting anything below +/-
 	// 1.175e-38 to 0 in case a conforming reader uses 32 bit
@@ -99,25 +101,25 @@ func TestNumeric(t *testing.T) {
 	// numbers to zero is better than accepting a representable
 	// number with a loss of precision.
 
-	testOneObject(t, "NewNumeric(1.176e-38)", NewNumeric(1.176e-38), nil, "1.176e-38")
-	testOneObject(t, "NewNumeric(-1.176e-38)", NewNumeric(-1.176e-38), nil, "-1.176e-38")
-	testOneObject(t, "NewNumeric(1.175e-38)", NewNumeric(1.175e-38), nil, "0")
-	testOneObject(t, "NewNumeric(-1.175e-38)", NewNumeric(-1.175e-38), nil, "0")
+	testOneObject(t, "NewNumeric(1.176e-38)", pdf.NewNumeric(1.176e-38), nil, "1.176e-38")
+	testOneObject(t, "NewNumeric(-1.176e-38)", pdf.NewNumeric(-1.176e-38), nil, "-1.176e-38")
+	testOneObject(t, "NewNumeric(1.175e-38)", pdf.NewNumeric(1.175e-38), nil, "0")
+	testOneObject(t, "NewNumeric(-1.175e-38)", pdf.NewNumeric(-1.175e-38), nil, "0")
 }
 
 func TestName(t *testing.T) {
-	testOneObject(t, `NewName("foo")`, NewName("foo"), nil, "/foo")
-	testOneObject(t, `NewName("résumé")`, NewName("résumé"), nil, "/résumé")
-	testOneObject(t, `NewName("#foo")`, NewName("#foo"), nil, "/#23foo")
-	testOneObject(t, `NewName(" foo")`, NewName(" foo"), nil, "/#20foo")
-	testOneObject(t, `NewName("(foo)")`, NewName("(foo)"), nil, "/#28foo#29")
+	testOneObject(t, `NewName("foo")`, pdf.NewName("foo"), nil, "/foo")
+	testOneObject(t, `NewName("résumé")`, pdf.NewName("résumé"), nil, "/résumé")
+	testOneObject(t, `NewName("#foo")`, pdf.NewName("#foo"), nil, "/#23foo")
+	testOneObject(t, `NewName(" foo")`, pdf.NewName(" foo"), nil, "/#20foo")
+	testOneObject(t, `NewName("(foo)")`, pdf.NewName("(foo)"), nil, "/#28foo#29")
 }
 
 func TestString(t *testing.T) {
-	testOneObject(t, `NewTextString("foo")`, NewTextString("foo"), nil, "(foo)")
-	testOneObject(t, `NewTextString("()\\"`, NewTextString("()\\"), nil, "(\\(\\)\\\\)")
-	testOneObject(t, `NewTextString("[]")`, NewTextString("[]"), nil, "([])")
-	testOneObject(t, `NewTextString("")`, NewTextString(""), nil, "()")
+	testOneObject(t, `NewTextString("foo")`, pdf.NewTextString("foo"), nil, "(foo)")
+	testOneObject(t, `NewTextString("()\\"`, pdf.NewTextString("()\\"), nil, "(\\(\\)\\\\)")
+	testOneObject(t, `NewTextString("[]")`, pdf.NewTextString("[]"), nil, "([])")
+	testOneObject(t, `NewTextString("")`, pdf.NewTextString(""), nil, "()")
 	testOneTextStringAsHex(t, "[]", "<5B5D>")
 	testOneTextStringAsHex(t, "0123", "<30313233>")
 	testOneTextStringAsHex(t, "", "<>")
@@ -129,29 +131,29 @@ func TestString(t *testing.T) {
 }
 
 func TestArray(t *testing.T) {
-	a := NewArray()
+	a := pdf.NewArray()
 	testOneObject(t, "NewArray()", a, nil, "[]")
 
-	a.Add(NewNumeric(3.14))
+	a.Add(pdf.NewNumeric(3.14))
 	testOneObject(t, "NewArray() with NewNumeric(3.14)", a, nil, "[3.14]")
 
-	a.Add(NewNumeric(2.718))
+	a.Add(pdf.NewNumeric(2.718))
 	testOneObject(t, "Array test", a, nil, "[3.14 2.718]")
 
-	a.Add(NewName("f o o"))
+	a.Add(pdf.NewName("f o o"))
 	testOneObject(t, "Array test", a, nil, "[3.14 2.718 /f#20o#20o]")
 }
 
 func TestDictionary(t *testing.T) {
-	d := NewDictionary()
+	d := pdf.NewDictionary()
 	testOneObject(t, "NewDictionary", d, nil, "<<>>")
 
-	d.Add("fee", NewNumeric(3.14))
+	d.Add("fee", pdf.NewNumeric(3.14))
 	testOneObject(t, "Dictionary.Add() test", d, nil, "<</fee 3.14>>")
 
 	// Can't test beyond three entries very easily because the order of entries is not specified
 	// and the number of permutations makes it not worth the effort with our simple testOneObject() function.
-	d.Add("fi", NewNumeric(2.718))
+	d.Add("fi", pdf.NewNumeric(2.718))
 	testOneObject(t, "Dictionary.Remove() test", d, nil, "<</fee 3.14 /fi 2.718>>", "<</fi 2.718 /fee 3.14>>")
 
 	// Begin removing entries to test Remove() method.
@@ -163,19 +165,19 @@ func TestDictionary(t *testing.T) {
 }
 
 func TestStream(t *testing.T) {
-	s := NewStream()
+	s := pdf.NewStream()
 	fmt.Fprint(s, "foo")
 	testOneObject(t, "NewStream", s, nil, "<</Length 3>>\nstream\nfoo\nendstream")
 }
 
 func TestIndirect(t *testing.T) {
 	// Two objects
-	i1 := NewIndirect()
-	i2 := NewIndirect()
+	i1 := pdf.NewIndirect()
+	i2 := pdf.NewIndirect()
 
 	// Two files
-	f1 := NewMockFile(21, 37)
-	f2 := NewMockFile(42, 23)
+	f1 := pdf.NewMockFile(21, 37)
+	f2 := pdf.NewMockFile(42, 23)
 
 	// Test all four combinations
 	testOneObject(t, "Indirect test", i1, f1, "21 37 R")
@@ -192,5 +194,5 @@ func TestIndirect(t *testing.T) {
 }
 
 func TestRectangle(t *testing.T) {
-	testOneObject(t, "Rectangle test", NewRectangle(1, 2, 3, 4), nil, "[1 2 3 4]")
+	testOneObject(t, "Rectangle test", pdf.NewRectangle(1, 2, 3, 4), nil, "[1 2 3 4]")
 }

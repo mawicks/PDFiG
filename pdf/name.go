@@ -1,15 +1,5 @@
 package pdf
 
-func HexDigit(b byte) (result byte) {
-	switch {
-	case b < 10:
-		result = b + '0'
-	default:
-		result = (b - 10) + 'A'
-	}
-	return result
-}
-
 type Name struct {
 	name string
 }

@@ -6,10 +6,17 @@ import "strconv"
 // PDF "Numeric" object
 // Implements:
 //	pdf.Object
+type Numeric interface {
+	Value() interface{}
+	Object
+}
+
+// FloatNumeric implements Numeric
 type FloatNumeric struct {
 	value float32
 }
 
+// IntNumeric implements Numeric
 type IntNumeric struct {
 	value int
 }
@@ -18,8 +25,16 @@ func (n *FloatNumeric) Serialize(w Writer, file ...File) {
 	w.WriteString(strconv.FormatFloat(float64(n.value), 'g', -1, 32))
 }
 
+func (n *FloatNumeric) Value() interface{} {
+	return n.value
+}
+
 func (n *IntNumeric) Serialize(w Writer, file ...File) {
 	w.WriteString(strconv.FormatInt(int64(n.value), 10))
+}
+
+func (n *IntNumeric) Value() interface{} {
+	return n.value
 }
 
 func adjustFloatRange(v float64) (float32Value float32) {

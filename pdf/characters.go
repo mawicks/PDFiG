@@ -1,5 +1,7 @@
 package pdf
 
+import "errors"
+
 const (
 	regularCharacter = iota
 	whiteSpaceCharacter
@@ -40,3 +42,53 @@ func IsDelimiter(b byte) bool {
 func IsRegular(b byte) bool {
 	return characterTypes[b] == regularCharacter
 }
+
+func IsAlpha(b byte) bool {
+	return b>='a' && b<='z' ||
+		b>='A' && b<='Z'
+}
+
+func IsDigit(b byte) bool {
+	return b>='0' && b<='9'
+}
+
+func IsOctalDigit(b byte) bool {
+	return b>='0' && b<='7'
+}
+
+func IsHexDigit(b byte) bool {
+	return b>='0' && b<='9' ||
+		b>='a' && b<='f' ||
+		b>='A' && b<='F'
+}
+
+func HexDigit(b byte) (result byte) {
+	switch {
+	case b < 10:
+		result = b + '0'
+	default:
+		result = (b - 10) + 'A'
+	}
+	return result
+}
+
+func ParseHexDigit(b byte) (byte,error) {
+	switch {
+	case b>='0' && b<='9':
+		return b-'0',nil
+	case b>='a' && b<='f':
+		return b-'a'+10,nil
+	case b>='A' && b<='F':
+		return b-'A'+10,nil
+	}
+	return 0,errors.New("Invalid character")
+}
+
+func ParseOctalDigit(b byte) (byte,error) {
+	switch {
+	case b>='0' && b<='7':
+		return b-'0',nil
+	}
+	return 0,errors.New("Invalid character")
+}
+
