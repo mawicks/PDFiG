@@ -62,14 +62,17 @@ func IsHexDigit(b byte) bool {
 		b>='A' && b<='F'
 }
 
+var invalidCharacter = errors.New("Invalid character")
+var rangeError = errors.New("Range error")
+
 func HexDigit(b byte) (result byte) {
 	switch {
 	case b < 10:
-		result = b + '0'
-	default:
-		result = (b - 10) + 'A'
+		return  b + '0'
+	case b < 16:
+		return (b - 10) + 'A'
 	}
-	return result
+	panic(rangeError)
 }
 
 func ParseHexDigit(b byte) (byte,error) {
@@ -81,7 +84,7 @@ func ParseHexDigit(b byte) (byte,error) {
 	case b>='A' && b<='F':
 		return b-'A'+10,nil
 	}
-	return 0,errors.New("Invalid character")
+	panic (invalidCharacter)
 }
 
 func ParseOctalDigit(b byte) (byte,error) {
@@ -89,6 +92,6 @@ func ParseOctalDigit(b byte) (byte,error) {
 	case b>='0' && b<='7':
 		return b-'0',nil
 	}
-	return 0,errors.New("Invalid character")
+	panic (invalidCharacter)
 }
 

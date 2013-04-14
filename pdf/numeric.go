@@ -25,7 +25,7 @@ func (n *FloatNumeric) Serialize(w Writer, file ...File) {
 	w.WriteString(strconv.FormatFloat(float64(n.value), 'g', -1, 32))
 }
 
-func (n *FloatNumeric) Value() interface{} {
+func (n *FloatNumeric) Value() float32 {
 	return n.value
 }
 
@@ -33,7 +33,7 @@ func (n *IntNumeric) Serialize(w Writer, file ...File) {
 	w.WriteString(strconv.FormatInt(int64(n.value), 10))
 }
 
-func (n *IntNumeric) Value() interface{} {
+func (n *IntNumeric) Value() int {
 	return n.value
 }
 

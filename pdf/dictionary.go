@@ -15,6 +15,10 @@ func (d *Dictionary) Add(key string, o Object) {
 	d.dictionary[key] = o
 }
 
+func (d *Dictionary) Get(key string) Object {
+	return d.dictionary[key]
+}
+
 func (d *Dictionary) Remove(key string) {
 	delete(d.dictionary, key)
 }
