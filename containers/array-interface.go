@@ -1,6 +1,3 @@
-/*
-	Package of containers.
-*/
 package containers
 
 type Array interface {

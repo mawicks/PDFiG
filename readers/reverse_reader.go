@@ -3,10 +3,14 @@ package readers
 import "io"
 import "os"
 
+// ReverseReader implements an io.Reader interface on an underlying
+// io.ReadSeeker to read it backwards.
 type ReverseReader struct {
 	readSeeker io.ReadSeeker
 }
 
+// NewReverseReader() returns an implementation of the io.Reader
+// interface that reads the passed io.ReadSeeker backwards.
 func NewReverseReader (readSeeker io.ReadSeeker) io.Reader {
 	readSeeker.Seek(0,os.SEEK_END)
 	return &ReverseReader{readSeeker}

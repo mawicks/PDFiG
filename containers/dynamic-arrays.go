@@ -1,17 +1,12 @@
-/*
-	Package of containers.
-*/
 package containers
 
-// DynamicArray implements the containters.Array interface.
-
+// DynamicArray implements the containers.Array interface.
 // Resizing a DynamicArray does not involve copying.  DynamicArray is
-// a sparse array.  Portions of the array are allocated chunks of the
-// "clusterSize" parameter passed to the constructor.  The larger the
+// also a sparse array.  Portions of the array are allocated chunks of
+// the "clusterSize" parameter passed to the constructor.  The larger the
 // cluster size, the faster the access.  Currently, shrinking is not
 // very efficient for large cluster sizes; therefore, PopBack() also
 // is not very efficient.
-
 type DynamicArray struct {
 	// Cluster size
 	clusterSize uint
@@ -30,6 +25,8 @@ type DynamicArray struct {
 	tree []interface{}
 }
 
+// NewDynamicArray() returns a containers.DynamicArray implementation of
+// the containers.Array interface.
 func NewDynamicArray (clusterSize uint) Array {
 	if clusterSize <= 1 {
 		panic ("NewDynamicArray(): clusterSize too small")
