@@ -13,17 +13,17 @@ type Scanner interface {
 //	Peek(int) ([]byte, error)
 }
 
-var invalidKeyword = errors.New("Invalid keyword")
-var expectingDigit = errors.New("Expecting digit")
-var parsingError = errors.New("Parsing error")
-var unknownIOError = errors.New("Unknown I/O error")
-var expectingName = errors.New("Expecting PDF name")
-var unexpectedEnd = errors.New("Unexpected end of input")
-var unexpectedInput = errors.New("Unexpected character or end of input")
-var expectedGreaterThan = errors.New(`Expected ">"`)
-
-type Parser struct {
-}
+var (
+	invalidKeyword = errors.New(`Invalid keyword`)
+	expectingDigit = errors.New(`Expecting digit`)
+	parsingError = errors.New(`Parsing error`)
+	unknownIOError = errors.New(`Unknown I/O error`)
+	expectingName = errors.New(`Expecting PDF name`)
+	unexpectedEnd = errors.New(`Unexpected end of input`)
+	unexpectedInput = errors.New(`Unexpected character or end of input`)
+	expectedGreaterThan = errors.New(`Expected ">"`)
+	expectingHexDigit = errors.New(`Expecting hex digit`)
+	expectingOctalDigit = errors.New(`Expecting octal digit`) )
 
 // Skip white space and return the byte following the white space or error.
 // If err is non-nil, the value of b is undefined.
@@ -74,7 +74,7 @@ func scanNumeric (scanner Scanner, b byte) Object {
 	var buffer[]byte = make([]byte, 0, 5)
 	var err error
 
-	hasAtLeastDigit := false
+	hasAtLeastOneDigit := false
 	float := false
 
 	if (b == '+' || b == '-') {
@@ -83,19 +83,19 @@ func scanNumeric (scanner Scanner, b byte) Object {
 	}
 
 	for ; err==nil && IsDigit(b); b,err=scanner.ReadByte() {
+		hasAtLeastOneDigit = true
 		buffer = append(buffer,b)
-		hasAtLeastDigit = true
 	}
 
 	if (err == nil && b == '.') {
+		float = true
 		buffer = append(buffer,b)
 		b,err=scanner.ReadByte()
-		float = true
 	}
 
 	for ; err==nil && IsDigit(b); b,err=scanner.ReadByte() {
+		hasAtLeastOneDigit = true
 		buffer = append(buffer,b)
-		hasAtLeastDigit = true
 	}
 
 	if err==nil {
@@ -106,7 +106,7 @@ func scanNumeric (scanner Scanner, b byte) Object {
 		panic(unknownIOError)
 	}
 
-	if !hasAtLeastDigit {
+	if !hasAtLeastOneDigit {
 		panic(expectingDigit)
 	}
 
@@ -118,6 +118,22 @@ func scanNumeric (scanner Scanner, b byte) Object {
 	return NewIntNumeric(int(number))
 }
 
+func scanDigitWithBase (scanner Scanner, parseDigit func (byte) byte) byte {
+	b,err := scanner.ReadByte()
+	if err != nil {
+		panic(unexpectedEnd)
+	}
+	return parseDigit(b)
+}
+
+func scanHexDigit (scanner Scanner) byte {
+	return scanDigitWithBase (scanner, ParseHexDigit)
+}
+
+func scanOctalDigit (scanner Scanner) byte {
+	return scanDigitWithBase (scanner, ParseOctalDigit)
+}
+
 func scanName (scanner Scanner) Object {
 	var buffer[]byte = make([]byte, 0, 8)
 	b,err := scanner.ReadByte()
@@ -127,10 +143,7 @@ func scanName (scanner Scanner) Object {
 		} else {
 			r := byte(0)
 			for i:=0; i<2; i++ {
-				if b,err = scanner.ReadByte(); err != nil {
-					panic(unexpectedEnd)
-				}
-				r = 16*r + ParseHexDigit(b)
+				r = r<<4 + scanHexDigit(scanner)
 			}
 			buffer = append(buffer, r)
 		}
@@ -153,10 +166,7 @@ func scanEscape (scanner Scanner) (b byte) {
 	if IsOctalDigit(b) {
 		r := ParseOctalDigit(b)
 		for i:=0; i<2; i++ {
-			if b,err=scanner.ReadByte(); err != nil {
-				panic(unexpectedEnd)
-			}
-			r = 8*r + ParseOctalDigit(b)
+			r = r<<3 + scanOctalDigit(scanner)
 		}
 		return r
 	}
@@ -210,10 +220,7 @@ func scanHexString (scanner Scanner,b byte) *String {
 		scanner.UnreadByte()
 		r := byte(0)
 		for i:=0; i<2; i++ {
-			if b,err = scanner.ReadByte(); err != nil {
-				panic(unexpectedEnd)
-			}
-			r = 16*r + ParseHexDigit(b)
+			r = r<<4 + scanHexDigit(scanner)
 		}
 		buffer = append(buffer, r)
 	}
@@ -274,18 +281,28 @@ func scanDictionaryOrStream (scanner Scanner) Object {
 	scanner.UnreadByte()
 
 	var s string
-	// Could be "stream" line.
+	// Could be a "stream" line.
 	if b=='s' {
 		s,err = ReadLine (scanner)
 	}
 
-	if (err == nil && s == "stream") {
+	var stream Object
+	if err == nil && s == "stream" {
 		v := dictionary.Get("Length").(*IntNumeric)
 		if v != nil {
 			length := v.Value()
 			contents := make([]byte, length)
 			scanner.Read(contents)
+			nextNonWhiteByte(scanner)
+			scanner.UnreadByte()
+			s,err = ReadLine(scanner)
+			if err == nil && s == "endstream" {
+				stream = NewStreamFromContents (dictionary,contents)
+			}
 		}
+	}
+	if stream != nil {
+		return stream
 	}
 	return dictionary
 }
@@ -316,24 +333,47 @@ func scanObject(scanner Scanner) Object {
 	panic(unexpectedInput)
 }
 
-func errorContext(historyReader *readers.HistoryReader) string {
-	context := make([]byte,0,1024)
-	history := historyReader.GetHistory()
-	for i:=0; i<len(history); i++ {
-		context = append(context, stringAsciiEscapeByte(history[i])...)
+func AsciiFromBytes (b []byte) string {
+	escaped := make([]byte,0,len(b))
+	for i:=0; i<len(b); i++ {
+		escaped = append(escaped, generalAsciiEscapeByte(b[i])...)
 	}
-	return string(context)
+	return string(escaped)
 }
 
 func Scan(scanner Scanner) (o Object,err error) {
 	historyReader := readers.NewHistoryReader(scanner,64)
+
 	defer func() {
 		if x := recover(); x!= nil {
 			fmt.Printf ("Parsing error:  %v\n", x)
-			fmt.Printf ("Input leading to the error:\n\t...%s\n", errorContext(historyReader))
+			fmt.Printf ("Input leading to the error:\n\t...%s\n", AsciiFromBytes(historyReader.GetHistory()))
 			err = x.(error)
 		}
 	} ()
+
 	o = scanObject(historyReader)
+
 	return
 }
+
+func ParseHexDigit(b byte) (byte) {
+	switch {
+	case b>='0' && b<='9':
+		return b-'0'
+	case b>='a' && b<='f':
+		return b-'a'+10
+	case b>='A' && b<='F':
+		return b-'A'+10
+	}
+	panic (expectingHexDigit)
+}
+
+func ParseOctalDigit(b byte) (byte) {
+	switch {
+	case b>='0' && b<='7':
+		return b-'0'
+	}
+	panic (expectingOctalDigit)
+}
+

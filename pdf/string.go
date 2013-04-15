@@ -83,6 +83,36 @@ func stringAsciiEscapeByte(b byte) (result []byte) {
 	return result
 }
 
+func generalAsciiEscapeByte(b byte) (result []byte) {
+	switch b {
+	case '\\':
+		result = []byte{'\\', b}
+	default:
+		if b < 128 && unicode.IsPrint(rune(b)) {
+			result = []byte{b}
+		} else {
+			var buffer bytes.Buffer
+			buffer.WriteByte('\\')
+			switch b {
+			case '\n':
+				buffer.WriteByte('n')
+			case '\r':
+				buffer.WriteByte('r')
+			case '\t':
+				buffer.WriteByte('t')
+			case '\b':
+				buffer.WriteByte('b')
+			case '\f':
+				buffer.WriteByte('f')
+			default:
+				fmt.Fprintf(&buffer, "%03o", b)
+			}
+			result = buffer.Bytes()
+		}
+	}
+	return result
+}
+
 func asciiSerializer(s *String, w Writer) {
 	w.WriteByte('(')
 	for _, b := range []byte(s.value) {

@@ -105,11 +105,18 @@ func TestParser (t *testing.T) {
 	}
 	testOneObject (t, "-54321", o, nil, "-54321")
 
-
 	o,err = pdf.Scan (reader)
 	if (err == nil) {
 		t.Error(`Scan() of "/a#" did NOT return error:`, err)
 	}
+
+	// Dictionary test
+	reader = strings.NewReader("<</Length 5>>\nstream\nabcde\nendstream")
+	o,err = pdf.Scan (reader)
+	if (err != nil) {
+		t.Error(`Scan() of "<<...>>" returned error:`, err)
+	}
+	testOneObject (t, "<<...>>", o, nil, "<</Length 5>>\nstream\nabcde\nendstream")
 
 	reader = strings.NewReader("falxe ")
 	o,err = pdf.Scan (reader)

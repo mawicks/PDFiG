@@ -15,6 +15,10 @@ func NewStream() *Stream {
 	return &Stream{NewDictionary(), bytes.Buffer{}}
 }
 
+func NewStreamFromContents(dictionary *Dictionary,b []byte) *Stream {
+	return &Stream{dictionary,*bytes.NewBuffer(b)}
+}
+
 func (s *Stream) Add(key string, o Object) {
 	s.dictionary.Add(key, o)
 }

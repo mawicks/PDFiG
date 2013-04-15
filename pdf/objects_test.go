@@ -2,6 +2,7 @@ package pdf_test
 
 import (
 	"github.com/mawicks/goPDF/pdf"
+	"strconv"
 	"testing"
 	"fmt" )
 
@@ -23,9 +24,9 @@ func testOneObject(t *testing.T, d string, o pdf.Object, file pdf.File, expect .
 	}
 	if !matched {
 		if len(expect) == 1 {
-			t.Errorf(`%s produced "%s"; expected "%s"`, d, s, expect[0])
+			t.Errorf(`%s produced %s; expected %s`, d, strconv.Quote(s), strconv.Quote(expect[0]))
 		} else {
-			t.Errorf(`%s produced "%s"; expected *one* element of %v`, d, s, expect)
+			t.Errorf(`%s produced %s; expected *one* element of %v`, d, strconv.Quote(s), expect)
 		}
 	}
 }
