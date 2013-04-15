@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"errors"
+	"github.com/mawicks/goPDF/readers"
 	"strconv" )
 
 type Scanner interface {
@@ -12,9 +13,14 @@ type Scanner interface {
 //	Peek(int) ([]byte, error)
 }
 
-
-var parsingError = errors.New("Parsing Error")
-var expectingName = errors.New("Expecting Name")
+var invalidKeyword = errors.New("Invalid keyword")
+var expectingDigit = errors.New("Expecting digit")
+var parsingError = errors.New("Parsing error")
+var unknownIOError = errors.New("Unknown I/O error")
+var expectingName = errors.New("Expecting PDF name")
+var unexpectedEnd = errors.New("Unexpected end of input")
+var unexpectedInput = errors.New("Unexpected character or end of input")
+var expectedGreaterThan = errors.New(`Expected ">"`)
 
 type Parser struct {
 }
@@ -61,7 +67,7 @@ func scanKeywordObject (scanner Scanner, b byte) Object {
 			return NewBoolean(false)
 		}
 	}
-	panic(parsingError)
+	panic(invalidKeyword)
 }
 
 func scanNumeric (scanner Scanner, b byte) Object {
@@ -96,8 +102,12 @@ func scanNumeric (scanner Scanner, b byte) Object {
 		scanner.UnreadByte()
 	}
 
-	if err != nil && err!=io.EOF || !hasAtLeastDigit {
-		panic(parsingError)
+	if err != nil && err!=io.EOF {
+		panic(unknownIOError)
+	}
+
+	if !hasAtLeastDigit {
+		panic(expectingDigit)
 	}
 
 	if float {
@@ -118,7 +128,7 @@ func scanName (scanner Scanner) Object {
 			r := byte(0)
 			for i:=0; i<2; i++ {
 				if b,err = scanner.ReadByte(); err != nil {
-					panic(parsingError)
+					panic(unexpectedEnd)
 				}
 				r = 16*r + ParseHexDigit(b)
 			}
@@ -131,20 +141,20 @@ func scanName (scanner Scanner) Object {
 	if err == nil || err == io.EOF {
 		return NewName(string(buffer))
 	}
-	panic (parsingError)
+	panic (unknownIOError)
 }
 
 func scanEscape (scanner Scanner) (b byte) {
 	var err error
 	if b,err =scanner.ReadByte(); err != nil {
-		panic (parsingError)
+		panic (unexpectedEnd)
 	}
 
 	if IsOctalDigit(b) {
 		r := ParseOctalDigit(b)
 		for i:=0; i<2; i++ {
 			if b,err=scanner.ReadByte(); err != nil {
-				panic(parsingError)
+				panic(unexpectedEnd)
 			}
 			r = 8*r + ParseOctalDigit(b)
 		}
@@ -188,7 +198,7 @@ func scanNormalString (scanner Scanner) *String {
 		}
 	}
 	if err != nil {
-		panic (parsingError)
+		panic (unexpectedEnd)
 	}
 	return NewBinaryString(buffer)
 }
@@ -201,14 +211,14 @@ func scanHexString (scanner Scanner,b byte) *String {
 		r := byte(0)
 		for i:=0; i<2; i++ {
 			if b,err = scanner.ReadByte(); err != nil {
-				panic(parsingError)
+				panic(unexpectedEnd)
 			}
 			r = 16*r + ParseHexDigit(b)
 		}
 		buffer = append(buffer, r)
 	}
 	if err != nil {
-		panic(parsingError)
+		panic(unexpectedEnd)
 	}
 	return NewBinaryString(buffer)
 }
@@ -224,7 +234,7 @@ func scanArray (scanner Scanner) *Array {
 	}
 
 	if err != nil {
-		panic(parsingError)
+		panic(unexpectedEnd)
 	}
 	return array
 }
@@ -244,12 +254,12 @@ func scanDictionary(scanner Scanner) *Dictionary {
 	}
 
 	if err != nil {
-		panic(parsingError)
+		panic(unexpectedEnd)
 	}
 
 	b,err = nextNonWhiteByte(scanner)
 	if (b != '>') {
-		panic(parsingError)
+		panic(expectedGreaterThan)
 	}
 	return d
 }
@@ -258,10 +268,6 @@ func scanDictionaryOrStream (scanner Scanner) Object {
 	var err error
 
 	dictionary := scanDictionary(scanner)
-
-	if err != nil {
-		panic(parsingError)
-	}
 
 	var b byte
 	b,err = nextNonWhiteByte(scanner)
@@ -307,16 +313,27 @@ func scanObject(scanner Scanner) Object {
 			return scanArray(scanner)
 		}
 	}
-	panic(parsingError)
+	panic(unexpectedInput)
+}
+
+func errorContext(historyReader *readers.HistoryReader) string {
+	context := make([]byte,0,1024)
+	history := historyReader.GetHistory()
+	for i:=0; i<len(history); i++ {
+		context = append(context, stringAsciiEscapeByte(history[i])...)
+	}
+	return string(context)
 }
 
 func Scan(scanner Scanner) (o Object,err error) {
+	historyReader := readers.NewHistoryReader(scanner,64)
 	defer func() {
 		if x := recover(); x!= nil {
-			fmt.Printf ("An error occurred while parsing: %v\n", x)
+			fmt.Printf ("Parsing error:  %v\n", x)
+			fmt.Printf ("Input leading to the error:\n\t...%s\n", errorContext(historyReader))
 			err = x.(error)
 		}
-	}()
-	o = scanObject(scanner)
+	} ()
+	o = scanObject(historyReader)
 	return
 }
