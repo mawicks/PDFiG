@@ -1,6 +1,6 @@
 package pdf
 
-import "github.com/mawicks/pdftig/containers"
+import "github.com/mawicks/pdfdig/containers"
 
 type Array struct {
 	array containers.Array

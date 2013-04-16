@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/mawicks/pdftig/pdf" )
+	"github.com/mawicks/pdfdig/pdf" )
 
 // make_file() produces a file using low-level methods of the pdf.File
 // type.  It does not work at the document layer and it does *not*

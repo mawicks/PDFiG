@@ -1,4 +1,4 @@
-PDF Toolkit In Go (pdftig)
+PDF Documents In Go (pdfdig)
 ==========================
 
 Generate and manipulate PDF files using the Go programming language

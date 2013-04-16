@@ -3,7 +3,7 @@ package pdf
 import (
 	"io"
 	"errors"
-	"github.com/mawicks/pdftig/readers"
+	"github.com/mawicks/pdfdig/readers"
 	"strconv" )
 
 type Scanner interface {
@@ -11,6 +11,16 @@ type Scanner interface {
 	io.Reader
 //	Peek(int) ([]byte, error)
 }
+
+type Parser struct {
+	historyReader *readers.HistoryReader
+	queuedObject Object
+}
+
+func NewParser(scanner Scanner) *Parser {
+	return &Parser{readers.NewHistoryReader(scanner,64),nil}
+}
+
 
 var (
 	invalidKeyword = errors.New(`Invalid keyword`)
@@ -117,7 +127,40 @@ func scanNumeric (scanner Scanner, b byte) Object {
 	return NewIntNumeric(int(number))
 }
 
-func scanDigitWithBase (scanner Scanner, parseDigit func (byte) byte) byte {
+func (p *Parser) scanNumericOrIndirectRef(b byte, file... File) Object {
+	n1 := scanNumeric(p.historyReader, b)
+
+	if _,ok := n1.(*IntNumeric); !ok {
+		return n1
+	}
+
+	b,err := nextNonWhiteByte(p.historyReader)
+	if err != nil && !IsDigit(b) {
+		p.historyReader.UnreadByte()
+		return n1
+	}
+
+	n2 := scanNumeric (p.historyReader, b)
+	if _,ok := n2.(*IntNumeric); !ok {
+		p.queuedObject = n2
+		return n1
+	}
+
+	b,err = nextNonWhiteByte(p.historyReader)
+	if b != 'R' {
+		p.historyReader.UnreadByte()
+		p.queuedObject = n2
+		return n1
+	} else {
+		number := uint32(n1.(*IntNumeric).Value())
+		generation := uint16(n2.(*IntNumeric).Value())
+		return newIndirectFromParse(ObjectNumber{number,generation}, file[0])
+	}
+	return n1
+}
+
+
+func scanDigitWithBase(scanner Scanner, parseDigit func (byte) byte) byte {
 	b,err := scanner.ReadByte()
 	if err != nil {
 		panic(unexpectedEnd)
@@ -227,13 +270,13 @@ func scanHexString (scanner Scanner,b byte) *String {
 	return NewBinaryString(buffer)
 }
 
-func scanArray (scanner Scanner) *Array {
+func (p *Parser) scanArray (file... File) *Array {
 	var array *Array = NewArray()
 
-	b,err := nextNonWhiteByte(scanner)
-	for ; err == nil && b != ']'; b,err=scanner.ReadByte() {
-		scanner.UnreadByte()
-		nextElement := scanObject(scanner)
+	b,err := nextNonWhiteByte(p.historyReader)
+	for ; err == nil && b != ']'; b,err=p.historyReader.ReadByte() {
+		p.historyReader.UnreadByte()
+		nextElement := p.scanObject(file...)
 		array.Add(nextElement)
 	}
 
@@ -243,17 +286,17 @@ func scanArray (scanner Scanner) *Array {
 	return array
 }
 
-func scanDictionary(scanner Scanner) *Dictionary {
+func (p *Parser) scanDictionary(file... File) *Dictionary {
 	var d *Dictionary = NewDictionary()
 
-	b,err := nextNonWhiteByte(scanner)
-	for ; err == nil && b != '>'; b,err=scanner.ReadByte() {
-		scanner.UnreadByte()
-		name := scanObject(scanner).(*Name)
-		if (name == nil) {
+	b,err := nextNonWhiteByte(p.historyReader)
+	for ; err == nil && b != '>'; b,err=p.historyReader.ReadByte() {
+		p.historyReader.UnreadByte()
+		name,ok := p.scanObject().(*Name)
+		if (!ok) {
 			panic(expectingName)
 		}
-		object := scanObject(scanner)
+		object := p.scanObject(file...)
 		d.Add(name.String(),object)
 	}
 
@@ -261,38 +304,38 @@ func scanDictionary(scanner Scanner) *Dictionary {
 		panic(unexpectedEnd)
 	}
 
-	b,err = nextNonWhiteByte(scanner)
+	b,err = nextNonWhiteByte(p.historyReader)
 	if (b != '>') {
 		panic(expectedGreaterThan)
 	}
 	return d
 }
 
-func scanDictionaryOrStream (scanner Scanner) Object {
+func (p *Parser) scanDictionaryOrStream (file... File) Object {
 	var err error
 
-	dictionary := scanDictionary(scanner)
+	dictionary := p.scanDictionary(file...)
 
 	var b byte
-	b,err = nextNonWhiteByte(scanner)
-	scanner.UnreadByte()
+	b,err = nextNonWhiteByte(p.historyReader)
+	p.historyReader.UnreadByte()
 
 	var s string
 	// Could be a "stream" line.
 	if b=='s' {
-		s,err = ReadLine (scanner)
+		s,err = ReadLine (p.historyReader)
 	}
 
 	var stream Object
 	if err == nil && s == "stream" {
-		v := dictionary.Get("Length").(*IntNumeric)
-		if v != nil {
+		v,ok := dictionary.Get("Length").(*IntNumeric)
+		if ok {
 			length := v.Value()
 			contents := make([]byte, length)
-			scanner.Read(contents)
-			nextNonWhiteByte(scanner)
-			scanner.UnreadByte()
-			s,err = ReadLine(scanner)
+			p.historyReader.Read(contents)
+			nextNonWhiteByte(p.historyReader)
+			p.historyReader.UnreadByte()
+			s,err = ReadLine(p.historyReader)
 			if err == nil && s == "endstream" {
 				stream = NewStreamFromContents (dictionary,contents)
 			}
@@ -304,46 +347,58 @@ func scanDictionaryOrStream (scanner Scanner) Object {
 	return dictionary
 }
 
-func scanObject(scanner Scanner) Object {
-	b,err := nextNonWhiteByte(scanner)
+func (p *Parser) scanObject(file ...File) Object {
+	// If there's a non-integer object left over from previous
+	// call, go ahead and return it.
+	if p.queuedObject != nil {
+		if _,ok := p.queuedObject.(*IntNumeric); !ok {
+			p.queuedObject = nil
+			return p.queuedObject
+		}
+	}
+	b,err := nextNonWhiteByte(p.historyReader)
 	if err == nil {
 		switch  {
 		case IsAlpha(b):
-			return scanKeywordObject(scanner, b)
-		case IsDigit(b),b=='.',b=='+',b=='-':
-			return scanNumeric(scanner, b)
+			return scanKeywordObject(p.historyReader, b)
+		case IsDigit(b):
+			return p.scanNumericOrIndirectRef(b, file...)
+		case b=='.',b=='+',b=='-':
+			return scanNumeric(p.historyReader, b)
 		case b =='/':
-			return scanName (scanner)
+			return scanName (p.historyReader)
 		case b=='(':
-			return scanNormalString(scanner)
+			return scanNormalString(p.historyReader)
 		case b=='<':
-			b,err = nextNonWhiteByte(scanner)
+			b,err = nextNonWhiteByte(p.historyReader)
 			if b == '<' {
-				return scanDictionaryOrStream(scanner)
+				return p.scanDictionaryOrStream(file...)
 			} else {
-				return scanHexString(scanner, b)
+				return scanHexString(p.historyReader, b)
 			}
 		case b=='[':
-			return scanArray(scanner)
+			return p.scanArray(file...)
 		}
 	}
 	panic(unexpectedInput)
 }
 
-// Scan() uses Scanner to parse an arbitrary object.  If successful,
-// the object is returned.  If not, err is set and context contains the
-// input bytes that preceeded the error.
-func Scan(scanner Scanner) (o Object,err error,context []byte) {
-	historyReader := readers.NewHistoryReader(scanner,64)
-
+// Scan() parses an arbitrary object.  If successful, the object is
+// returned.  If not, err is set and context contains the input bytes
+// that preceeded the error.  The optional File argument, of which
+// there should be no more than one, indicates the pdf.File to use to
+// resolve indirect object references (e.g., "25 0 R").  Typically
+// Scanner will be the pdf.File's underlying os.File, but this is not
+// strictly necessary.  If no File is supplied, the input stream may
+// not contain any indirect object references.
+func (p *Parser) Scan(file... File) (o Object,err error) {
 	defer func() {
 		if x := recover(); x!= nil {
-			context = historyReader.GetHistory()
-			err = x.(error)
+			err,_ = x.(error)
 		}
 	} ()
 
-	o = scanObject(historyReader)
+	o = p.scanObject(file...)
 
 	return
 }

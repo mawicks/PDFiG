@@ -36,7 +36,7 @@ func NewDocument(filename string) *Document {
 
 	d.DocumentInfo = NewDocumentInfo()
 	// Set a default producer field.  Clients calls to SetProducer() override this.
-	d.SetProducer("pdftig")
+	d.SetProducer("pdfdig")
 
 	return d
 }

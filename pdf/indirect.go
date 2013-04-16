@@ -115,6 +115,14 @@ func NewIndirect(file... File) *Indirect {
 	return result
 }
 
+func newIndirectFromParse(objectNumber ObjectNumber, file File) *Indirect {
+	result := new(Indirect)
+	result.fileBindings = make(map[File]ObjectNumber,5)
+	result.isFinal = true
+	result.fileBindings[file] = objectNumber
+	return result
+}
+
 func (i *Indirect) Serialize(w Writer, file ...File) {
 	if len(file) == 0 {
 		panic("File parameter required for pdf.Indirect.Serialize()")
