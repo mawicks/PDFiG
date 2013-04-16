@@ -1,7 +1,6 @@
 package pdf
 
 import (
-	"fmt"
 	"io"
 	"errors"
 	"github.com/mawicks/goPDF/readers"
@@ -187,19 +186,17 @@ func scanEscape (scanner Scanner) (b byte) {
 }
 
 func scanNormalString (scanner Scanner) *String {
-	var openCount = 1
+	var openCount = 0
 	var buffer[]byte = make([]byte, 0, 128)
 	b,err :=scanner.ReadByte()
-	for ; err == nil && openCount != 0; b,err=scanner.ReadByte() {
+	for ; err == nil && (b!=')' || openCount != 0); b,err=scanner.ReadByte() {
 		switch b {
 		case '(':
 			openCount += 1;
 			buffer = append(buffer, b)
 		case ')':
 			openCount -= 1;
-			if (openCount != 0) {
-				buffer = append(buffer, b)
-			}
+			buffer = append(buffer, b)
 		case '\\':
 			v := scanEscape (scanner)
 			buffer = append(buffer, v)
@@ -333,21 +330,15 @@ func scanObject(scanner Scanner) Object {
 	panic(unexpectedInput)
 }
 
-func AsciiFromBytes (b []byte) string {
-	escaped := make([]byte,0,len(b))
-	for i:=0; i<len(b); i++ {
-		escaped = append(escaped, generalAsciiEscapeByte(b[i])...)
-	}
-	return string(escaped)
-}
-
-func Scan(scanner Scanner) (o Object,err error) {
+// Scan() uses Scanner to parse an arbitrary object.  If successful,
+// the object is returned.  If not, err is set and context contains the
+// input bytes that preceeded the error.
+func Scan(scanner Scanner) (o Object,err error,context []byte) {
 	historyReader := readers.NewHistoryReader(scanner,64)
 
 	defer func() {
 		if x := recover(); x!= nil {
-			fmt.Printf ("Parsing error:  %v\n", x)
-			fmt.Printf ("Input leading to the error:\n\t...%s\n", AsciiFromBytes(historyReader.GetHistory()))
+			context = historyReader.GetHistory()
 			err = x.(error)
 		}
 	} ()
@@ -356,24 +347,3 @@ func Scan(scanner Scanner) (o Object,err error) {
 
 	return
 }
-
-func ParseHexDigit(b byte) (byte) {
-	switch {
-	case b>='0' && b<='9':
-		return b-'0'
-	case b>='a' && b<='f':
-		return b-'a'+10
-	case b>='A' && b<='F':
-		return b-'A'+10
-	}
-	panic (expectingHexDigit)
-}
-
-func ParseOctalDigit(b byte) (byte) {
-	switch {
-	case b>='0' && b<='7':
-		return b-'0'
-	}
-	panic (expectingOctalDigit)
-}
-

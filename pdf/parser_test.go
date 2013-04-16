@@ -1,142 +1,53 @@
 package pdf_test
 
 import (
+	"bytes"
+	"fmt"
 	"github.com/mawicks/goPDF/pdf"
 	"strings"
 	"testing" )
 
 func TestParser (t *testing.T) {
-	reader := strings.NewReader("null true false /foo /a#20b#20c " +
-		"(abc) (a(bc)) (\\061) " +
-		" [] [true false] " +
-		" <<>> <</foo true>> " +
-		" <302031> " +
-		" 123.456 " +
-		" -54321 " +
-		" /a#")
-
-	o,err := pdf.Scan (reader)
-	if (err != nil) {
-		t.Error(`Scan() of "null ..." returned error:`, err)
-	}
-	testOneObject (t, "null", o, nil, "null")
-
-	o,err = pdf.Scan (reader)
-	if (err != nil) {
-		t.Error(`Scan() of "true ..." returned error:`, err)
-	}
-	testOneObject (t, "true", o, nil, "true")
-
-	o,err = pdf.Scan (reader)
-	if (err != nil) {
-		t.Error(`Scan() of "false ..." returned error:`, err)
-	}
-	testOneObject (t, "false", o, nil, "false")
-
-	o,err = pdf.Scan (reader)
-	if (err != nil) {
-		t.Error(`Scan() of "/foo ..." returned error:`, err)
-	}
-	testOneObject (t, "/foo", o, nil, "/foo")
-
-	o,err = pdf.Scan (reader)
-	if (err != nil) {
-		t.Error(`Scan() of "/a#20#b#20c ..." returned error:`, err)
-	}
-	testOneObject (t, "/a#20b#20c", o, nil, "/a#20b#20c")
-
-	o,err = pdf.Scan (reader)
-	if (err != nil) {
-		t.Error(`Scan() of "(abc) ..." returned error:`, err)
-	}
-	testOneObject (t, "(abc)", o, nil, "(abc)")
-
-	o,err = pdf.Scan (reader)
-	if (err != nil) {
-		t.Error(`Scan() of "(a(bc)) ..." returned error:`, err)
-	}
-	testOneObject (t, "(abc)", o, nil, "(a\\(bc\\))")
-
-	o,err = pdf.Scan (reader)
-	if (err != nil) {
-		t.Error(`Scan() of "(\\061) ..." returned error:`, err)
-	}
-	testOneObject (t, "(\\061)", o, nil, "(1)")
-
-	o,err = pdf.Scan (reader)
-	if (err != nil) {
-		t.Error(`Scan() of "[] ..." returned error:`, err)
-	}
-	testOneObject (t, "[]", o, nil, "[]")
-
-	o,err = pdf.Scan (reader)
-	if (err != nil) {
-		t.Error(`Scan() of "[true false] ..." returned error:`, err)
-	}
-	testOneObject (t, "[true false]", o, nil, "[true false]")
-
-	o,err = pdf.Scan (reader)
-	if (err != nil) {
-		t.Error(`Scan() of "<<>> ..." returned error:`, err)
-	}
-	testOneObject (t, "<<>>", o, nil, "<<>>")
-
-	o,err = pdf.Scan (reader)
-	if (err != nil) {
-		t.Error(`Scan() of "<</foo true>> ..." returned error:`, err)
-	}
-	testOneObject (t, "<</foo true>>", o, nil, "<</foo true>>")
-
-	o,err = pdf.Scan (reader)
-	if (err != nil) {
-		t.Error(`Scan() of "<302031> ..." returned error:`, err)
-	}
-	testOneObject (t, "<302031>", o, nil, "(0 1)")
-
-	o,err = pdf.Scan (reader)
-	if (err != nil) {
-		t.Error(`Scan() of "123.456 ..." returned error:`, err)
-	}
-	testOneObject (t, "123.456", o, nil, "123.456")
-
-	o,err = pdf.Scan (reader)
-	if (err != nil) {
-		t.Error(`Scan() of "-54321 ..." returned error:`, err)
-	}
-	testOneObject (t, "-54321", o, nil, "-54321")
-
-	o,err = pdf.Scan (reader)
-	if (err == nil) {
-		t.Error(`Scan() of "/a#" did NOT return error:`, err)
+	testParse := func(source string, expected string) {
+		o,err,_ := pdf.Scan (strings.NewReader(source))
+		if (err != nil) {
+			t.Errorf(`Scan() of "%s" returned error: %v`, source, err)
+		}
+		testOneObject (t, fmt.Sprintf(`Scan of "%s"`, pdf.AsciiFromBytes([]byte(source))), o, nil, expected)
 	}
 
-	// Dictionary test
-	reader = strings.NewReader("<</Length 5>>\nstream\nabcde\nendstream")
-	o,err = pdf.Scan (reader)
-	if (err != nil) {
-		t.Error(`Scan() of "<<...>>" returned error:`, err)
-	}
-	testOneObject (t, "<<...>>", o, nil, "<</Length 5>>\nstream\nabcde\nendstream")
-
-	reader = strings.NewReader("falxe ")
-	o,err = pdf.Scan (reader)
-	if (err == nil) {
-		t.Error(`Scan() of "falxe" did NOT return error:`, err)
+	testParseFail := func(source string, prefix string) {
+		_,err,context := pdf.Scan (strings.NewReader(source))
+		if (err == nil) {
+			t.Errorf(`Scan() of "%s" did NOT return an error`, source)
+		}
+		if !bytes.Equal(context,[]byte(prefix)) {
+			t.Errorf(`Scan() of "%s" returned "%s" as error context instead of "%s".`, source,
+				pdf.AsciiFromBytes(context),
+				pdf.AsciiFromBytes([]byte(prefix)))
+		}
 	}
 
-	// Make sure end of file doesn't generate an erro
-	reader = strings.NewReader("false")
-	o,err = pdf.Scan (reader)
-	if (err != nil) {
-		t.Error(`Scan() of "false" returned error:`, err)
-	}
+	testParse (" \n  null", "null")
+	testParse ("true", "true")
+	testParse ("false", "false")
+	testParse ("/foo", "/foo")
+	testParse ("/a#20b#20c", "/a#20b#20c")
+	testParse ("(abc)", "(abc)")
+	testParse ("(a(bc))", "(a\\(bc\\))")
+	testParse ("(\\061)", "(1)")
+	testParse ("[]", "[]")
+	testParse ("[true false]", "[true false]")
+	testParse ("<<>>", "<<>>")
+	testParse ("<</foo true>>", "<</foo true>>")
+	testParse ("<302031>", "(0 1)")
+	testParse ("123.456", "123.456")
+	testParse ("-54321", "-54321")
+	testParse ("<</Length 5>>\nstream\nabcde\nendstream", "<</Length 5>>\nstream\nabcde\nendstream")
 
-	// Make sure end of file doesn't generate an error
-	reader = strings.NewReader("/foo")
-	o,err = pdf.Scan (reader)
-	if (err != nil) {
-		t.Error(`Scan() of "/foo" returned error:`, err)
-	}
+	testParseFail("  /a#", "  /a#")
+	testParseFail("  /a#(123)", "  /a#(")
+	testParseFail("falxe  ", "falxe")
 
 }
 
