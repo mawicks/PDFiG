@@ -7,8 +7,8 @@ import (
 	"os"
 	"regexp"
 	"strconv"
-	"github.com/mawicks/goPDF/containers"
-	"github.com/mawicks/goPDF/readers" )
+	"github.com/mawicks/pdftig/containers"
+	"github.com/mawicks/pdftig/readers" )
 
 // xrefEntry type
 type xrefEntry struct {

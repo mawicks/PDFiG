@@ -3,7 +3,7 @@ package pdf
 import (
 	"io"
 	"errors"
-	"github.com/mawicks/goPDF/readers"
+	"github.com/mawicks/pdftig/readers"
 	"strconv" )
 
 type Scanner interface {

@@ -3,7 +3,7 @@ package pdf_test
 import (
 	"bytes"
 	"fmt"
-	"github.com/mawicks/goPDF/pdf"
+	"github.com/mawicks/pdftig/pdf"
 	"strings"
 	"testing" )
 

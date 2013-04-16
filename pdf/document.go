@@ -1,16 +1,16 @@
 package pdf
 
 type Document struct {
-	file            File
+	file File
 
 	// Each element in the pages array is a Indirect reference to a Page dictionary
 	// returned by Page.Indirect().
 	pages *Array
 
 	currentPage *Page
-	pageCount   uint
+	pageCount uint
 
-	pageTreeRoot         *Dictionary
+	pageTreeRoot *Dictionary
 	pageTreeRootIndirect *Indirect
 
 	procSetIndirect *Indirect
@@ -36,7 +36,7 @@ func NewDocument(filename string) *Document {
 
 	d.DocumentInfo = NewDocumentInfo()
 	// Set a default producer field.  Clients calls to SetProducer() override this.
-	d.SetProducer("goPDF")
+	d.SetProducer("pdftig")
 
 	return d
 }

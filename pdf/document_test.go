@@ -2,7 +2,7 @@ package pdf_test
 
 import (
 	"fmt"
-	"github.com/mawicks/goPDF/pdf" )
+	"github.com/mawicks/pdftig/pdf" )
 
 func ExampleDocument() {
 	doc := pdf.NewDocument("/tmp/test-document.pdf")
