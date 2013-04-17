@@ -13,14 +13,13 @@ type Scanner interface {
 }
 
 type Parser struct {
-	historyReader *readers.HistoryReader
+	scanner *readers.HistoryReader
 	queuedObject Object
 }
 
 func NewParser(scanner Scanner) *Parser {
 	return &Parser{readers.NewHistoryReader(scanner,64),nil}
 }
-
 
 var (
 	invalidKeyword = errors.New(`Invalid keyword`)
@@ -128,27 +127,43 @@ func scanNumeric (scanner Scanner, b byte) Object {
 }
 
 func (p *Parser) scanNumericOrIndirectRef(b byte, file... File) Object {
-	n1 := scanNumeric(p.historyReader, b)
+	var n1 Object
+	var err error
+
+	if (p.queuedObject != nil) {
+		p.scanner.UnreadByte()
+		n1 = p.queuedObject
+		p.queuedObject = nil
+	} else {
+		n1 = scanNumeric(p.scanner, b)
+	}
 
 	if _,ok := n1.(*IntNumeric); !ok {
 		return n1
 	}
 
-	b,err := nextNonWhiteByte(p.historyReader)
-	if err != nil && !IsDigit(b) {
-		p.historyReader.UnreadByte()
+	b,err = nextNonWhiteByte(p.scanner)
+	if err == nil && !IsDigit(b) {
+		p.scanner.UnreadByte()
+	}
+
+
+	if (err != nil || !IsDigit(b)) {
 		return n1
 	}
 
-	n2 := scanNumeric (p.historyReader, b)
+	n2 := scanNumeric (p.scanner, b)
 	if _,ok := n2.(*IntNumeric); !ok {
+		if (p.queuedObject != nil) {
+			panic ("Queued object is not nil. This shouldn't happen")
+		}
 		p.queuedObject = n2
 		return n1
 	}
 
-	b,err = nextNonWhiteByte(p.historyReader)
+	b,err = nextNonWhiteByte(p.scanner)
 	if b != 'R' {
-		p.historyReader.UnreadByte()
+		p.scanner.UnreadByte()
 		p.queuedObject = n2
 		return n1
 	} else {
@@ -156,7 +171,7 @@ func (p *Parser) scanNumericOrIndirectRef(b byte, file... File) Object {
 		generation := uint16(n2.(*IntNumeric).Value())
 		return newIndirectFromParse(ObjectNumber{number,generation}, file[0])
 	}
-	return n1
+	return nil
 }
 
 
@@ -273,13 +288,12 @@ func scanHexString (scanner Scanner,b byte) *String {
 func (p *Parser) scanArray (file... File) *Array {
 	var array *Array = NewArray()
 
-	b,err := nextNonWhiteByte(p.historyReader)
-	for ; err == nil && b != ']'; b,err=p.historyReader.ReadByte() {
-		p.historyReader.UnreadByte()
+	b,err := nextNonWhiteByte(p.scanner)
+	for ; p.queuedObject != nil || (err == nil && b != ']'); b,err=p.scanner.ReadByte() {
+		p.scanner.UnreadByte()
 		nextElement := p.scanObject(file...)
 		array.Add(nextElement)
 	}
-
 	if err != nil {
 		panic(unexpectedEnd)
 	}
@@ -289,9 +303,9 @@ func (p *Parser) scanArray (file... File) *Array {
 func (p *Parser) scanDictionary(file... File) *Dictionary {
 	var d *Dictionary = NewDictionary()
 
-	b,err := nextNonWhiteByte(p.historyReader)
-	for ; err == nil && b != '>'; b,err=p.historyReader.ReadByte() {
-		p.historyReader.UnreadByte()
+	b,err := nextNonWhiteByte(p.scanner)
+	for ; err == nil && b != '>'; b,err=p.scanner.ReadByte() {
+		p.scanner.UnreadByte()
 		name,ok := p.scanObject().(*Name)
 		if (!ok) {
 			panic(expectingName)
@@ -304,7 +318,7 @@ func (p *Parser) scanDictionary(file... File) *Dictionary {
 		panic(unexpectedEnd)
 	}
 
-	b,err = nextNonWhiteByte(p.historyReader)
+	b,err = nextNonWhiteByte(p.scanner)
 	if (b != '>') {
 		panic(expectedGreaterThan)
 	}
@@ -317,13 +331,13 @@ func (p *Parser) scanDictionaryOrStream (file... File) Object {
 	dictionary := p.scanDictionary(file...)
 
 	var b byte
-	b,err = nextNonWhiteByte(p.historyReader)
-	p.historyReader.UnreadByte()
+	b,err = nextNonWhiteByte(p.scanner)
+	p.scanner.UnreadByte()
 
 	var s string
 	// Could be a "stream" line.
 	if b=='s' {
-		s,err = ReadLine (p.historyReader)
+		s,err = ReadLine (p.scanner)
 	}
 
 	var stream Object
@@ -332,10 +346,10 @@ func (p *Parser) scanDictionaryOrStream (file... File) Object {
 		if ok {
 			length := v.Value()
 			contents := make([]byte, length)
-			p.historyReader.Read(contents)
-			nextNonWhiteByte(p.historyReader)
-			p.historyReader.UnreadByte()
-			s,err = ReadLine(p.historyReader)
+			p.scanner.Read(contents)
+			nextNonWhiteByte(p.scanner)
+			p.scanner.UnreadByte()
+			s,err = ReadLine(p.scanner)
 			if err == nil && s == "endstream" {
 				stream = NewStreamFromContents (dictionary,contents)
 			}
@@ -348,33 +362,34 @@ func (p *Parser) scanDictionaryOrStream (file... File) Object {
 }
 
 func (p *Parser) scanObject(file ...File) Object {
-	// If there's a non-integer object left over from previous
+	// If there's a non-integer object left parsed during a previous
 	// call, go ahead and return it.
 	if p.queuedObject != nil {
 		if _,ok := p.queuedObject.(*IntNumeric); !ok {
+			object := p.queuedObject
 			p.queuedObject = nil
-			return p.queuedObject
+			return object
 		}
 	}
-	b,err := nextNonWhiteByte(p.historyReader)
+	b,err := nextNonWhiteByte(p.scanner)
 	if err == nil {
 		switch  {
 		case IsAlpha(b):
-			return scanKeywordObject(p.historyReader, b)
-		case IsDigit(b):
+			return scanKeywordObject(p.scanner, b)
+		case IsDigit(b),p.queuedObject != nil:
 			return p.scanNumericOrIndirectRef(b, file...)
 		case b=='.',b=='+',b=='-':
-			return scanNumeric(p.historyReader, b)
+			return scanNumeric(p.scanner, b)
 		case b =='/':
-			return scanName (p.historyReader)
+			return scanName (p.scanner)
 		case b=='(':
-			return scanNormalString(p.historyReader)
+			return scanNormalString(p.scanner)
 		case b=='<':
-			b,err = nextNonWhiteByte(p.historyReader)
+			b,err = nextNonWhiteByte(p.scanner)
 			if b == '<' {
 				return p.scanDictionaryOrStream(file...)
 			} else {
-				return scanHexString(p.historyReader, b)
+				return scanHexString(p.scanner, b)
 			}
 		case b=='[':
 			return p.scanArray(file...)
@@ -401,4 +416,8 @@ func (p *Parser) Scan(file... File) (o Object,err error) {
 	o = p.scanObject(file...)
 
 	return
+}
+
+func (p *Parser) GetContext() []byte {
+	return p.scanner.GetHistory()
 }
