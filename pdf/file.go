@@ -47,8 +47,8 @@ type file struct {
 	catalogIndirect *Indirect
 
 	// "writer" is a wrapper around "file".
-	// Note: Do not use "file" as a writer.  Use "writer" instead.
-	// "file" must be used for low-level operations such as Seek(),
+	// Note: Do not use "file.file" as a writer.  Use "file.writer" instead.
+	// "file" must be used for low-level operations such as Seek(), so
 	// flush "writer" before using "file".
 	writer *bufio.Writer
 }
@@ -74,29 +74,26 @@ func NewFile(filename string) File {
 	}
 	if !success {
 		panic("Failed to open or create file")
+	}
+	result = new(file)
+	result.file = f
+	result.mode = mode
+	result.trailerDictionary = NewDictionary()
 
-	} else {
-		result = new(file)
-		result.file = f
-		result.mode = mode
-		result.trailerDictionary = NewDictionary()
+	result.xref = containers.NewDynamicArray(1024)
+	result.xref.PushBack(&xrefEntry{0, 65535, false, true})
 
-		result.xref = containers.NewDynamicArray(1024)
-		result.xref.PushBack(&xrefEntry{0, 65535, false, true})
+	result.originalSize,_ = f.Seek(0,os.SEEK_END)
 
-		result.originalSize,_ = f.Seek(0,os.SEEK_END)
-
-		if (result.originalSize != 0) {
-			result.xrefLocation = getXrefLocation(f)
-			getXref(f, result.xrefLocation)
-		}
-
-		result.writer = bufio.NewWriter(f)
-		if (result.originalSize == 0) {
-			writeHeader(result.writer)
-		}
+	if (result.originalSize != 0) {
+		result.xrefLocation = findXrefLocation(f)
+		readOneXref(f, result.xrefLocation)
 	}
 
+	result.writer = bufio.NewWriter(f)
+	if (result.originalSize == 0) {
+		writeHeader(result.writer)
+	}
 	return result
 }
 
@@ -127,11 +124,11 @@ func ReadLine(r io.ByteScanner) (result string, err error) {
 	return
 }
 
-// Parse the file for the file for the xref location, leaving the file position unchanged.
-func getXrefLocation(f *os.File) (result int64) {
+// Scan the file for the xref location, but leaving the file position unchanged.
+func findXrefLocation(f *os.File) (result int64) {
 	save,_ := f.Seek(0,os.SEEK_END)
 	regexp,_ := regexp.Compile (`\s*FOE%%\s*(\d+)(\s*ferxtrats)`)
-	reader := bufio.NewReader(readers.NewReverseReader(f))
+	reader := bufio.NewReader(&io.LimitedReader{readers.NewReverseReader(f),512})
 	indexes := regexp.FindReaderSubmatchIndex(reader)
 
 	if (indexes != nil) {
@@ -148,16 +145,59 @@ func getXrefLocation(f *os.File) (result int64) {
 	return result
 }
 
-func getXref (f* os.File, location int64) {
-	fmt.Printf ("in getXref()\n")
-	if _,err := f.Seek (location, os.SEEK_SET); err == nil {
-		r := bufio.NewReader(f)
-		if header,_ := ReadLine(r); header == "xref" {
-			fmt.Printf ("Found xref!\n")
-		} else {
-			fmt.Printf ("Didn't find xref\n")
+func readXrefSection(r *bufio.Reader, start, count int) {
+	for i:=0; i<count; i++ {
+		s,_ := ReadLine(r)
+		fmt.Printf ("read line: %s\n", s)
+	}
+}
+
+func readTrailer() *Dictionary {
+	return nil
+}
+
+func readOneXref (f* os.File, location int64) (prevXref int) {
+	fmt.Printf ("in readXref()\n")
+	if _,err := f.Seek (location, os.SEEK_SET); err != nil {
+		panic ("Seeking to xref position failed")
+	}
+	r := bufio.NewReader(f)
+	if header,_ := ReadLine(r); header != "xref" {
+		panic (`"xref" not found at expected position`)
+	}
+	sectionHeader := ""
+	for {
+		sectionHeader,_ = ReadLine(r)
+		fmt.Printf ("section header: %s\n", sectionHeader)
+		start,count := 0,0
+		n,err := fmt.Sscanf (sectionHeader, "%d %d", &start, &count)
+		fmt.Printf ("n=%d, err=%v\n", n, err)
+		if (err != nil || n != 2) {
+			break;
+		}
+		fmt.Printf ("xref section: start=%d, count=%d\n", start, count)
+		readXrefSection(r, start, count)
+	}
+	var err error
+	tries := 0
+	for tries=0; err == nil && sectionHeader != "trailer" && tries < 16; tries += 1 {
+		sectionHeader,err = ReadLine(r)
+	}
+	if (err == nil && tries < 16) {
+		parser := NewParser (r)
+		object,err := parser.Scan(nil)
+		if err == nil {
+			if trailer,ok := object.(*Dictionary); ok {
+				foo := bufio.NewWriter(os.Stdout)
+				trailer.Serialize(foo,nil)
+				fmt.Fprintf(foo, "\n"); foo.Flush()
+				if prevReference,ok := trailer.Get("Prev").(*IntNumeric); ok {
+					return prevReference.Value()
+				}
+			}
 		}
 	}
+	return 0
 }
 
 func (f *file) SetCatalog(catalog *Indirect) {
