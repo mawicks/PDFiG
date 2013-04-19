@@ -3,7 +3,7 @@ package pdf
 import (
 	"io"
 	"errors"
-	"github.com/mawicks/pdfdig/readers"
+	"github.com/mawicks/pdfDIG/readers"
 	"strconv" )
 
 type Scanner interface {

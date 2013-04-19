@@ -1,4 +1,4 @@
-PDF Documents In Go (pdfdig)
+PDF Documents In Go (pdfDIG)
 ==========================
 
 Generate and manipulate PDF files using the Go programming language
