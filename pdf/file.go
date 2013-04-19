@@ -46,6 +46,10 @@ type file struct {
 	trailerDictionary, previousTrailerDictionary *Dictionary
 	catalogIndirect *Indirect
 
+	// "dirty" is true iff this PDF file requires an update (new
+	// xref, new trailer, etc.) when it is closed.
+	dirty bool
+
 	// "writer" is a wrapper around "file".
 	// Note: Do not use "file.file" as a writer.  Use "file.writer" instead.
 	// "file" must be used for low-level operations such as Seek(), so
@@ -87,6 +91,7 @@ func NewFile(filename string) File {
 	if (result.originalSize == 0) {
 		// There is no xref so start one
 		result.xref.PushBack(&xrefEntry{0, 65535, false, true})
+		result.dirty = true
 	} else {
 		// For pre-existing files, read the xref
 		result.xrefLocation = findXrefLocation(f)
@@ -269,19 +274,22 @@ func (f *file) release() {
 
 // Implements Close() in File interface
 func (f *file) Close() {
-	f.trailerDictionary.Add("Size", NewIntNumeric(int(f.xref.Size())))
+	if f.dirty {
+		f.trailerDictionary.Add("Size", NewIntNumeric(int(f.xref.Size())))
 
-	// The catalog appearing in the trailer must be an indirect
-	// object.  Create an indirect object pointed at the catalog,
-	// add it to the trailer dictionary, and write out the trailer dictionary.
-	if f.catalogIndirect == nil {
-		panic("No document catalog has been specified.  Use File.SetCatalog() to set one.")
+		// The catalog appearing in the trailer must be an indirect
+		// object.  Create an indirect object pointed at the catalog,
+		// add it to the trailer dictionary, and write out the trailer dictionary.
+		if f.catalogIndirect == nil {
+			panic("No document catalog has been specified.  Use File.SetCatalog() to set one.")
+		}
+		f.trailerDictionary.Add("Root", f.catalogIndirect)
+
+		xrefPosition := f.Tell()
+		f.writeXref()
+		f.writeTrailer(xrefPosition)
 	}
-	f.trailerDictionary.Add("Root", f.catalogIndirect)
 
-	xrefPosition := f.Tell()
-	f.writeXref()
-	f.writeTrailer(xrefPosition)
 	f.writer.Flush()
 	f.file.Close()
 
@@ -301,14 +309,22 @@ func (f *file) Tell() int64 {
 // Implements AddObjectAt() in File interface
 func (f *file) AddObjectAt(object ObjectNumber, o Object) {
 	entry := (*f.xref.At(uint(object.number))).(*xrefEntry)
+
 	if entry.byteOffset != 0 {
 		panic("An object has already been written with this number")
 	}
+
 	if entry.generation != object.generation {
 		panic("Generation number mismatch")
 	}
 
 	entry.byteOffset = uint64(f.Tell())
+
+	// Setting dirty flags should not be necessary here.
+	// They should have been set when "entry" was added to the xref,
+	// presumably by ReserveObjectNumber().
+	entry.dirty = true
+	f.dirty = true
 
 	fmt.Fprintf(f.writer, "%d %d obj\n", object.number, object.generation)
 	o.Serialize(f.writer, f)
@@ -342,6 +358,7 @@ func (f *file) DeleteObject(object ObjectNumber) {
 
 	entry.inUse = false
 	entry.dirty = true
+	f.dirty = true
 }
 
 // Implements ReserveObjectNumber() in File interface
@@ -364,7 +381,9 @@ func (f *file) ReserveObjectNumber(o Object) ObjectNumber {
 		(*f.xref.At(0)).(*xrefEntry).byteOffset = entry.byteOffset
 		generation = entry.generation
 		entry.inUse = true
+		entry.dirty = true
 	}
+	f.dirty = true
 	result := ObjectNumber{freeIndex, generation}
 	return result
 }
