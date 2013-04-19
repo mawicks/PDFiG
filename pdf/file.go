@@ -43,7 +43,7 @@ type file struct {
 	mode int
 	xrefLocation int64
 	xref containers.Array
-	trailerDictionary *Dictionary
+	trailerDictionary, previousTrailerDictionary *Dictionary
 	catalogIndirect *Indirect
 
 	// "writer" is a wrapper around "file".
@@ -213,13 +213,16 @@ func readTrailer(subsectionHeader string, r *bufio.Reader, pdffile *file) *Dicti
 }
 
 func readOneXrefSection (pdffile *file, location int64) (prevXref int) {
+
 	if _,err := pdffile.file.Seek (location, os.SEEK_SET); err != nil {
 		panic ("Seeking to xref position failed")
 	}
+
 	r := bufio.NewReader(pdffile.file)
-	if header,_ := ReadLine(r); header != "xref" {
+ 	if header,_ := ReadLine(r); header != "xref" {
 		panic (`"xref" not found at expected position`)
 	}
+
 	subsectionHeader := ""
 	for {
 		subsectionHeader,_ = ReadLine(r)
@@ -235,8 +238,13 @@ func readOneXrefSection (pdffile *file, location int64) (prevXref int) {
 	}
 
 	trailer := readTrailer (subsectionHeader, r, pdffile)
-
-	if trailer != nil {
+	if trailer == nil {
+		panic ("Expected trailer not found")
+	} else {
+		// Save the first trailer encountered working backwards through the history.
+		if pdffile.previousTrailerDictionary == nil {
+			pdffile.previousTrailerDictionary = trailer
+		}
 		if prevReference,ok := trailer.Get("Prev").(*IntNumeric); ok {
 			prevXref = prevReference.Value()
 		}
