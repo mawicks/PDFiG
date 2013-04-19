@@ -81,19 +81,18 @@ func NewFile(filename string) File {
 	result.file = f
 	result.mode = mode
 
-
-
 	result.xref = containers.NewDynamicArray(1024)
-	result.originalSize,_ = f.Seek(0,os.SEEK_END)
+	result.originalSize,_ = f.Seek(0, os.SEEK_END)
 
 	if (result.originalSize == 0) {
+		// There is no xref so start one
 		result.xref.PushBack(&xrefEntry{0, 65535, false, true})
 	} else {
-	// For pre-existing files, read the xref
+		// For pre-existing files, read the xref
 		result.xrefLocation = findXrefLocation(f)
-		nextXref := readOneXref(result, result.xrefLocation)
+		nextXref := readOneXrefSection(result, result.xrefLocation)
 		for ; nextXref != 0; {
-			nextXref = readOneXref(result, int64(nextXref))
+			nextXref = readOneXrefSection(result, int64(nextXref))
 		}
 	}
 
@@ -137,7 +136,7 @@ func ReadLine(r io.ByteScanner) (result string, err error) {
 	return
 }
 
-// Scan the file for the xref location, but leaving the file position unchanged.
+// Scan the file for the xref location, returning with the original file position.
 func findXrefLocation(f *os.File) (result int64) {
 	save,_ := f.Seek(0,os.SEEK_END)
 	regexp,_ := regexp.Compile (`\s*FOE%%\s*(\d+)(\s*ferxtrats)`)
@@ -158,11 +157,12 @@ func findXrefLocation(f *os.File) (result int64) {
 	return result
 }
 
-func readXrefSection(xref containers.Array, r *bufio.Reader, start, count uint) {
+
+func readXrefSubsection(xref containers.Array, r *bufio.Reader, start, count uint) {
 	var (
 		position uint64
 		generation uint16
-		use rune
+		useChar rune
 	)
 
 	// Make sure xref is large enough for the section about to be read.
@@ -172,21 +172,16 @@ func readXrefSection(xref containers.Array, r *bufio.Reader, start, count uint) 
 
 	for i:=uint(0); i<count; i++ {
 		xrefLine,_ := ReadLine(r)
-		n,err := fmt.Sscanf (xrefLine, "%d %d %c", &position, &generation, &use)
+		n,err := fmt.Sscanf (xrefLine, "%d %d %c", &position, &generation, &useChar)
 		if err != nil || n != 3 {
 			panic (fmt.Sprintf("Invalid xref line: %s", xrefLine))
 		}
-		fmt.Printf ("pos: %d gen: %d %c\n", position, generation, use)
+		fmt.Printf ("pos: %d gen: %d %c\n", position, generation, useChar)
 
-		inUse := func (x rune) (result bool) {
-			if  x == 'f' {
-				result = false
-			}  else if x == 'n'{
-				result = true
-			} else {
-				panic ("Invalid character %c in xref use field.")
-			}
-			return result } (use)
+		if useChar != 'f' && useChar != 'n' {
+			panic (fmt.Sprintf("Invalid character '%c' in xref use field.", useChar))
+		}
+		inUse := (useChar == 'n')
 
 		// Never overwrite a pre-existing entry.
 		if *xref.At(start+i) == nil {
@@ -195,38 +190,14 @@ func readXrefSection(xref containers.Array, r *bufio.Reader, start, count uint) 
 	}
 }
 
-func readTrailer() *Dictionary {
-	return nil
-}
-
-func readOneXref (pdffile *file, location int64) (prevXref int) {
-	if _,err := pdffile.file.Seek (location, os.SEEK_SET); err != nil {
-		panic ("Seeking to xref position failed")
-	}
-	r := bufio.NewReader(pdffile.file)
-	if header,_ := ReadLine(r); header != "xref" {
-		panic (`"xref" not found at expected position`)
-	}
-	sectionHeader := ""
-	for {
-		sectionHeader,_ = ReadLine(r)
-		fmt.Printf ("section header: %s\n", sectionHeader)
-		start,count := uint(0),uint(0)
-		n,err := fmt.Sscanf (sectionHeader, "%d %d", &start, &count)
-		fmt.Printf ("n=%d, err=%v\n", n, err)
-		if (err != nil || n != 2) {
-			break;
-		}
-		fmt.Printf ("xref section: start=%d, count=%d\n", start, count)
-		readXrefSection(pdffile.xref, r, start, count)
-	}
+func readTrailer(subsectionHeader string, r *bufio.Reader, pdffile *file) *Dictionary {
 	var err error
 	tries := 0
-	const maxtries = 4
-	for tries=0; err == nil && sectionHeader != "trailer" && maxtries < 8; tries += 1 {
-		sectionHeader,err = ReadLine(r)
+	const maxTries = 4
+	for tries=0; err == nil && subsectionHeader != "trailer" && tries < maxTries; tries += 1 {
+		subsectionHeader,err = ReadLine(r)
 	}
-	if (err == nil && maxtries < 8) {
+	if (err == nil && tries < maxTries) {
 		parser := NewParser (r)
 		object,err := parser.Scan(pdffile)
 		if err == nil {
@@ -234,10 +205,40 @@ func readOneXref (pdffile *file, location int64) (prevXref int) {
 				w := bufio.NewWriter(os.Stdout)
 				trailer.Serialize(w,pdffile)
 				fmt.Fprintf(w, "\n"); w.Flush()
-				if prevReference,ok := trailer.Get("Prev").(*IntNumeric); ok {
-					prevXref = prevReference.Value()
-				}
+				return trailer
 			}
+		}
+	}
+	return nil
+}
+
+func readOneXrefSection (pdffile *file, location int64) (prevXref int) {
+	if _,err := pdffile.file.Seek (location, os.SEEK_SET); err != nil {
+		panic ("Seeking to xref position failed")
+	}
+	r := bufio.NewReader(pdffile.file)
+	if header,_ := ReadLine(r); header != "xref" {
+		panic (`"xref" not found at expected position`)
+	}
+	subsectionHeader := ""
+	for {
+		subsectionHeader,_ = ReadLine(r)
+		fmt.Printf ("subsection header: %s\n", subsectionHeader)
+		start,count := uint(0),uint(0)
+		n,err := fmt.Sscanf (subsectionHeader, "%d %d", &start, &count)
+		fmt.Printf ("n=%d, err=%v\n", n, err)
+		if (err != nil || n != 2) {
+			break;
+		}
+		fmt.Printf ("xref subsection: start=%d, count=%d\n", start, count)
+		readXrefSubsection(pdffile.xref, r, start, count)
+	}
+
+	trailer := readTrailer (subsectionHeader, r, pdffile)
+
+	if trailer != nil {
+		if prevReference,ok := trailer.Get("Prev").(*IntNumeric); ok {
+			prevXref = prevReference.Value()
 		}
 	}
 	return
@@ -262,7 +263,7 @@ func (f *file) release() {
 func (f *file) Close() {
 	f.trailerDictionary.Add("Size", NewIntNumeric(int(f.xref.Size())))
 
-	// The catalog appearing in the trailer must be indirect
+	// The catalog appearing in the trailer must be an indirect
 	// object.  Create an indirect object pointed at the catalog,
 	// add it to the trailer dictionary, and write out the trailer dictionary.
 	if f.catalogIndirect == nil {
@@ -272,7 +273,6 @@ func (f *file) Close() {
 
 	xrefPosition := f.Tell()
 	f.writeXref()
-
 	f.writeTrailer(xrefPosition)
 	f.writer.Flush()
 	f.file.Close()
