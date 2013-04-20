@@ -27,7 +27,7 @@ func (f *mockFile) AddObject(object Object) (reference *Indirect) {
 }
 
 // Implements DeleteObject() in File interface
-func (f *mockFile) DeleteObject(on ObjectNumber) {}
+func (f *mockFile) DeleteObject(*Indirect) {}
 
 // Implements ReserveObjectNumber() in File interface
 func (f *mockFile) ReserveObjectNumber(o Object) ObjectNumber {

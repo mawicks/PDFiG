@@ -17,11 +17,11 @@ func make_file() {
 	f.AddObject(pdf.NewName("foo"))
 
 	// Delete the *indirect reference* to the 3.14 numeric
-	f.DeleteObject(indirect1.ObjectNumber(f))
+	f.DeleteObject(indirect1)
 	f.AddObject(pdf.NewNumeric(3))
 
 	// Delete the 2.718 numeric object itself
-	f.DeleteObject(indirect2.ObjectNumber(f))
+	f.DeleteObject(indirect2)
 
 	p := pdf.NewPage(f)
 	p.SetParent(indirect1)

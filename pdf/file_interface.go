@@ -27,7 +27,8 @@ type File interface {
 	SetInfo(*Indirect)
 
 	// DeleteObject() deletes the specified object from the file.
-	DeleteObject(ObjectNumber)
+	// It must be an indirect object.
+	DeleteObject(*Indirect)
 
 	// Close() writes the xref, trailer, etc., and closes the underlying file.
 	Close()

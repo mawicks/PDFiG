@@ -37,6 +37,21 @@ func (entry *xrefEntry) Serialize(w Writer) {
 		}(entry.inUse))
 }
 
+func (entry *xrefEntry) clear (nextFree uint64) {
+	if entry.inUse && entry.generation < 65535 {
+		entry.generation += 1
+	}
+	entry.byteOffset = nextFree
+	entry.inUse = false
+	entry.dirty = true
+}
+
+func (entry *xrefEntry) setInUse (location uint64) {
+	entry.byteOffset = location
+	entry.inUse = true
+	entry.dirty = true
+}
+
 type file struct {
 	file *os.File
 	originalSize int64
@@ -247,7 +262,8 @@ func readOneXrefSection (pdffile *file, location int64) (prevXref int) {
 	if trailer == nil {
 		panic ("Expected trailer not found")
 	} else {
-		// Save the first trailer encountered working backwards through the history.
+		// Save the first trailer encountered while working
+		// backwards through the history.
 		if pdffile.previousTrailerDictionary == nil {
 			pdffile.previousTrailerDictionary = trailer
 		}
@@ -319,7 +335,7 @@ func (f *file) AddObjectAt(object ObjectNumber, o Object) {
 		panic("Generation number mismatch")
 	}
 
-	entry.byteOffset = uint64(f.Tell())
+	entry.setInUse(uint64(f.Tell()))
 
 	fmt.Fprintf(f.writer, "%d %d obj\n", object.number, object.generation)
 	o.Serialize(f.writer, f)
@@ -328,7 +344,6 @@ func (f *file) AddObjectAt(object ObjectNumber, o Object) {
 	// Setting dirty flags should not be necessary here.
 	// They should have been set when "entry" was added to the xref,
 	// presumably by ReserveObjectNumber().
-	entry.dirty = true
 	f.dirty = true
 }
 
@@ -340,25 +355,24 @@ func (f *file) AddObject(object Object) (reference *Indirect) {
 }
 
 // Implements DeleteObject() in File interface
-func (f *file) DeleteObject(object ObjectNumber) {
-	entry := (*f.xref.At(uint(object.number))).(*xrefEntry)
-	if object.generation != entry.generation {
+func (f *file) DeleteObject(indirect *Indirect) {
+	objectNumber := indirect.ObjectNumber(f)
+	entry := (*f.xref.At(uint(objectNumber.number))).(*xrefEntry)
+	if objectNumber.generation != entry.generation {
 		panic("Generation number mismatch")
 	}
 
 	if entry.generation < 65535 {
 		// Increment the generation count for the next use
 		// and link into free list.
-		entry.generation += 1
-		entry.byteOffset = (*f.xref.At(0)).(*xrefEntry).byteOffset
-		(*f.xref.At(0)).(*xrefEntry).byteOffset = uint64(object.number)
+		freeHead := (*f.xref.At(0)).(*xrefEntry)
+		entry.clear(freeHead.byteOffset)
+		freeHead.clear(uint64(objectNumber.number))
 	} else {
 		// Don't link into free list.  Just set byte offset to 0
-		entry.byteOffset = 0
+		entry.clear(0)
 	}
 
-	entry.inUse = false
-	entry.dirty = true
 	f.dirty = true
 }
 
@@ -375,16 +389,14 @@ func (f *file) ReserveObjectNumber(o Object) ObjectNumber {
 	if newNumber == 0 {
 		// Create a new xref entry
 		newNumber = uint32(f.xref.Size())
-		f.xref.PushBack(&xrefEntry{0, 0, true, true})
+		f.xref.PushBack(&xrefEntry{0, 0, false, true})
 	} else {
 		// Adjust link in head of free list
 		freeHead := (*f.xref.At(0)).(*xrefEntry)
 		entry := (*f.xref.At(uint(newNumber))).(*xrefEntry)
-		freeHead.byteOffset = entry.byteOffset
-		entry.inUse = true
-		// Mark free head and reused entry as dirty
-		freeHead.dirty = true
-		entry.dirty = true
+		freeHead.clear(entry.byteOffset)
+
+		entry.clear(0)
 		generation = entry.generation
 	}
 	f.dirty = true
