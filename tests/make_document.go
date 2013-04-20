@@ -38,8 +38,3 @@ func make_document() {
 
 	doc.Close()
 }
-
-func main() {
-	make_document()
-	make_file()
-}
