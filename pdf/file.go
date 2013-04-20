@@ -59,7 +59,7 @@ type file struct {
 	// Location of xref for pre-existing files.
 	xrefLocation int64
 	xref containers.Array
-	trailerDictionary, previousTrailerDictionary *Dictionary
+	trailerDictionary *Dictionary
 	catalogIndirect *Indirect
 
 	// "dirty" is true iff this PDF file requires an update (new
@@ -72,8 +72,6 @@ type file struct {
 	// flush "writer" before using "file".
 	writer *bufio.Writer
 }
-
-// Public methods
 
 // Constructor for File object
 func NewFile(filename string) File {
@@ -116,8 +114,14 @@ func NewFile(filename string) File {
 			nextXref = readOneXrefSection(result, int64(nextXref))
 		}
 	}
+	// If a pre-exisisting trailer was found, use it to initialize
+	// the trailer Dictionary.  This will pick up and re-use a
+	// pre-existing document catalog and document info.
+	if result.trailerDictionary == nil {
+		result.trailerDictionary = NewDictionary()
+	}
 
-	result.trailerDictionary = NewDictionary()
+	// Link the new current trailer to the most recent pre-existing xref.
 	if (result.xrefLocation != 0) {
 		result.trailerDictionary.Add ("Prev", NewIntNumeric(int(result.xrefLocation)))
 	}
@@ -130,11 +134,100 @@ func NewFile(filename string) File {
 	return result
 }
 
-// Read a line from a PDF file interpreting end-of-line characters
-// according to the PDF specification.  In contexts where you would be
-// likely to use pdf.ReadLine() are where the line consists of ASCII
-// characters.  Therefore ReadLine() returns a string rather than a
-// []byte.
+// Implements AddObject() in File interface
+func (f *file) AddObject(object Object) (reference *Indirect) {
+	reference = NewIndirect(f)
+	reference.Finalize(object)
+	return reference
+}
+
+// Implements DeleteObject() in File interface
+func (f *file) DeleteObject(indirect *Indirect) {
+	objectNumber := indirect.ObjectNumber(f)
+	entry := (*f.xref.At(uint(objectNumber.number))).(*xrefEntry)
+	if objectNumber.generation != entry.generation {
+		panic("Generation number mismatch")
+	}
+
+	if entry.generation < 65535 {
+		// Increment the generation count for the next use
+		// and link into free list.
+		freeHead := (*f.xref.At(0)).(*xrefEntry)
+		entry.clear(freeHead.byteOffset)
+		freeHead.clear(uint64(objectNumber.number))
+	} else {
+		// Don't link into free list.  Just set byte offset to 0
+		entry.clear(0)
+	}
+
+	f.dirty = true
+}
+
+// Implements ReserveObjectNumber() in File interface
+func (f *file) ReserveObjectNumber(o Object) ObjectNumber {
+	var (
+		newNumber uint32
+		generation uint16
+	)
+
+	// Find an unused node if possible taken from beginning of
+	// free list.
+	newNumber = uint32((*f.xref.At(0)).(*xrefEntry).byteOffset)
+	if newNumber == 0 {
+		// Create a new xref entry
+		newNumber = uint32(f.xref.Size())
+		f.xref.PushBack(&xrefEntry{0, 0, false, true})
+	} else {
+		// Adjust link in head of free list
+		freeHead := (*f.xref.At(0)).(*xrefEntry)
+		entry := (*f.xref.At(uint(newNumber))).(*xrefEntry)
+		freeHead.clear(entry.byteOffset)
+
+		entry.clear(0)
+		generation = entry.generation
+	}
+	f.dirty = true
+	result := ObjectNumber{newNumber, generation}
+	return result
+}
+
+// Implements Close() in File interface
+func (f *file) Close() {
+	if f.dirty {
+		f.trailerDictionary.Add("Size", NewIntNumeric(int(f.xref.Size())))
+
+		// The catalog appearing in the trailer must be an indirect
+		// object.  Create an indirect object pointed at the catalog,
+		// add it to the trailer dictionary, and write out the trailer dictionary.
+		fmt.Printf ("in Close(), root is %v\n", f.trailerDictionary.Get("Root"))
+
+		// If client specified a catalog, use it.  Otherwise
+		// re-use use pre-existing catalog if it exists.
+		if f.catalogIndirect != nil {
+			f.trailerDictionary.Add("Root", f.catalogIndirect)
+		}
+
+		if f.trailerDictionary.Get("Root") == nil {
+			panic("No document catalog has been specified.  Use File.SetCatalog() to set one.")
+		}
+
+
+		xrefPosition := f.Tell()
+		f.writeXref()
+		f.writeTrailer(xrefPosition)
+	}
+
+	f.writer.Flush()
+	f.file.Close()
+
+	f.release()
+}
+
+// ReadLine() reads a line from a PDF file interpreting end-of-line
+// characters according to the PDF specification.  In contexts where
+// you would be likely to use pdf.ReadLine() are where the line
+// consists of ASCII characters.  Therefore ReadLine() returns a
+// string rather than a []byte.
 func ReadLine(r io.ByteScanner) (result string, err error) {
 	bytes := make([]byte, 0, 512)
 	var byte byte
@@ -155,6 +248,27 @@ func ReadLine(r io.ByteScanner) (result string, err error) {
 	}
 	result = string(bytes)
 	return
+}
+
+func (f *file) SetCatalog(catalog *Indirect) {
+	f.catalogIndirect = catalog
+}
+
+func (f *file) SetInfo(i *Indirect) {
+	f.trailerDictionary.Add("Info", i)
+}
+
+func (f *file) Trailer() {
+}
+
+func (f *file) Seek(position int64, whence int) (int64, error) {
+	f.writer.Flush()
+	return f.file.Seek(position, whence)
+}
+
+func (f *file) Tell() int64 {
+	position, _ := f.Seek(0, os.SEEK_CUR)
+	return position
 }
 
 // Scan the file for the xref location, returning with the original file position.
@@ -264,8 +378,8 @@ func readOneXrefSection (pdffile *file, location int64) (prevXref int) {
 	} else {
 		// Save the first trailer encountered while working
 		// backwards through the history.
-		if pdffile.previousTrailerDictionary == nil {
-			pdffile.previousTrailerDictionary = trailer
+		if pdffile.trailerDictionary == nil {
+			pdffile.trailerDictionary = trailer
 		}
 		if prevReference,ok := trailer.Get("Prev").(*IntNumeric); ok {
 			prevXref = prevReference.Value()
@@ -274,53 +388,11 @@ func readOneXrefSection (pdffile *file, location int64) (prevXref int) {
 	return
 }
 
-func (f *file) SetCatalog(catalog *Indirect) {
-	f.catalogIndirect = catalog
-}
-
-func (f *file) SetInfo(i *Indirect) {
-	f.trailerDictionary.Add("Info", i)
-}
-
 func (f *file) release() {
 	f.xref.SetSize(0)
 	f.catalogIndirect = nil
 	f.trailerDictionary = nil
 	f.file = nil
-}
-
-// Implements Close() in File interface
-func (f *file) Close() {
-	if f.dirty {
-		f.trailerDictionary.Add("Size", NewIntNumeric(int(f.xref.Size())))
-
-		// The catalog appearing in the trailer must be an indirect
-		// object.  Create an indirect object pointed at the catalog,
-		// add it to the trailer dictionary, and write out the trailer dictionary.
-		if f.catalogIndirect == nil {
-			panic("No document catalog has been specified.  Use File.SetCatalog() to set one.")
-		}
-		f.trailerDictionary.Add("Root", f.catalogIndirect)
-
-		xrefPosition := f.Tell()
-		f.writeXref()
-		f.writeTrailer(xrefPosition)
-	}
-
-	f.writer.Flush()
-	f.file.Close()
-
-	f.release()
-}
-
-func (f *file) Seek(position int64, whence int) (int64, error) {
-	f.writer.Flush()
-	return f.file.Seek(position, whence)
-}
-
-func (f *file) Tell() int64 {
-	position, _ := f.Seek(0, os.SEEK_CUR)
-	return position
 }
 
 // Implements AddObjectAt() in File interface
@@ -345,63 +417,6 @@ func (f *file) AddObjectAt(object ObjectNumber, o Object) {
 	// They should have been set when "entry" was added to the xref,
 	// presumably by ReserveObjectNumber().
 	f.dirty = true
-}
-
-// Implements AddObject() in File interface
-func (f *file) AddObject(object Object) (reference *Indirect) {
-	reference = NewIndirect(f)
-	reference.Finalize(object)
-	return reference
-}
-
-// Implements DeleteObject() in File interface
-func (f *file) DeleteObject(indirect *Indirect) {
-	objectNumber := indirect.ObjectNumber(f)
-	entry := (*f.xref.At(uint(objectNumber.number))).(*xrefEntry)
-	if objectNumber.generation != entry.generation {
-		panic("Generation number mismatch")
-	}
-
-	if entry.generation < 65535 {
-		// Increment the generation count for the next use
-		// and link into free list.
-		freeHead := (*f.xref.At(0)).(*xrefEntry)
-		entry.clear(freeHead.byteOffset)
-		freeHead.clear(uint64(objectNumber.number))
-	} else {
-		// Don't link into free list.  Just set byte offset to 0
-		entry.clear(0)
-	}
-
-	f.dirty = true
-}
-
-// Implements ReserveObjectNumber() in File interface
-func (f *file) ReserveObjectNumber(o Object) ObjectNumber {
-	var (
-		newNumber uint32
-		generation uint16
-	)
-
-	// Find an unused node if possible taken from beginning of
-	// free list.
-	newNumber = uint32((*f.xref.At(0)).(*xrefEntry).byteOffset)
-	if newNumber == 0 {
-		// Create a new xref entry
-		newNumber = uint32(f.xref.Size())
-		f.xref.PushBack(&xrefEntry{0, 0, false, true})
-	} else {
-		// Adjust link in head of free list
-		freeHead := (*f.xref.At(0)).(*xrefEntry)
-		entry := (*f.xref.At(uint(newNumber))).(*xrefEntry)
-		freeHead.clear(entry.byteOffset)
-
-		entry.clear(0)
-		generation = entry.generation
-	}
-	f.dirty = true
-	result := ObjectNumber{newNumber, generation}
-	return result
 }
 
 func (f *file) parseExistingFile() {
@@ -459,6 +474,7 @@ func (f *file) writeXref() {
 
 func (f *file) writeTrailer(xrefPosition int64) {
 	f.writer.WriteString("trailer\n")
+fmt.Printf ("trailer before serializing: %v\n", f.trailerDictionary)
 	f.trailerDictionary.Serialize(f.writer, f)
 	f.writer.WriteString("\nstartxref\n")
 	fmt.Fprintf(f.writer, "%d\n", xrefPosition)
