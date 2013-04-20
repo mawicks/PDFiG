@@ -1,8 +1,5 @@
 Portable Document Format In Go (PDFiG)
-======================================It is meant for low-level manipulation of PDF files and
-will not necessarily produce a file that can be read by a PDF reader
-without imposing additional document structure.
-
+======================================
 Read, write, and modify PDF files using the Go programming language
 
 This project has the goal of being a full-featured PDF library with
@@ -24,7 +21,7 @@ internal `pdf.File` object to generate usable PDF files.  PDF files
 may be constructed using only a `pdf.Document` object, without regard
 to the underlying `pdf.File` object.  The `pdf.File` type is meant for
 low-level manipulation of PDF files and does not necessarily produce a
-file that can be read by a PDF reader without imposing additional
+file that can be read by a PDF reader without adding additional
 document structure.
 
 Although the library is very much a work in progress, it is currently
