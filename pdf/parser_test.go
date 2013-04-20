@@ -19,6 +19,15 @@ func TestParser (t *testing.T) {
 		testOneObject (t, fmt.Sprintf(`Scan of "%s"`, pdf.AsciiFromBytes([]byte(source))), o, mockFile, expected)
 	}
 
+	testParseIndirect := func(objectNumber pdf.ObjectNumber, source string, expected string) {
+		parser := pdf.NewParser (strings.NewReader(source))
+		o,err := parser.ScanIndirect (objectNumber, mockFile)
+		if (err != nil) {
+			t.Errorf(`Scan() of "%s" returned error: %v`, source, err)
+		}
+		testOneObject (t, fmt.Sprintf(`Scan of "%s"`, pdf.AsciiFromBytes([]byte(source))), o, mockFile, expected)
+	}
+
 	testParseFail := func(source string, prefix string) {
 		parser := pdf.NewParser (strings.NewReader(source))
 		_,err := parser.Scan (mockFile)
@@ -83,9 +92,12 @@ func TestParser (t *testing.T) {
 	testParse ("[301 302 303 R 304]", "[301 302 303 R 304]")
 	testParse ("[401 402 403 404 R 405]", "[401 402 403 404 R 405]")
 
+	testParseIndirect(pdf.NewObjectNumber(4,0), "4 0 obj\n100\nendobj", "100")
+
 	testParseFail("  /a#", "  /a#")
 	testParseFail("  /a#(123)", "  /a#(")
 	testParseFail("falxe  ", "falxe")
+
 
 }
 

@@ -1,6 +1,7 @@
 package pdf
 
 import (
+	"fmt"
 	"io"
 	"errors"
 	"github.com/mawicks/PDFiG/readers"
@@ -17,6 +18,9 @@ type Parser struct {
 	queuedObject Object
 }
 
+// NewParser constructs a new parser from the passed Scanner.
+// Typically Scanner will be the pdf.File's underlying os.File, but
+// this is not strictly necessary.
 func NewParser(scanner Scanner) *Parser {
 	return &Parser{readers.NewHistoryReader(scanner,64),nil}
 }
@@ -402,10 +406,9 @@ func (p *Parser) scanObject(file ...File) Object {
 // returned.  If not, err is set and context contains the input bytes
 // that preceeded the error.  The optional File argument, of which
 // there should be no more than one, indicates the pdf.File to use to
-// resolve indirect object references (e.g., "25 0 R").  Typically
-// Scanner will be the pdf.File's underlying os.File, but this is not
-// strictly necessary.  If no File is supplied, the input stream may
-// not contain any indirect object references.
+// resolve indirect object references (e.g., "25 0 R").  If no File is
+// supplied, the input stream may not contain any indirect object
+// references.
 func (p *Parser) Scan(file... File) (o Object,err error) {
 	defer func() {
 		if x := recover(); x!= nil {
@@ -417,6 +420,46 @@ func (p *Parser) Scan(file... File) (o Object,err error) {
 
 	return
 }
+
+// ScanIndirect() parses an indirect object including the "%d %d obj"
+// header and "endobj" trailer.  If successful the object is returned.
+// It returns an error if the object number and generation do not
+// match the passed ObjectNumber.  The optional File argument is as
+// described in Parser.Scan().
+func (p *Parser) ScanIndirect(objectNumber ObjectNumber, file... File) (object Object,err error) {
+	defer func() {
+		if x := recover(); x!= nil {
+			err,_ = x.(error)
+		}
+	} ()
+
+	header,_ := ReadLine(p.scanner)
+	var (
+		index uint32
+		generation uint16
+		obj string )
+
+	n,err := fmt.Sscanf (header, "%d %d %s", &index, &generation, &obj)
+	if err != nil || n != 3 {
+		panic(errors.New(fmt.Sprintf(`Object header expected but not found at position %p`, p)))
+	}
+	if (objectNumber.number != index || objectNumber.generation != generation) {
+		panic(errors.New(fmt.Sprintf(`Expected "%d %d obj" at location %d but found "%d %d %s"`,
+			objectNumber.number, objectNumber.generation,
+			index, generation, obj)))
+	}
+	object = p.scanObject(file...)
+	nextNonWhiteByte(p.scanner)
+	p.scanner.UnreadByte()
+
+	trailer,_ := ReadLine(p.scanner)
+	if trailer != "endobj" {
+		panic(errors.New(fmt.Sprintf(`No "endobj" following object "%d %d obj"`,
+			objectNumber.number, objectNumber.generation)))
+	}
+	return object,err
+}
+
 
 func (p *Parser) GetContext() []byte {
 	return p.scanner.GetHistory()

@@ -163,6 +163,15 @@ func (f *file) DeleteObject(indirect *Indirect) {
 	f.dirty = true
 }
 
+// Object() retrieves a finalized object that has already been written
+// to a PDF file.
+func (pdffile *file) Object(o ObjectNumber) (Object,error) {
+	entry := (*pdffile.xref.At(uint(o.number))).(*xrefEntry)
+	pdffile.Seek(int64(entry.byteOffset),os.SEEK_SET)
+	r := bufio.NewReader(pdffile.file)
+	return NewParser(r).ScanIndirect(o, pdffile)
+}
+
 // Implements ReserveObjectNumber() in File interface
 func (f *file) ReserveObjectNumber(o Object) ObjectNumber {
 	var (
@@ -259,12 +268,16 @@ func (f *file) SetInfo(i *Indirect) {
 func (f *file) Trailer() {
 }
 
+// Using pdf.file.Seek() rather than calling pdf.file.file.Seek()
+// directly provides a measure of safety by making sure the internal
+// writer is flushed before the file position is moved.
 func (f *file) Seek(position int64, whence int) (int64, error) {
 	f.writer.Flush()
 	return f.file.Seek(position, whence)
 }
 
 func (f *file) Tell() int64 {
+	// Make sure to use the flushing version of Seek() here...
 	position, _ := f.Seek(0, os.SEEK_CUR)
 	return position
 }

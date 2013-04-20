@@ -5,7 +5,7 @@ import (
 	"strings"
 	"github.com/mawicks/PDFiG/pdf" )
 
-func ExampleFile() {
+func ExampleFile_creation() {
 	f := pdf.OpenFile("/tmp/test-file.pdf")
 	o1 := pdf.NewIndirect()
 	indirect1 := f.AddObject(o1)
@@ -37,7 +37,7 @@ func ExampleFile() {
 	f.Close()
 }
 
-func ExampleModifyExistingFile_file() {
+func ExampleFile_modification() {
 	f := pdf.OpenFile("/tmp/pre-existing-file.pdf")
 	documentInfo := pdf.NewDocumentInfo()
 	documentInfo.SetTitle("Rewritten Title")

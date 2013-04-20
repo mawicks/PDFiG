@@ -1,6 +1,8 @@
 package main
 
 import (
+	"bufio"
+	"os"
 	"github.com/mawicks/PDFiG/pdf" )
 
 // make_file() produces a file using low-level methods of the pdf.File
@@ -12,6 +14,13 @@ func modify_file() {
 	documentInfo.SetTitle("Rewritten Title")
 	documentInfo.SetAuthor("Nobody")
 	documentInfo.SetCreator("Nothing")
+
+	// Verify that we can retrieve an arbitrary object
+	writer := bufio.NewWriter(os.Stdout)
+	o,_ := f.Object(pdf.NewObjectNumber(10,0))
+	o.Serialize(writer, f)
+	writer.WriteString("\n")
+	writer.Flush()
 
 	documentInfoIndirect := pdf.NewIndirect(f)
 	documentInfoIndirect.Finalize(documentInfo)

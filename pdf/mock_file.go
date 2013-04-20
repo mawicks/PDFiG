@@ -26,6 +26,11 @@ func (f *mockFile) AddObject(object Object) (reference *Indirect) {
 	return reference
 }
 
+// Implements Object() in File interface
+func (f *mockFile) Object(o ObjectNumber) (Object,error) {
+	return nil,nil
+}
+
 // Implements DeleteObject() in File interface
 func (f *mockFile) DeleteObject(*Indirect) {}
 
