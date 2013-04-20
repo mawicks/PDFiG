@@ -41,6 +41,7 @@ type file struct {
 	file *os.File
 	originalSize int64
 	mode int
+	// Location of xref for pre-existing files.
 	xrefLocation int64
 	xref containers.Array
 	trailerDictionary, previousTrailerDictionary *Dictionary
@@ -320,15 +321,15 @@ func (f *file) AddObjectAt(object ObjectNumber, o Object) {
 
 	entry.byteOffset = uint64(f.Tell())
 
+	fmt.Fprintf(f.writer, "%d %d obj\n", object.number, object.generation)
+	o.Serialize(f.writer, f)
+	fmt.Fprintf(f.writer, "\nendobj\n")
+
 	// Setting dirty flags should not be necessary here.
 	// They should have been set when "entry" was added to the xref,
 	// presumably by ReserveObjectNumber().
 	entry.dirty = true
 	f.dirty = true
-
-	fmt.Fprintf(f.writer, "%d %d obj\n", object.number, object.generation)
-	o.Serialize(f.writer, f)
-	fmt.Fprintf(f.writer, "\nendobj\n")
 }
 
 // Implements AddObject() in File interface
@@ -364,27 +365,30 @@ func (f *file) DeleteObject(object ObjectNumber) {
 // Implements ReserveObjectNumber() in File interface
 func (f *file) ReserveObjectNumber(o Object) ObjectNumber {
 	var (
-		freeIndex uint32
+		newNumber uint32
 		generation uint16
 	)
 
 	// Find an unused node if possible taken from beginning of
 	// free list.
-	freeIndex = uint32((*f.xref.At(0)).(*xrefEntry).byteOffset)
-	if freeIndex == 0 {
+	newNumber = uint32((*f.xref.At(0)).(*xrefEntry).byteOffset)
+	if newNumber == 0 {
 		// Create a new xref entry
-		freeIndex = uint32(f.xref.Size())
+		newNumber = uint32(f.xref.Size())
 		f.xref.PushBack(&xrefEntry{0, 0, true, true})
 	} else {
-		entry := (*f.xref.At(uint(freeIndex))).(*xrefEntry)
 		// Adjust link in head of free list
-		(*f.xref.At(0)).(*xrefEntry).byteOffset = entry.byteOffset
-		generation = entry.generation
+		freeHead := (*f.xref.At(0)).(*xrefEntry)
+		entry := (*f.xref.At(uint(newNumber))).(*xrefEntry)
+		freeHead.byteOffset = entry.byteOffset
 		entry.inUse = true
+		// Mark free head and reused entry as dirty
+		freeHead.dirty = true
 		entry.dirty = true
+		generation = entry.generation
 	}
 	f.dirty = true
-	result := ObjectNumber{freeIndex, generation}
+	result := ObjectNumber{newNumber, generation}
 	return result
 }
 
