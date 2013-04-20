@@ -6,7 +6,7 @@ import (
 	"github.com/mawicks/pdfDIG/pdf" )
 
 func ExampleFile() {
-	f := pdf.NewFile("/tmp/test-file.pdf")
+	f := pdf.OpenFile("/tmp/test-file.pdf")
 	o1 := pdf.NewIndirect()
 	indirect1 := f.AddObject(o1)
 	o1.Finalize(pdf.NewNumeric(3.14))

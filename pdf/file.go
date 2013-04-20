@@ -73,8 +73,8 @@ type file struct {
 	writer *bufio.Writer
 }
 
-// Constructor for File object
-func NewFile(filename string) File {
+// OpenFile() construct a File object from either a new or a pre-existing filename.
+func OpenFile(filename string) File {
 	var (
 		result *file
 		f *os.File

@@ -7,7 +7,7 @@ import (
 // type.  It does not work at the document layer and it does *not*
 // produce a PDF document that a viewer will understand.
 func modify_file() {
-	f := pdf.NewFile("/tmp/test-document.pdf")
+	f := pdf.OpenFile("/tmp/test-document.pdf")
 	documentInfoIndirect := pdf.NewIndirect(f)
 	f.SetInfo (documentInfoIndirect)
 	documentInfo := pdf.NewDocumentInfo()

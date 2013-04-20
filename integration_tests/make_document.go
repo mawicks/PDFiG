@@ -5,7 +5,7 @@ import (
 	"github.com/mawicks/pdfDIG/pdf" )
 
 func make_document() {
-	doc := pdf.NewDocument("/tmp/test-document.pdf")
+	doc := pdf.OpenDocument("/tmp/test-document.pdf")
 	doc.SetAuthor("Mark Wicks")
 	doc.SetTitle("Test Document")
 	// Following is to test string encoding

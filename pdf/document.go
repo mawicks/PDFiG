@@ -18,10 +18,11 @@ type Document struct {
 	DocumentInfo
 }
 
-func NewDocument(filename string) *Document {
+// OpenDocument() constructs a document object from either a new or a pre-existing filename.
+func OpenDocument(filename string) *Document {
 	d := new(Document)
 
-	d.file = NewFile(filename)
+	d.file = OpenFile(filename)
 
 	d.pages = NewArray()
 
