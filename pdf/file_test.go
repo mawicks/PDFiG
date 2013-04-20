@@ -3,7 +3,7 @@ package pdf_test
 import (
 	"testing"
 	"strings"
-	"github.com/mawicks/pdfDIG/pdf" )
+	"github.com/mawicks/PDFiG/pdf" )
 
 func ExampleFile() {
 	f := pdf.OpenFile("/tmp/test-file.pdf")

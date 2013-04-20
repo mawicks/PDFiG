@@ -1,5 +1,5 @@
-PDF Documents In Go (pdfDIG)
-==========================
+Portable Document Format In Go (PDFiG)
+======================================
 
 Generate and manipulate PDF files using the Go programming language
 

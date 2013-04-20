@@ -2,7 +2,7 @@ package pdf_test
 
 import (
 	"fmt"
-	"github.com/mawicks/pdfDIG/pdf" )
+	"github.com/mawicks/PDFiG/pdf" )
 
 func ExampleDocument() {
 	doc := pdf.OpenDocument("/tmp/test-document.pdf")

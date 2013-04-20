@@ -1,7 +1,7 @@
 package pdf_test
 
 import (
-	"github.com/mawicks/pdfDIG/pdf"
+	"github.com/mawicks/PDFiG/pdf"
 	"strconv"
 	"testing"
 	"fmt" )
