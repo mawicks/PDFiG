@@ -22,6 +22,12 @@ func modify_file() {
 	writer.WriteString("\n")
 	writer.Flush()
 
+	if info := f.Info(); info != nil {
+		info.Serialize(writer, f)
+		writer.WriteString("\n")
+		writer.Flush()
+	}
+
 	documentInfoIndirect := pdf.NewIndirect(f)
 	documentInfoIndirect.Finalize(documentInfo)
 	f.SetInfo (documentInfoIndirect)

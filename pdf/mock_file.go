@@ -48,3 +48,7 @@ func (f *mockFile) SetCatalog(i *Indirect) {
 func (f *mockFile) SetInfo(i *Indirect) {
 }
 
+func (f *mockFile) Info() *Dictionary {
+	return nil
+}
+

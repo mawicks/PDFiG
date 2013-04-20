@@ -53,6 +53,7 @@ func (entry *xrefEntry) setInUse (location uint64) {
 }
 
 type file struct {
+	pdfVersion uint
 	file *os.File
 	originalSize int64
 	mode int
@@ -164,7 +165,9 @@ func (f *file) DeleteObject(indirect *Indirect) {
 }
 
 // Object() retrieves a finalized object that has already been written
-// to a PDF file.
+// to a PDF file.  Each call causes a new object to be unserialized
+// directly from the file so the caller has exclusive ownership of the
+// returned object.
 func (pdffile *file) Object(o ObjectNumber) (Object,error) {
 	entry := (*pdffile.xref.At(uint(o.number))).(*xrefEntry)
 	pdffile.Seek(int64(entry.byteOffset),os.SEEK_SET)
@@ -263,6 +266,19 @@ func (f *file) SetCatalog(catalog *Indirect) {
 
 func (f *file) SetInfo(i *Indirect) {
 	f.trailerDictionary.Add("Info", i)
+}
+
+func (f *file) Info() *Dictionary {
+	fmt.Printf ("Info called\n")
+	if infoValue := f.trailerDictionary.Get("Info"); infoValue != nil {
+		indirect := infoValue.(*Indirect)
+		if direct,_ := f.Object(indirect.ObjectNumber(f)); direct != nil {
+			if info,ok := direct.(*Dictionary); ok {
+				return info
+			}
+		}
+	}
+	return NewDictionary()
 }
 
 func (f *file) Trailer() {
