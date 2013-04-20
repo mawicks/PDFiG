@@ -37,6 +37,20 @@ func ExampleFile() {
 	f.Close()
 }
 
+func ExampleModifyExistingFile_file() {
+	f := pdf.OpenFile("/tmp/pre-existing-file.pdf")
+	documentInfo := pdf.NewDocumentInfo()
+	documentInfo.SetTitle("Rewritten Title")
+	documentInfo.SetAuthor("Nobody")
+	documentInfo.SetCreator("Nothing")
+
+	documentInfoIndirect := pdf.NewIndirect(f)
+	documentInfoIndirect.Finalize(documentInfo)
+	f.SetInfo (documentInfoIndirect)
+
+	f.Close()
+}
+
 func TestPDFReadLine (t *testing.T) {
 	teststring := "abc\ndef\rghi\r\njkl\n\r\n\r123\n\r\r\n456\n\n789"
 	lines := [...]string{

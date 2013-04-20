@@ -8,12 +8,14 @@ import (
 // produce a PDF document that a viewer will understand.
 func modify_file() {
 	f := pdf.OpenFile("/tmp/test-document.pdf")
-	documentInfoIndirect := pdf.NewIndirect(f)
-	f.SetInfo (documentInfoIndirect)
 	documentInfo := pdf.NewDocumentInfo()
 	documentInfo.SetTitle("Rewritten Title")
 	documentInfo.SetAuthor("Nobody")
 	documentInfo.SetCreator("Nothing")
+
+	documentInfoIndirect := pdf.NewIndirect(f)
 	documentInfoIndirect.Finalize(documentInfo)
+	f.SetInfo (documentInfoIndirect)
+
 	f.Close()
 }
