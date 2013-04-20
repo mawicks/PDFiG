@@ -194,13 +194,6 @@ func (f *file) ReserveObjectNumber(o Object) ObjectNumber {
 // Implements Close() in File interface
 func (f *file) Close() {
 	if f.dirty {
-		f.trailerDictionary.Add("Size", NewIntNumeric(int(f.xref.Size())))
-
-		// The catalog appearing in the trailer must be an indirect
-		// object.  Create an indirect object pointed at the catalog,
-		// add it to the trailer dictionary, and write out the trailer dictionary.
-		fmt.Printf ("in Close(), root is %v\n", f.trailerDictionary.Get("Root"))
-
 		// If client specified a catalog, use it.  Otherwise
 		// re-use use pre-existing catalog if it exists.
 		if f.catalogIndirect != nil {
@@ -211,9 +204,14 @@ func (f *file) Close() {
 			panic("No document catalog has been specified.  Use File.SetCatalog() to set one.")
 		}
 
+		f.trailerDictionary.Add("Size", NewIntNumeric(int(f.xref.Size())))
 
 		xrefPosition := f.Tell()
+
+//	 	dumpXref(f.xref)
+
 		f.writeXref()
+
 		f.writeTrailer(xrefPosition)
 	}
 
@@ -284,7 +282,6 @@ func findXrefLocation(f *os.File) (result int64) {
 		_,err := f.Read(b)
 		if (err == nil) {
 			result,_ = strconv.ParseInt(string(b),10,64)
-			fmt.Printf ("Xref location is %d\n", result)
 		}
 	}
 	// Restore file position
@@ -311,7 +308,6 @@ func readXrefSubsection(xref containers.Array, r *bufio.Reader, start, count uin
 		if err != nil || n != 3 {
 			panic (fmt.Sprintf("Invalid xref line: %s", xrefLine))
 		}
-		fmt.Printf ("pos: %d gen: %d %c\n", position, generation, useChar)
 
 		if useChar != 'f' && useChar != 'n' {
 			panic (fmt.Sprintf("Invalid character '%c' in xref use field.", useChar))
@@ -337,9 +333,6 @@ func readTrailer(subsectionHeader string, r *bufio.Reader, pdffile *file) *Dicti
 		object,err := parser.Scan(pdffile)
 		if err == nil {
 			if trailer,ok := object.(*Dictionary); ok {
-				w := bufio.NewWriter(os.Stdout)
-				trailer.Serialize(w,pdffile)
-				fmt.Fprintf(w, "\n"); w.Flush()
 				return trailer
 			}
 		}
@@ -361,14 +354,11 @@ func readOneXrefSection (pdffile *file, location int64) (prevXref int) {
 	subsectionHeader := ""
 	for {
 		subsectionHeader,_ = ReadLine(r)
-		fmt.Printf ("subsection header: %s\n", subsectionHeader)
 		start,count := uint(0),uint(0)
 		n,err := fmt.Sscanf (subsectionHeader, "%d %d", &start, &count)
-		fmt.Printf ("n=%d, err=%v\n", n, err)
 		if (err != nil || n != 2) {
 			break;
 		}
-		fmt.Printf ("xref subsection: start=%d, count=%d\n", start, count)
 		readXrefSubsection(pdffile.xref, r, start, count)
 	}
 
@@ -457,7 +447,6 @@ func nextSegment(xref containers.Array, start uint) (nextStart, length uint) {
 }
 
 func (f *file) writeXref() {
-	dumpXref(f.xref)
 	f.writer.WriteString("xref\n")
 
 	for s, l := nextSegment(f.xref, 0); s < f.xref.Size(); s, l = nextSegment(f.xref, s+l) {
@@ -474,7 +463,6 @@ func (f *file) writeXref() {
 
 func (f *file) writeTrailer(xrefPosition int64) {
 	f.writer.WriteString("trailer\n")
-fmt.Printf ("trailer before serializing: %v\n", f.trailerDictionary)
 	f.trailerDictionary.Serialize(f.writer, f)
 	f.writer.WriteString("\nstartxref\n")
 	fmt.Fprintf(f.writer, "%d\n", xrefPosition)
