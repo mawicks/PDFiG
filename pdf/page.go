@@ -39,15 +39,6 @@ func (p *Page) Indirect() *Indirect {
 	return p.dictionaryIndirect
 }
 
-func (p *Page) BindToFile(f File) {
-	// The returned ObjectNumbers are ignored because they are not
-	// of any use here.  We're after the side effect of binding
-	// these objects to the File.
-	p.dictionaryIndirect.ObjectNumber(f)
-	p.resourcesIndirect.ObjectNumber(f)
-	p.contentsIndirect.ObjectNumber(f)
-}
-
 func (p *Page) Finalize() {
 	p.dictionary.Add("Resources", p.resourcesIndirect)
 	p.dictionary.Add("Type", NewName("Page"))
