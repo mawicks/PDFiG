@@ -55,8 +55,8 @@ func (entry *xrefEntry) setInUse (location uint64) {
 type file struct {
 	pdfVersion uint
 	file *os.File
-	originalSize int64
 	mode int
+	originalSize int64
 	// Location of xref for pre-existing files.
 	xrefLocation int64
 	xref containers.Array
@@ -75,27 +75,13 @@ type file struct {
 }
 
 // OpenFile() construct a File object from either a new or a pre-existing filename.
-func OpenFile(filename string) File {
-	var (
-		result *file
-		f *os.File
-		err error
-		mode int
-	)
+func OpenFile(filename string, mode int) (result *file,exists bool,err error) {
+	var f *os.File
+	f,err = os.OpenFile(filename, mode, 0666)
+	if err != nil {
+		return
+	}
 
-	success := false
-	modes := [...]int {os.O_RDWR|os.O_CREATE, os.O_RDONLY}
-	for _,m := range modes {
-		f, err = os.OpenFile(filename, m, 0777)
-		if (err == nil) {
-			mode = m
-			success = true
-			break;
-		}
-	}
-	if !success {
-		panic("Failed to open or create file")
-	}
 	result = new(file)
 	result.file = f
 	result.mode = mode
@@ -108,16 +94,16 @@ func OpenFile(filename string) File {
 		result.xref.PushBack(&xrefEntry{0, 65535, false, true})
 		result.dirty = true
 	} else {
+		exists = true
 		// For pre-existing files, read the xref
 		result.xrefLocation = findXrefLocation(f)
-		nextXref := readOneXrefSection(result, result.xrefLocation)
+		var nextXref int
+		nextXref,result.trailerDictionary = readOneXrefSection(result, result.xrefLocation)
 		for ; nextXref != 0; {
-			nextXref = readOneXrefSection(result, int64(nextXref))
+			nextXref,_ = readOneXrefSection(result, int64(nextXref))
 		}
 	}
-	// If a pre-exisisting trailer was found, use it to initialize
-	// the trailer Dictionary.  This will pick up and re-use a
-	// pre-existing document catalog and document info.
+	// If no pre-existing trailer was parsed, create a new dictionary.
 	if result.trailerDictionary == nil {
 		result.trailerDictionary = NewDictionary()
 	}
@@ -132,7 +118,7 @@ func OpenFile(filename string) File {
 		writeHeader(result.writer)
 	}
 	f.Seek(0,os.SEEK_END)
-	return result
+	return
 }
 
 // Implements AddObject() in File interface
@@ -334,7 +320,6 @@ func findXrefLocation(f *os.File) (result int64) {
 	return result
 }
 
-
 func readXrefSubsection(xref containers.Array, r *bufio.Reader, start, count uint) {
 	var (
 		position uint64
@@ -385,7 +370,7 @@ func readTrailer(subsectionHeader string, r *bufio.Reader, pdffile *file) *Dicti
 	return nil
 }
 
-func readOneXrefSection (pdffile *file, location int64) (prevXref int) {
+func readOneXrefSection (pdffile *file, location int64) (prevXref int, trailer *Dictionary) {
 
 	if _,err := pdffile.file.Seek (location, os.SEEK_SET); err != nil {
 		panic ("Seeking to xref position failed")
@@ -407,18 +392,11 @@ func readOneXrefSection (pdffile *file, location int64) (prevXref int) {
 		readXrefSubsection(pdffile.xref, r, start, count)
 	}
 
-	trailer := readTrailer (subsectionHeader, r, pdffile)
+	trailer = readTrailer (subsectionHeader, r, pdffile)
 	if trailer == nil {
 		panic ("Expected trailer not found")
-	} else {
-		// Save the first trailer encountered while working
-		// backwards through the history.
-		if pdffile.trailerDictionary == nil {
-			pdffile.trailerDictionary = trailer
-		}
-		if prevReference,ok := trailer.Get("Prev").(*IntNumeric); ok {
-			prevXref = prevReference.Value()
-		}
+	} else if prevReference,ok := trailer.Get("Prev").(*IntNumeric); ok {
+		prevXref = prevReference.Value()
 	}
 	return
 }

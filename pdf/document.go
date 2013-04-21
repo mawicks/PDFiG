@@ -19,10 +19,10 @@ type Document struct {
 }
 
 // OpenDocument() constructs a document object from either a new or a pre-existing filename.
-func OpenDocument(filename string) *Document {
+func OpenDocument(filename string, mode int) *Document {
 	d := new(Document)
 
-	d.file = OpenFile(filename)
+	d.file,_,_ = OpenFile(filename, mode)
 
 	d.pages = NewArray()
 
@@ -51,9 +51,10 @@ func (d *Document) release() {
 }
 
 func (d *Document) finishCurrentPage() {
-	d.currentPage.Finalize()
-	d.pages.Add(d.currentPage.Indirect())
-	d.pageCount += 1
+	if d.currentPage != nil {
+		d.pages.Add(d.currentPage.Finalize())
+		d.pageCount += 1
+	}
 }
 
 func (d *Document) finishPageTree() {
@@ -89,9 +90,7 @@ func (d *Document) finishDocumentInfo() {
 }
 
 func (d *Document) NewPage() *Page {
-	if d.currentPage != nil {
-		d.finishCurrentPage()
-	}
+	d.finishCurrentPage()
 	d.currentPage = NewPage(d.file)
 	d.currentPage.SetParent(d.pageTreeRootIndirect)
 	d.currentPage.setProcSet(d.procSetIndirect)

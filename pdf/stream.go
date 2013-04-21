@@ -27,6 +27,10 @@ func (s *Stream) Add(key string, o Object) {
 	s.dictionary.Add(key, o)
 }
 
+func (s *Stream) Reader() *bytes.Reader {
+	return bytes.NewReader(s.buffer.Bytes())
+}
+
 func (s *Stream) Remove(key string) {
 	s.dictionary.Remove(key)
 }

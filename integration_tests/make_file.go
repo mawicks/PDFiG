@@ -1,13 +1,14 @@
 package main
 
 import (
+	"os"
 	"github.com/mawicks/PDFiG/pdf" )
 
 // make_file() produces a file using low-level methods of the pdf.File
 // type.  It does not work at the document layer and it does *not*
 // produce a PDF document that a viewer will understand.
 func make_file() {
-	f := pdf.OpenFile("/tmp/test-file.pdf")
+	f,_,_ := pdf.OpenFile("/tmp/test-file.pdf", os.O_RDWR|os.O_CREATE)
 	o1 := pdf.NewIndirect()
 	indirect1 := f.AddObject(o1)
 	o1.Finalize(pdf.NewNumeric(3.14))
