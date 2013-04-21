@@ -56,3 +56,7 @@ func (f *mockFile) Catalog() *Dictionary {
 	return nil
 }
 
+func (f *mockFile) Trailer() *Dictionary {
+	return nil
+}
+

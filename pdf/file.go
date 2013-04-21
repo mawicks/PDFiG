@@ -273,14 +273,18 @@ func (f *file) dictionaryFromTrailer(name string) *Dictionary {
 	return NewDictionary()
 }
 
+func (f *file) dictionaryToTrailer(name string, d *Dictionary) {
+	indirect := NewIndirect(f)
+	indirect.Finalize(d)
+	f.trailerDictionary.Add(name,indirect)
+}
+
 func (f *file) Catalog() *Dictionary {
 	return f.dictionaryFromTrailer("Root")
 }
 
 func (f *file) SetCatalog(catalog *Dictionary) {
-	indirect := NewIndirect(f)
-	indirect.Finalize(catalog)
-	f.trailerDictionary.Add("Root", indirect)
+	f.dictionaryToTrailer("Root",catalog)
 }
 
 func (f *file) Info() *Dictionary {
@@ -288,12 +292,12 @@ func (f *file) Info() *Dictionary {
 }
 
 func (f *file) SetInfo(info DocumentInfo) {
-	indirect := NewIndirect(f)
-	indirect.Finalize(info)
-	f.trailerDictionary.Add("Info", indirect)
+	f.dictionaryToTrailer("Info", info.Dictionary)
 }
 
-func (f *file) Trailer() {
+func (f *file) Trailer() *Dictionary {
+	// Return a clone so nobody can alter the real dictionary
+	return f.trailerDictionary.Clone().(*Dictionary)
 }
 
 // Using pdf.file.Seek() rather than calling pdf.file.file.Seek()

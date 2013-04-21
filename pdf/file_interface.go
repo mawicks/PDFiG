@@ -42,6 +42,10 @@ type File interface {
 	// SetInfo() sets the Info object
 	SetInfo(DocumentInfo)
 
+	// Trailer() returns a copy of the current contents of the
+	// trailer dictionary
+	Trailer() *Dictionary
+
 	// DeleteObject() deletes the specified object from the file.
 	// It must be an indirect object.
 	DeleteObject(*Indirect)
