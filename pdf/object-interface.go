@@ -13,12 +13,18 @@ type Writer interface {
 // All PDF objects implement the pdf.Object inteface
 type Object interface {
 	// Clone() copies the object in such a way that it can be
-	// returned from or passed to a function without fear of
-	// modifying internal data structures.
-
+	// returned from or passed to a function without losing
+	// control of its internal data structures.
 	Clone() Object
-	// Serialize() writes a representation of object to Writer as if with indirect references
-	// resolved using optional File.
+
+	// Serialize() write a serial byte representation (as defined
+	// by the PDF specification) of the object to the Writer.
+	// Indirect references are resolved and numbered as if they
+	// were being written to the optional File argument.  Having
+	// separate arguments for Writer and File allows writing an
+	// object to stdout, but using the indirect reference object
+	// numbers as if it were contained in a specific PDF file.
+	// Objects can be unserialized using Parser.Scan().
 	Serialize(Writer, ...File)
 }
 

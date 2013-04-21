@@ -134,6 +134,12 @@ func (i *Indirect) Clone() Object {
 	return newIndirect
 }
 
+// Serialize() write a serial representation (as defined by the PDF
+// specification) of the object to the Writer.  Indirect references
+// are resolved and numbered as if they were being written to the
+// optional File argument.  Having separate arguments for Writer and File
+// allows writing an object to stdout, but using the indirect reference object numbers
+// as if it were contained in a specific PDF file.
 func (i *Indirect) Serialize(w Writer, file ...File) {
 	if len(file) == 0 {
 		panic("File parameter required for pdf.Indirect.Serialize()")
@@ -149,6 +155,9 @@ func (i *Indirect) Serialize(w Writer, file ...File) {
 	w.WriteString(" R")
 }
 
+// Finalize() writes the passed object as an indirect object (complete
+// with an entry in the xref, an "obj" header, and an "endobj"
+// trailer) to all files to which the Indirect object has been bound.
 func (i *Indirect) Finalize(o Object) {
 	if i.isFinal {
 		panic("Finalize() called on a final object")

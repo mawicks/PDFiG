@@ -203,6 +203,9 @@ func TestStream(t *testing.T) {
 	s := pdf.NewStream()
 	fmt.Fprint(s, "foo")
 	testOneObject(t, "NewStream", s, nil, "<</Length 3>>\nstream\nfoo\nendstream")
+	// Ensure stream can be serialized more than once (i.e., that reading the internal buffer doesn't
+	// affect the current read position.
+	testOneObject(t, "NewStream", s, nil, "<</Length 3>>\nstream\nfoo\nendstream")
 	b := s.Clone()
 	testOneObject(t, "Stream.Clone()", b, nil, "<</Length 3>>\nstream\nfoo\nendstream")
 }

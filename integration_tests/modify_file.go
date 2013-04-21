@@ -9,7 +9,7 @@ import (
 // type.  It does not work at the document layer and it does *not*
 // produce a PDF document that a viewer will understand.
 func modify_file() {
-	f := pdf.OpenFile("/tmp/test-document.pdf")
+	f,_,_ := pdf.OpenFile("/tmp/test-document.pdf", os.O_RDWR|os.O_CREATE)
 	documentInfo := pdf.NewDocumentInfo()
 	documentInfo.SetTitle("Rewritten Title")
 	documentInfo.SetAuthor("Nobody")

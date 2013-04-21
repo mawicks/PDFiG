@@ -2,10 +2,11 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"github.com/mawicks/PDFiG/pdf" )
 
 func make_document() {
-	doc := pdf.OpenDocument("/tmp/test-document.pdf")
+	doc := pdf.OpenDocument("/tmp/test-document.pdf", os.O_RDWR|os.O_CREATE)
 	doc.SetAuthor("Mark Wicks")
 	doc.SetTitle("Test Document")
 	// Following is to test string encoding

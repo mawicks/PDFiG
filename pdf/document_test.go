@@ -2,10 +2,11 @@ package pdf_test
 
 import (
 	"fmt"
+	"os"
 	"github.com/mawicks/PDFiG/pdf" )
 
 func ExampleDocument() {
-	doc := pdf.OpenDocument("/tmp/test-document.pdf")
+	doc := pdf.OpenDocument("/tmp/test-document.pdf", os.O_RDWR|os.O_CREATE)
 	doc.SetAuthor("Mark Wicks")
 	doc.SetTitle("Test Document")
 

@@ -5,15 +5,9 @@ import "strconv"
 type Page struct {
 	fileList []File
 	contents *Stream
-	parent   *Indirect
+	parent *Indirect
 
-	dictionary *Dictionary
-	resources  *Dictionary
-	fontResources* Dictionary
-
-	dictionaryIndirect *Indirect
-	resourcesIndirect  *Indirect
-	contentsIndirect *Indirect
+	dictionary, resources, fontResources *Dictionary
 
 	fontMap map[Font] string
 }
@@ -22,40 +16,46 @@ func NewPage(file... File) *Page {
 	p := new(Page)
 	p.fileList = file
 	p.contents = NewStream()
+	p.parent = nil
 
 	p.dictionary = NewDictionary()
 	p.resources = NewDictionary()
-
-	p.dictionaryIndirect = NewIndirect(file...)
-	p.resourcesIndirect = NewIndirect(file...)
-	p.contentsIndirect = NewIndirect(file...)
+	p.fontResources = nil
 
 	p.fontMap = make(map[Font]string, 15)
 
 	return p
 }
 
-func (p *Page) Indirect() *Indirect {
-	return p.dictionaryIndirect
-}
+func (p *Page) Finalize() *Indirect {
+	if (p.fontResources != nil) {
+		p.resources.Add("Font", p.fontResources)
+		p.fontResources = nil
+	}
 
-func (p *Page) Finalize() {
-	p.dictionary.Add("Resources", p.resourcesIndirect)
-	p.dictionary.Add("Type", NewName("Page"))
-	p.dictionary.Add("Contents", p.contentsIndirect)
+	indirect := NewIndirect(p.fileList...)
+	p.dictionary.Add("Resources", indirect)
+	indirect.Finalize(p.resources)
+	p.resources = nil
+
+	indirect = NewIndirect(p.fileList...)
+	p.dictionary.Add("Contents", indirect)
+	indirect.Finalize(p.contents)
+	p.contents = nil
+
 	if p.parent == nil {
 		panic("No parent specified")
 	}
-
 	p.dictionary.Add("Parent", p.parent)
-	p.dictionaryIndirect.Finalize(p.dictionary)
+	p.parent = nil
 
-	p.contentsIndirect.Finalize(p.contents)
+	p.dictionary.Add("Type", NewName("Page"))
 
-	if (p.fontResources != nil) {
-		p.resources.Add("Font", p.fontResources)
-	}
-	p.resourcesIndirect.Finalize(p.resources)
+	indirect = NewIndirect(p.fileList...)
+	indirect.Finalize(p.dictionary)
+	p.dictionary = nil
+
+	return indirect
 }
 
 func (p *Page) AddFont (font Font) string {

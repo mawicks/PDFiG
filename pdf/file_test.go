@@ -1,12 +1,14 @@
 package pdf_test
 
 import (
-	"testing"
+	"os"
 	"strings"
+	"testing"
 	"github.com/mawicks/PDFiG/pdf" )
 
 func ExampleFile_creation() {
-	f := pdf.OpenFile("/tmp/test-file.pdf")
+	f,_,_ := pdf.OpenFile("/tmp/test-file.pdf", os.O_RDWR|os.O_CREATE)
+
 	o1 := pdf.NewIndirect()
 	indirect1 := f.AddObject(o1)
 	o1.Finalize(pdf.NewNumeric(3.14))
@@ -35,7 +37,7 @@ func ExampleFile_creation() {
 }
 
 func ExampleFile_modification() {
-	f := pdf.OpenFile("/tmp/pre-existing-file.pdf")
+	f,_,_ := pdf.OpenFile("/tmp/pre-existing-file.pdf", os.O_RDWR|os.O_CREATE)
 	documentInfo := pdf.NewDocumentInfo()
 	documentInfo.SetTitle("Rewritten Title")
 	documentInfo.SetAuthor("Nobody")
