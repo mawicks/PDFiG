@@ -21,9 +21,7 @@ func (f *mockFile) AddObjectAt(ObjectNumber, Object) {}
 
 // Implements AddObject() in File interface
 func (f *mockFile) AddObject(object Object) (reference *Indirect) {
-	reference = NewIndirect(f)
-	reference.Finalize(object)
-	return reference
+	return NewIndirect(f).Finalize(object)
 }
 
 // Implements Object() in File interface

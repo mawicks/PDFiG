@@ -159,7 +159,10 @@ func (i *Indirect) Serialize(w Writer, file ...File) {
 // Finalize() writes the passed object as an indirect object (complete
 // with an entry in the xref, an "obj" header, and an "endobj"
 // trailer) to all files to which the Indirect object has been bound.
-func (i *Indirect) Finalize(o Object) {
+// Finalize() returns its Indirect object for constructions such as
+//  a := NewIndirect(f).Finalize(object)
+
+func (i *Indirect) Finalize(o Object) *Indirect{
 	if i.isFinal {
 		panic("Finalize() called on a final object")
 	}
@@ -167,7 +170,7 @@ func (i *Indirect) Finalize(o Object) {
 		file.AddObjectAt(objectNumber, o)
 	}
 	i.isFinal = true
-	return
+	return i
 }
 
 // ObjectNumber() binds its object to the passed pdf.File object and

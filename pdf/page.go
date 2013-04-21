@@ -33,14 +33,10 @@ func (p *Page) Finalize() *Indirect {
 		p.fontResources = nil
 	}
 
-	indirect := NewIndirect(p.fileList...)
-	p.dictionary.Add("Resources", indirect)
-	indirect.Finalize(p.resources)
+	p.dictionary.Add("Resources", NewIndirect(p.fileList...).Finalize(p.resources))
 	p.resources = nil
 
-	indirect = NewIndirect(p.fileList...)
-	p.dictionary.Add("Contents", indirect)
-	indirect.Finalize(p.contents)
+	p.dictionary.Add("Contents", NewIndirect(p.fileList...).Finalize(p.contents))
 	p.contents = nil
 
 	if p.parent == nil {
@@ -51,8 +47,7 @@ func (p *Page) Finalize() *Indirect {
 
 	p.dictionary.Add("Type", NewName("Page"))
 
-	indirect = NewIndirect(p.fileList...)
-	indirect.Finalize(p.dictionary)
+	indirect := NewIndirect(p.fileList...).Finalize(p.dictionary)
 	p.dictionary = nil
 
 	return indirect

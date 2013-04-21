@@ -123,9 +123,7 @@ func OpenFile(filename string, mode int) (result *file,exists bool,err error) {
 
 // Implements AddObject() in File interface
 func (f *file) AddObject(object Object) (reference *Indirect) {
-	reference = NewIndirect(f)
-	reference.Finalize(object)
-	return reference
+	return NewIndirect(f).Finalize(object)
 }
 
 // Implements DeleteObject() in File interface
@@ -260,9 +258,7 @@ func (f *file) dictionaryFromTrailer(name string) *Dictionary {
 }
 
 func (f *file) dictionaryToTrailer(name string, d *Dictionary) {
-	indirect := NewIndirect(f)
-	indirect.Finalize(d)
-	f.trailerDictionary.Add(name,indirect)
+	f.trailerDictionary.Add(name,NewIndirect(f).Finalize(d))
 }
 
 func (f *file) Catalog() *Dictionary {
