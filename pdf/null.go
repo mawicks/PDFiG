@@ -14,3 +14,8 @@ func (n *Null) Serialize(w Writer, file ...File) {
 	w.WriteString("null")
 	return
 }
+
+func (n *Null) Clone() Object {
+	// All copies of null point to the same instance.
+	return n
+}

@@ -78,17 +78,13 @@ func (d *Document) finishProcSet() {
 func (d *Document) finishCatalog() {
 	catalog := NewDictionary()
 	catalog.Add("Type", NewName("Catalog"))
-	catalogIndirect := NewIndirect(d.file)
-	d.file.SetCatalog(catalogIndirect)
 	catalog.Add("Pages", d.pageTreeRootIndirect)
-	catalogIndirect.Finalize(catalog)
+	d.file.SetCatalog(catalog)
 }
 
 func (d *Document) finishDocumentInfo() {
 	if d.DocumentInfo.Size() != 0 {
-		documentInfoIndirect := NewIndirect(d.file)
-		d.file.SetInfo (documentInfoIndirect)
-		documentInfoIndirect.Finalize(d.DocumentInfo)
+		d.file.SetInfo (d.DocumentInfo)
 	}
 }
 

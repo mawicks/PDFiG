@@ -260,17 +260,9 @@ func ReadLine(r io.ByteScanner) (result string, err error) {
 	return
 }
 
-func (f *file) SetCatalog(catalog *Indirect) {
-	f.catalogIndirect = catalog
-}
 
-func (f *file) SetInfo(i *Indirect) {
-	f.trailerDictionary.Add("Info", i)
-}
-
-func (f *file) Info() *Dictionary {
-	fmt.Printf ("Info called\n")
-	if infoValue := f.trailerDictionary.Get("Info"); infoValue != nil {
+func (f *file) dictionaryFromTrailer(name string) *Dictionary {
+	if infoValue := f.trailerDictionary.Get(name); infoValue != nil {
 		indirect := infoValue.(*Indirect)
 		if direct,_ := f.Object(indirect.ObjectNumber(f)); direct != nil {
 			if info,ok := direct.(*Dictionary); ok {
@@ -279,6 +271,26 @@ func (f *file) Info() *Dictionary {
 		}
 	}
 	return NewDictionary()
+}
+
+func (f *file) Catalog() *Dictionary {
+	return f.dictionaryFromTrailer("Root")
+}
+
+func (f *file) SetCatalog(catalog *Dictionary) {
+	indirect := NewIndirect(f)
+	indirect.Finalize(catalog)
+	f.trailerDictionary.Add("Root", indirect)
+}
+
+func (f *file) Info() *Dictionary {
+	return f.dictionaryFromTrailer("Info")
+}
+
+func (f *file) SetInfo(info DocumentInfo) {
+	indirect := NewIndirect(f)
+	indirect.Finalize(info)
+	f.trailerDictionary.Add("Info", indirect)
 }
 
 func (f *file) Trailer() {

@@ -23,14 +23,20 @@ func modify_file() {
 	writer.Flush()
 
 	if info := f.Info(); info != nil {
+		writer.WriteString("Info: ")
 		info.Serialize(writer, f)
 		writer.WriteString("\n")
 		writer.Flush()
 	}
 
-	documentInfoIndirect := pdf.NewIndirect(f)
-	documentInfoIndirect.Finalize(documentInfo)
-	f.SetInfo (documentInfoIndirect)
+	if catalog := f.Catalog(); catalog != nil {
+		writer.WriteString("Catalog: ")
+		catalog.Serialize(writer, f)
+		writer.WriteString("\n")
+		writer.Flush()
+	}
+
+	f.SetInfo (documentInfo)
 
 	f.Close()
 }

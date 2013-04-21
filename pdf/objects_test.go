@@ -77,11 +77,14 @@ func testOneBinaryStringAsAscii(t *testing.T, testValue, expect string) {
 // Unit tests follow
 func TestNull(t *testing.T) {
 	testOneObject(t, "NewNull()", pdf.NewNull(), nil, "null")
+	testOneObject(t, "NewNull().Clone()", pdf.NewNull().Clone(), nil, "null")
 }
 
 func TestBoolean(t *testing.T) {
 	testOneObject(t, "NewBoolean(false)", pdf.NewBoolean(false), nil, "false")
 	testOneObject(t, "NewBoolean(true)", pdf.NewBoolean(true), nil, "true")
+	testOneObject(t, "NewBoolean(false).Clone()", pdf.NewBoolean(false).Clone(), nil, "false")
+	testOneObject(t, "NewBoolean(true).Clone()", pdf.NewBoolean(true).Clone(), nil, "true")
 }
 
 func TestNumeric(t *testing.T) {
@@ -90,8 +93,16 @@ func TestNumeric(t *testing.T) {
 	testOneObject(t, "NewNumeric(0.1)", pdf.NewNumeric(0.1), nil, "0.1")
 	testOneObject(t, "NewNumeric(2147483647)", pdf.NewNumeric(2147483647), nil, "2147483647")
 	testOneObject(t, "NewNumeric(-2147483648)", pdf.NewNumeric(-2147483648), nil, "-2147483648")
-	testOneObject(t, "NewNumeric(3.403e+38)", pdf.NewNumeric(3.403e+38), nil, "3.4028235e+38")
-	testOneObject(t, "NewNumeric(-3.403e+38)", pdf.NewNumeric(-3.403e+38), nil, "-3.4028235e+38")
+	testOneObject(t, "NewNumeric(3.403e+38)", pdf.NewNumeric(3.403e+38), nil, "340282350000000000000000000000000000000")
+	testOneObject(t, "NewNumeric(-3.403e+38)", pdf.NewNumeric(-3.403e+38), nil, "-340282350000000000000000000000000000000")
+
+	testOneObject(t, "NewNumeric(1).Clone()", pdf.NewNumeric(1).Clone(), nil, "1")
+	testOneObject(t, "NewNumeric(3.14159).Clone()", pdf.NewNumeric(3.14159).Clone(), nil, "3.14159")
+	testOneObject(t, "NewNumeric(0.1).Clone()", pdf.NewNumeric(0.1).Clone(), nil, "0.1")
+	testOneObject(t, "NewNumeric(2147483647).Clone()", pdf.NewNumeric(2147483647).Clone(), nil, "2147483647")
+	testOneObject(t, "NewNumeric(-2147483648).Clone()", pdf.NewNumeric(-2147483648).Clone(), nil, "-2147483648")
+	testOneObject(t, "NewNumeric(3.403e+38).Clone()", pdf.NewNumeric(3.403e+38), nil, "340282350000000000000000000000000000000")
+	testOneObject(t, "NewNumeric(-3.403e+38).Clone()", pdf.NewNumeric(-3.403e+38), nil, "-340282350000000000000000000000000000000")
 
 	// The PDF spec recommends setting anything below +/-
 	// 1.175e-38 to 0 in case a conforming reader uses 32 bit
@@ -102,8 +113,8 @@ func TestNumeric(t *testing.T) {
 	// numbers to zero is better than accepting a representable
 	// number with a loss of precision.
 
-	testOneObject(t, "NewNumeric(1.176e-38)", pdf.NewNumeric(1.176e-38), nil, "1.176e-38")
-	testOneObject(t, "NewNumeric(-1.176e-38)", pdf.NewNumeric(-1.176e-38), nil, "-1.176e-38")
+	testOneObject(t, "NewNumeric(1.176e-38)", pdf.NewNumeric(1.176e-38), nil, "0.00000000000000000000000000000000000001176")
+	testOneObject(t, "NewNumeric(-1.176e-38)", pdf.NewNumeric(-1.176e-38), nil, "-0.00000000000000000000000000000000000001176")
 	testOneObject(t, "NewNumeric(1.175e-38)", pdf.NewNumeric(1.175e-38), nil, "0")
 	testOneObject(t, "NewNumeric(-1.175e-38)", pdf.NewNumeric(-1.175e-38), nil, "0")
 }
@@ -114,6 +125,12 @@ func TestName(t *testing.T) {
 	testOneObject(t, `NewName("#foo")`, pdf.NewName("#foo"), nil, "/#23foo")
 	testOneObject(t, `NewName(" foo")`, pdf.NewName(" foo"), nil, "/#20foo")
 	testOneObject(t, `NewName("(foo)")`, pdf.NewName("(foo)"), nil, "/#28foo#29")
+
+	testOneObject(t, `NewName("foo").Clone()`, pdf.NewName("foo").Clone(), nil, "/foo")
+	testOneObject(t, `NewName("résumé").Clone()`, pdf.NewName("résumé").Clone(), nil, "/résumé")
+	testOneObject(t, `NewName("#foo").Clone()`, pdf.NewName("#foo").Clone(), nil, "/#23foo")
+	testOneObject(t, `NewName(" foo").Clone()`, pdf.NewName(" foo").Clone(), nil, "/#20foo")
+	testOneObject(t, `NewName("(foo)".Clone())`, pdf.NewName("(foo)").Clone(), nil, "/#28foo#29")
 }
 
 func TestString(t *testing.T) {
@@ -129,6 +146,11 @@ func TestString(t *testing.T) {
 	testOneTextStringAsAscii(t, "\n\r\t\b\f", "(\\376\\377\\000\\n\\000\\r\\000\\t\\000\\b\\000\\f)")
 	testOneBinaryStringAsAscii(t, "\200", "(\\200)")
 	testOneBinaryStringAsHex(t, "\200", "<80>")
+
+	testOneObject(t, `NewTextString("foo").Clone()`, pdf.NewTextString("foo").Clone(), nil, "(foo)")
+	testOneObject(t, `NewTextString("()\\".Clone()`, pdf.NewTextString("()\\").Clone(), nil, "(\\(\\)\\\\)")
+	testOneObject(t, `NewTextString("[]").Clone()`, pdf.NewTextString("[]").Clone(), nil, "([])")
+	testOneObject(t, `NewTextString("").Clone()`, pdf.NewTextString("").Clone(), nil, "()")
 }
 
 func TestArray(t *testing.T) {
@@ -140,9 +162,14 @@ func TestArray(t *testing.T) {
 
 	a.Add(pdf.NewNumeric(2.718))
 	testOneObject(t, "Array test", a, nil, "[3.14 2.718]")
+	b := a.Clone()
+	testOneObject(t, "Array test", b, nil, "[3.14 2.718]")
 
 	a.Add(pdf.NewName("f o o"))
 	testOneObject(t, "Array test", a, nil, "[3.14 2.718 /f#20o#20o]")
+
+	// Make sure clone hasn't changed
+	testOneObject(t, "Array test", b, nil, "[3.14 2.718]")
 }
 
 func TestDictionary(t *testing.T) {
@@ -152,14 +179,21 @@ func TestDictionary(t *testing.T) {
 	d.Add("fee", pdf.NewNumeric(3.14))
 	testOneObject(t, "Dictionary.Add() test", d, nil, "<</fee 3.14>>")
 
+	b := d.Clone()
+	testOneObject(t, "Dictionary.Clone() test", b, nil, "<</fee 3.14>>")
+
 	// Can't test beyond three entries very easily because the order of entries is not specified
 	// and the number of permutations makes it not worth the effort with our simple testOneObject() function.
 	d.Add("fi", pdf.NewNumeric(2.718))
 	testOneObject(t, "Dictionary.Remove() test", d, nil, "<</fee 3.14 /fi 2.718>>", "<</fi 2.718 /fee 3.14>>")
 
+	// Make sure clone hasn't changed.
+	testOneObject(t, "Dictionary.Clone() test", b, nil, "<</fee 3.14>>")
+
 	// Begin removing entries to test Remove() method.
 	d.Remove("fee")
 	testOneObject(t, "Dictionary.Remove() test", d, nil, "<</fi 2.718>>")
+	testOneObject(t, "Dictionary.Clone() test", b, nil, "<</fee 3.14>>")
 
 	d.Remove("fi")
 	testOneObject(t, "Dictionary.Remove() test", d, nil, "<<>>")
@@ -169,6 +203,8 @@ func TestStream(t *testing.T) {
 	s := pdf.NewStream()
 	fmt.Fprint(s, "foo")
 	testOneObject(t, "NewStream", s, nil, "<</Length 3>>\nstream\nfoo\nendstream")
+	b := s.Clone()
+	testOneObject(t, "Stream.Clone()", b, nil, "<</Length 3>>\nstream\nfoo\nendstream")
 }
 
 func TestIndirect(t *testing.T) {
@@ -179,6 +215,8 @@ func TestIndirect(t *testing.T) {
 	// Two files
 	f1 := pdf.NewMockFile(21, 37)
 	f2 := pdf.NewMockFile(42, 23)
+
+	c1 := i1.Clone()
 
 	// Test all four combinations
 	testOneObject(t, "Indirect test", i1, f1, "21 37 R")
@@ -192,6 +230,10 @@ func TestIndirect(t *testing.T) {
 	testOneObject(t, "Indirect test", i1, f2, "42 23 R")
 	testOneObject(t, "Indirect test", i2, f1, "22 38 R")
 	testOneObject(t, "Indirect test", i2, f2, "43 24 R")
+
+	// Now test clones
+	testOneObject(t, "Indirect test", c1, f1, "21 37 R")
+	testOneObject(t, "Indirect test", c1, f2, "42 23 R")
 }
 
 func TestRectangle(t *testing.T) {

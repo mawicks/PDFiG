@@ -33,6 +33,14 @@ func NewBinaryString(s []byte) *String {
 	return &String{s, normalSerializer}
 }
 
+func (s *String) Clone() Object {
+	newString := *s
+	return &newString
+}
+
+func (s *String) Serialize(w Writer, file ...File) {
+	s.serializer(s, w)
+}
 
 func stringMinimalEscapeByte(b byte) (result []byte) {
 	switch b {
@@ -129,10 +137,6 @@ func hexSerializer(s *String, w Writer) {
 		w.WriteByte(HexDigit(b % 16))
 	}
 	w.WriteByte('>')
-}
-
-func (s *String) Serialize(w Writer, file ...File) {
-	s.serializer(s, w)
 }
 
 func (s *String) SetNormalOutput() {

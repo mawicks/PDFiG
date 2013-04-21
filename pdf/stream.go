@@ -19,6 +19,10 @@ func NewStreamFromContents(dictionary *Dictionary,b []byte) *Stream {
 	return &Stream{dictionary,*bytes.NewBuffer(b)}
 }
 
+func (s *Stream) Clone() Object {
+	return NewStreamFromContents(s.dictionary,s.buffer.Bytes())
+}
+
 func (s *Stream) Add(key string, o Object) {
 	s.dictionary.Add(key, o)
 }

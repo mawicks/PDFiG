@@ -123,6 +123,17 @@ func newIndirectFromParse(objectNumber ObjectNumber, file File) *Indirect {
 	return result
 }
 
+// Clones of Indirect are cloned as if they had been Finalized.  Only
+// the original instance can be finalized, not copies. An attempt to
+// dereference a copy may fail if the original has not yet been
+// finalized because the object will not exist in the file.
+func (i *Indirect) Clone() Object {
+	newIndirect := new(Indirect)
+	newIndirect.fileBindings = i.fileBindings
+	newIndirect.isFinal = true
+	return newIndirect
+}
+
 func (i *Indirect) Serialize(w Writer, file ...File) {
 	if len(file) == 0 {
 		panic("File parameter required for pdf.Indirect.Serialize()")

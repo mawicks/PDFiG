@@ -11,6 +11,14 @@ func NewDictionary() *Dictionary {
 	return &Dictionary{make(map[string]Object, 16)}
 }
 
+func (d *Dictionary) Clone() Object {
+	newDictionary := NewDictionary()
+	for key,value := range d.dictionary {
+		newDictionary.dictionary[key] = value.Clone()
+	}
+	return newDictionary
+}
+
 func (d *Dictionary) Add(key string, o Object) {
 	d.dictionary[key] = o
 }

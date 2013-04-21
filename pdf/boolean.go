@@ -22,10 +22,18 @@ func NewBoolean(v bool) Object {
 	return result
 }
 
+func (b TrueBoolean) Clone() Object {
+	return b
+}
+
 // Since TrueBoolean and FalseBoolean are empty structs, value targets
 // should be efficient.
 func (b TrueBoolean) Serialize(w Writer, file ...File) {
 	w.WriteString("true")
+}
+
+func (b FalseBoolean) Clone() Object {
+	return b
 }
 
 func (b FalseBoolean) Serialize(w Writer, file ...File) {

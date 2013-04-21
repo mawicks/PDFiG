@@ -28,15 +28,19 @@ type File interface {
 	// for the passed object in the File.
 	ReserveObjectNumber(Object) ObjectNumber
 
-	// SetCatalog() sets the catalog object
-	SetCatalog(*Indirect)
-
-	// SetInfo() sets the Info object
-	SetInfo(*Indirect)
-
 	// Info() returns a copy of the Info dictionary.  Caller may modify the copy and use SetInfo() to replace
 	// the file's info dictionary
 	Info() *Dictionary
+
+	// Catalog() returns a copy of the Info dictionary.  Caller may modify the copy and use SetCatalog() to replace
+	// the file's info dictionary
+	Catalog() *Dictionary
+
+	// SetCatalog() sets the catalog object
+	SetCatalog(*Dictionary)
+
+	// SetInfo() sets the Info object
+	SetInfo(DocumentInfo)
 
 	// DeleteObject() deletes the specified object from the file.
 	// It must be an indirect object.

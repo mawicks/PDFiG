@@ -42,13 +42,17 @@ func (f *mockFile) ReserveObjectNumber(o Object) ObjectNumber {
 	return result
 }
 
-func (f *mockFile) SetCatalog(i *Indirect) {
+func (f *mockFile) SetCatalog(i *Dictionary) {
 }
 
-func (f *mockFile) SetInfo(i *Indirect) {
+func (f *mockFile) SetInfo(i DocumentInfo) {
 }
 
 func (f *mockFile) Info() *Dictionary {
+	return nil
+}
+
+func (f *mockFile) Catalog() *Dictionary {
 	return nil
 }
 

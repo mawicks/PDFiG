@@ -27,12 +27,9 @@ func ExampleFile_creation() {
 	p.SetMediaBox(0, 0, 612, 792)
 	p.Finalize()
 
-	catalogIndirect := pdf.NewIndirect(f)
-	f.SetCatalog(catalogIndirect)
-
 	catalog := pdf.NewDictionary()
 	catalog.Add("Type", pdf.NewName("Catalog"))
-	catalogIndirect.Finalize(catalog)
+	f.SetCatalog(catalog)
 
 	f.Close()
 }
@@ -44,9 +41,7 @@ func ExampleFile_modification() {
 	documentInfo.SetAuthor("Nobody")
 	documentInfo.SetCreator("Nothing")
 
-	documentInfoIndirect := pdf.NewIndirect(f)
-	documentInfoIndirect.Finalize(documentInfo)
-	f.SetInfo (documentInfoIndirect)
+	f.SetInfo (documentInfo)
 
 	f.Close()
 }

@@ -19,6 +19,12 @@ func nameEscapeByte(b byte) (result []byte) {
 	return result
 }
 
+func (n *Name) Clone() Object {
+	// Names are intended to be immutable, so return a pointer
+	// to the same instance
+	return n
+}
+
 func (n *Name) Serialize(w Writer, file ...File) {
 	w.WriteByte('/')
 	for _, b := range []byte(n.name) {

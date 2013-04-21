@@ -12,7 +12,14 @@ type Writer interface {
 
 // All PDF objects implement the pdf.Object inteface
 type Object interface {
-	Serialize(Writer, ...File) // Write a representation of object.
+	// Clone() copies the object in such a way that it can be
+	// returned from or passed to a function without fear of
+	// modifying internal data structures.
+
+	Clone() Object
+	// Serialize() writes a representation of object to Writer as if with indirect references
+	// resolved using optional File.
+	Serialize(Writer, ...File)
 }
 
 // ObjectStringDecorator adds the String() method to Object; delegating all other methods to object.
