@@ -51,3 +51,11 @@ func (d *Dictionary) Size() int {
 	return len(d.dictionary)
 }
 
+func (d *Dictionary) CheckNameValue (key string, expected string) bool {
+	if value,ok := d.Get(key).(*Name); ok {
+		if ok && value != nil && value.String() == expected {
+			return true
+		}
+	}
+	return false
+}

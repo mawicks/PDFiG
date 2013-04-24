@@ -161,7 +161,6 @@ func (i *Indirect) Serialize(w Writer, file ...File) {
 // trailer) to all files to which the Indirect object has been bound.
 // Finalize() returns its Indirect object for constructions such as
 //  a := NewIndirect(f).Finalize(object)
-
 func (i *Indirect) Finalize(o Object) *Indirect{
 	if i.isFinal {
 		panic("Finalize() called on a final object")

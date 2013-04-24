@@ -60,7 +60,13 @@ type file struct {
 	// Location of xref for pre-existing files.
 	xrefLocation int64
 	xref containers.Array
+
+	// trailerDictionary is never nil
+	// It is initialized from a pre-existing trailer
+	// or is initialized to an empty dictionary
 	trailerDictionary *Dictionary
+
+	// catalogIndirect is never nil
 	catalogIndirect *Indirect
 
 	// "dirty" is true iff this PDF file requires an update (new
@@ -254,13 +260,15 @@ func (f *file) dictionaryFromTrailer(name string) *Dictionary {
 			}
 		}
 	}
-	return NewDictionary()
+	return nil
 }
 
 func (f *file) dictionaryToTrailer(name string, d *Dictionary) {
 	f.trailerDictionary.Add(name,NewIndirect(f).Finalize(d))
 }
 
+// Catalog() returns the current document catalog of nil if one doesn't
+// exist (either from a pre-existing file or from file.SetCatalog())
 func (f *file) Catalog() *Dictionary {
 	return f.dictionaryFromTrailer("Root")
 }
@@ -269,6 +277,9 @@ func (f *file) SetCatalog(catalog *Dictionary) {
 	f.dictionaryToTrailer("Root",catalog)
 }
 
+// Info() returns the current document info dictionary or nil if one
+// doesn't exist (either from a pre-existing file or from
+// file.SetCatalog())
 func (f *file) Info() *Dictionary {
 	return f.dictionaryFromTrailer("Info")
 }
@@ -277,6 +288,7 @@ func (f *file) SetInfo(info DocumentInfo) {
 	f.dictionaryToTrailer("Info", info.Dictionary)
 }
 
+// Trailer() returns the current trailer, which is never nil
 func (f *file) Trailer() *Dictionary {
 	// Return a clone so nobody can alter the real dictionary
 	return f.trailerDictionary.Clone().(*Dictionary)
@@ -408,12 +420,9 @@ func (f *file) release() {
 func (f *file) AddObjectAt(object ObjectNumber, o Object) {
 	entry := (*f.xref.At(uint(object.number))).(*xrefEntry)
 
-	if entry.byteOffset != 0 {
-		panic("An object has already been written with this number")
-	}
-
 	if entry.generation != object.generation {
-		panic("Generation number mismatch")
+		panic(fmt.Sprintf("Generation number mismatch: object %d current generation is %d but attempted to write %d",
+			object.number, entry.generation, object.generation))
 	}
 
 	entry.setInUse(uint64(f.Tell()))
@@ -422,9 +431,6 @@ func (f *file) AddObjectAt(object ObjectNumber, o Object) {
 	o.Serialize(f.writer, f)
 	fmt.Fprintf(f.writer, "\nendobj\n")
 
-	// Setting dirty flags should not be necessary here.
-	// They should have been set when "entry" was added to the xref,
-	// presumably by ReserveObjectNumber().
 	f.dirty = true
 }
 

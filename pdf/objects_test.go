@@ -197,6 +197,23 @@ func TestDictionary(t *testing.T) {
 
 	d.Remove("fi")
 	testOneObject(t, "Dictionary.Remove() test", d, nil, "<<>>")
+
+	// d is empty now.
+
+	if d.CheckNameValue("foo","fi") {
+		t.Error(`CheckNameValue returned true on empty dictionary`)
+	}
+
+	d.Add("bar", pdf.NewTextString("fi"))
+	if d.CheckNameValue("bar","fi") {
+		t.Error(`CheckNameValue returned true on non-name`)
+	}
+
+	d.Add("foo", pdf.NewName("fi"))
+	if !d.CheckNameValue("foo","fi") {
+		t.Errorf(`CheckNameValue("foo","fi") failed <</foo /fi>>.`)
+	}
+
 }
 
 func TestStream(t *testing.T) {
