@@ -7,7 +7,11 @@ import "strconv"
 //	bufio.Writer
 type Indirect struct {
 	fileBindings map[File]ObjectNumber
-	isFinal      bool
+	existsInFile      bool
+	// Any file is any file that contains the object.  Having a
+	// separate member is easier than trying to find one key in a
+	// map.
+	anyFile File
 }
 
 
@@ -23,7 +27,7 @@ indirect reference (for example, "10 1 R").  There are several
 use-cases.
 
 USE-CASE 1: A pdf.Indirect object is created, its Serialize() method
-is invoked for one or more output files, then its Finalize() method is
+is invoked for one or more output files, then its Write() method is
 invoked with its underlying direct object.  The PDF reference suggests
 that a reference is sometimes written before the information required
 for the object being referenced is available.  An example from the PDF
@@ -44,10 +48,10 @@ a file.  A pdf.Indirect can be written before the direct object it
 references has been defined.  A pdf.Indirect obtains and reserves an
 object number whenever it is written to a file, whether or not the
 object being referenced has yet been specified.  Eventually, the
-Finalize() method must be called passing the object being referenced.
+Write() method must be called passing the object being referenced.
 At that moment, the object being referenced is written to all files to
 which the pdf.Indirect was written.  If the pdf.Indirect is
-subsequently added to additional files, the Finalize()ed object must
+subsequently added to additional files, the Write()ed object must
 also written to those files.  This, however, would require either
 retaining a reference in memory indefinitely (bad) or reading it from
 one of the files where it is known to exist (reading is not yet
@@ -56,11 +60,11 @@ indirect references contained within it also need to be read and added
 to the file accordingly).  For the time being, we elect not to keep
 references in memory.  Until parsing is implemented, indirect objects
 may be explicitly bound to files either (1) by using ObjectNumber()
-prior to calling Finalize or (2) by calling pdf.File.AddObject().
-Serialize()ing a pdf.Indirect to a new file after calling Finalize()
+prior to calling Write or (2) by calling pdf.File.AddObject().
+Serialize()ing a pdf.Indirect to a new file after calling Write()
 without an earlier call to Serialize() or ObjectNumber() will
 generate an error.  The complete list of files that will contain the
-refence must be known when Finalize() is called.
+refence must be known when Write() is called.
 
 The call to ObjectNumber() is handled transparently and automatically
 for forward references.  The client need not call it explicitly.  A
@@ -71,14 +75,14 @@ reference returned by pdf.File.AddObject() is bound only to one file.
 
 USE-CASE 2: A pdf.Indirect is created based on a finished direct
 object.  This is essentially the same as use-case 1.  An object is
-constructed and immediately Finalize()'d.  Subsequent invocations of
+constructed and immediately Write()'d.  Subsequent invocations of
 Serialize() on files where it doesn't already exist cause it to be
 added to that file.  As with USE-CASE 1, this requires either
 retaining a reference in memory indefinitely (bad) or reading from one
 of the files where it is known to exist (not yet implemented).  For
 the time being, we elect not to keep references in memory. Until
 parsing is implemented, so Serialize()ing a pdf.Indirect to a file
-after calling Finalize() is an error.
+after calling Write() is an error.
 
 USE-CASE 3: A pdf.Indirect is constructed when a token of the form "10
 1 R" is read from file X.  The underlying direct object is unknown at
@@ -106,10 +110,11 @@ implemented in Go.
 func NewIndirect(file... File) *Indirect {
 	result := new(Indirect)
 	result.fileBindings = make(map[File]ObjectNumber,5)
-	result.isFinal = false
+	result.existsInFile = false
 
 	for _,f := range file {
 		result.ObjectNumber(f)
+		result.anyFile = f
 	}
 
 	return result
@@ -118,19 +123,21 @@ func NewIndirect(file... File) *Indirect {
 func newIndirectFromParse(objectNumber ObjectNumber, file File) *Indirect {
 	result := new(Indirect)
 	result.fileBindings = make(map[File]ObjectNumber,5)
-	result.isFinal = true
+	result.existsInFile = true
 	result.fileBindings[file] = objectNumber
+	result.anyFile = file
 	return result
 }
 
-// Clones of Indirect are cloned as if they had been Finalized.  Only
+// Clones of Indirect are cloned as if they had been Writed.  Only
 // the original instance can be finalized, not copies. An attempt to
 // dereference a copy may fail if the original has not yet been
 // finalized because the object will not exist in the file.
 func (i *Indirect) Clone() Object {
 	newIndirect := new(Indirect)
 	newIndirect.fileBindings = i.fileBindings
-	newIndirect.isFinal = true
+	newIndirect.anyFile = i.anyFile
+	newIndirect.existsInFile = true
 	return newIndirect
 }
 
@@ -145,9 +152,18 @@ func (i *Indirect) Serialize(w Writer, file ...File) {
 	if len(file) == 0 {
 		panic("File parameter required for pdf.Indirect.Serialize()")
 	}
-	if i.isFinal && !i.existsInFile(file[0]) {
+	if i.existsInFile && !i.BoundToFile(file[0]) {
+		objectNumber := i.ObjectNumber(file[0])
+		// Grab the object from one of the files where it
+		// already exists.
+		o, err := i.anyFile.Object(objectNumber)
 		panic("Serializing a finalized object to a new file is not yet allowed. " +
-			"Try calling pdf.Indirect.ObjectNumber() before pdf.Indirect.Finalize() or use pdf.File.AddObject")
+			"Try calling pdf.Indirect.ObjectNumber() before pdf.Indirect.Write() or use pdf.File.AddObject")
+		// And write it to the new file.
+		if err == nil {
+			i.fileBindings[file[0]] = objectNumber
+			file[0].AddObjectAt(objectNumber,o)
+		}
 	}
 	n := i.ObjectNumber(file[0])
 	w.WriteString(strconv.FormatInt(int64(n.number), 10))
@@ -156,19 +172,17 @@ func (i *Indirect) Serialize(w Writer, file ...File) {
 	w.WriteString(" R")
 }
 
-// Finalize() writes the passed object as an indirect object (complete
+// Write() writes the passed object as an indirect object (complete
 // with an entry in the xref, an "obj" header, and an "endobj"
 // trailer) to all files to which the Indirect object has been bound.
-// Finalize() returns its Indirect object for constructions such as
-//  a := NewIndirect(f).Finalize(object)
-func (i *Indirect) Finalize(o Object) *Indirect{
-	if i.isFinal {
-		panic("Finalize() called on a final object")
-	}
+// Write() may be used to replace an existing object.
+// Write() returns its Indirect object for constructions such as
+//  a := NewIndirect(f).Write(object)
+func (i *Indirect) Write(o Object) *Indirect{
 	for file, objectNumber := range i.fileBindings {
 		file.AddObjectAt(objectNumber, o)
 	}
-	i.isFinal = true
+	i.existsInFile = true
 	return i
 }
 
@@ -179,7 +193,7 @@ func (i *Indirect) Finalize(o Object) *Indirect{
 // if the underlying direct object is to be finalized before an
 // indirect reference is actually written.  In that case, the caller
 // should call ObjectNumber() one or more times *before* calling
-// Finalize().  Alternatively, client code may call File.AddObject(),
+// Write().  Alternatively, client code may call File.AddObject(),
 // which returns an Indirect* that may be used for backward
 // references.  In the latter case, the reference will only be bound
 // to one file.
@@ -188,11 +202,12 @@ func (i *Indirect) ObjectNumber(f File) ObjectNumber {
 	if !exists {
 		result = f.ReserveObjectNumber(i)
 		i.fileBindings[f] = result
+		i.anyFile = f
 	}
 	return result
 }
 
-func (i *Indirect) existsInFile(f File) bool {
+func (i *Indirect) BoundToFile(f File) bool {
 	_,exists := i.fileBindings[f]
 	return exists
 }

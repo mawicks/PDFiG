@@ -129,7 +129,7 @@ func OpenFile(filename string, mode int) (result *file,exists bool,err error) {
 
 // Implements AddObject() in File interface
 func (f *file) AddObject(object Object) (reference *Indirect) {
-	return NewIndirect(f).Finalize(object)
+	return NewIndirect(f).Write(object)
 }
 
 // Implements DeleteObject() in File interface
@@ -154,10 +154,9 @@ func (f *file) DeleteObject(indirect *Indirect) {
 	f.dirty = true
 }
 
-// Object() retrieves a finalized object that has already been written
-// to a PDF file.  Each call causes a new object to be unserialized
-// directly from the file so the caller has exclusive ownership of the
-// returned object.
+// Object() retrieves an object that already exists in a PDF file.
+// Each call causes a new object to be unserialized directly from the
+// file so the caller has exclusive ownership of the returned object.
 func (pdffile *file) Object(o ObjectNumber) (Object,error) {
 	entry := (*pdffile.xref.At(uint(o.number))).(*xrefEntry)
 	pdffile.Seek(int64(entry.byteOffset),os.SEEK_SET)
@@ -264,7 +263,7 @@ func (f *file) dictionaryFromTrailer(name string) *Dictionary {
 }
 
 func (f *file) dictionaryToTrailer(name string, d *Dictionary) {
-	f.trailerDictionary.Add(name,NewIndirect(f).Finalize(d))
+	f.trailerDictionary.Add(name,NewIndirect(f).Write(d))
 }
 
 // Catalog() returns the current document catalog of nil if one doesn't

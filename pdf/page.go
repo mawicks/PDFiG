@@ -27,16 +27,16 @@ func NewPage(file... File) *Page {
 	return p
 }
 
-func (p *Page) Finalize() *Indirect {
+func (p *Page) Close() *Indirect {
 	if (p.fontResources != nil) {
 		p.resources.Add("Font", p.fontResources)
 		p.fontResources = nil
 	}
 
-	p.dictionary.Add("Resources", NewIndirect(p.fileList...).Finalize(p.resources))
+	p.dictionary.Add("Resources", NewIndirect(p.fileList...).Write(p.resources))
 	p.resources = nil
 
-	p.dictionary.Add("Contents", NewIndirect(p.fileList...).Finalize(p.contents))
+	p.dictionary.Add("Contents", NewIndirect(p.fileList...).Write(p.contents))
 	p.contents = nil
 
 	if p.parent == nil {
@@ -47,7 +47,7 @@ func (p *Page) Finalize() *Indirect {
 
 	p.dictionary.Add("Type", NewName("Page"))
 
-	indirect := NewIndirect(p.fileList...).Finalize(p.dictionary)
+	indirect := NewIndirect(p.fileList...).Write(p.dictionary)
 	p.dictionary = nil
 
 	return indirect

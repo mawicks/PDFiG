@@ -81,7 +81,7 @@ func (d *Document) finishCatalog() {
 
 func (d *Document) finishCurrentPage() {
 	if d.currentPage != nil {
-		d.pages.Add(d.currentPage.Finalize())
+		d.pages.Add(d.currentPage.Close())
 		d.pageCount += 1
 	}
 }
@@ -97,7 +97,7 @@ func (d *Document) finishPageTree() {
 		d.pageTreeRoot.Add("Type", NewName("Pages"))
 		d.pageTreeRoot.Add("Count", NewIntNumeric(int(d.pageCount)))
 		d.pageTreeRoot.Add("Kids", d.pages)
-		d.pageTreeRootIndirect.Finalize(d.pageTreeRoot)
+		d.pageTreeRootIndirect.Write(d.pageTreeRoot)
 	}
 }
 
@@ -111,7 +111,7 @@ func (d *Document) finishProcSet() {
 		procsetArray.Add (NewName("ImageB"))
 		procsetArray.Add (NewName("ImageC"))
 		procsetArray.Add (NewName("ImageI"))
-		d.procSetIndirect.Finalize(procsetArray)
+		d.procSetIndirect.Write(procsetArray)
 	}
 }
 

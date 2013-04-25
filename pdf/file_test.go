@@ -11,7 +11,7 @@ func ExampleFile_creation() {
 
 	o1 := pdf.NewIndirect()
 	indirect1 := f.AddObject(o1)
-	o1.Finalize(pdf.NewNumeric(3.14))
+	o1.Write(pdf.NewNumeric(3.14))
 
 	indirect2 := f.AddObject(pdf.NewNumeric(2.718))
 
@@ -27,7 +27,7 @@ func ExampleFile_creation() {
 	p := pdf.NewPage(f)
 	p.SetParent(indirect1)
 	p.SetMediaBox(0, 0, 612, 792)
-	p.Finalize()
+	p.Close()
 
 	catalog := pdf.NewDictionary()
 	catalog.Add("Type", pdf.NewName("Catalog"))
