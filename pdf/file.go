@@ -88,7 +88,7 @@ type file struct {
 	writer *bufio.Writer
 
 	writeQueue chan writeQueueEntry
-	finished chan int
+	writingFinished chan int
 }
 
 // OpenFile() construct a File object from either a new or a pre-existing filename.
@@ -135,8 +135,8 @@ func OpenFile(filename string, mode int) (result *file,exists bool,err error) {
 		writeHeader(result.writer)
 	}
 
-	result.writeQueue = make(chan writeQueueEntry)
-	result.finished = make(chan int)
+	result.writeQueue = make(chan writeQueueEntry, 3)
+	result.writingFinished = make(chan int)
 
 	go result.gowriter()
 
@@ -212,7 +212,8 @@ func (f *file) ReserveObjectNumber(o Object) ObjectNumber {
 
 // Implements Close() in File interface
 func (f *file) Close() {
-	f.finished <- 1
+	close(f.writeQueue)
+	<- f.writingFinished
 	if f.dirty {
 		// If client specified a catalog, use it.  Otherwise
 		// re-use use pre-existing catalog if it exists.
@@ -435,16 +436,11 @@ func (f *file) release() {
 }
 
 func (f* file) gowriter () {
-	done := false
-	for !done {
-		var entry writeQueueEntry
-		select {
-		case entry = <-f.writeQueue:
-			f.writeObject(entry)
-		case <-f.finished:
-			done = true
-		}
+	for entry := range f.writeQueue {
+		fmt.Printf ("len = %d\n", len(f.writeQueue))
+		f.writeObject(entry)
 	}
+	f.writingFinished <- 1
 }
 
 func (f *file) writeObject(queueEntry writeQueueEntry) {
