@@ -19,6 +19,10 @@ func (d *Dictionary) Clone() Object {
 	return newDictionary
 }
 
+func (d *Dictionary) Dereference(...File) Object {
+	return d
+}
+
 func (d *Dictionary) Add(key string, o Object) {
 	d.dictionary[key] = o
 }
@@ -51,8 +55,14 @@ func (d *Dictionary) Size() int {
 	return len(d.dictionary)
 }
 
-func (d *Dictionary) CheckNameValue (key string, expected string) bool {
-	if value,ok := d.Get(key).(*Name); ok {
+func (d *Dictionary) CheckNameValue (key string, expected string, file... File) bool {
+	var rawValue Object
+
+	if rawValue = d.Get(key); rawValue == nil {
+		return false
+	}
+
+	if value,ok := rawValue.Dereference(file...).(*Name); ok {
 		if ok && value != nil && value.String() == expected {
 			return true
 		}

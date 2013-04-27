@@ -23,6 +23,10 @@ func (s *Stream) Clone() Object {
 	return NewStreamFromContents(s.dictionary,s.buffer.Bytes())
 }
 
+func (s *Stream) Dereference(...File) Object {
+	return s
+}
+
 func (s *Stream) Add(key string, o Object) {
 	s.dictionary.Add(key, o)
 }

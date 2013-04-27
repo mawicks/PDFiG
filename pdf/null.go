@@ -19,3 +19,7 @@ func (n *Null) Clone() Object {
 	// All copies of null point to the same instance.
 	return n
 }
+
+func (n *Null) Dereference(...File) Object {
+	return n
+}

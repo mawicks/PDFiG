@@ -25,6 +25,10 @@ func (n *Name) Clone() Object {
 	return n
 }
 
+func (n *Name) Dereference(...File) Object {
+	return n
+}
+
 func (n *Name) Serialize(w Writer, file ...File) {
 	w.WriteByte('/')
 	for _, b := range []byte(n.name) {

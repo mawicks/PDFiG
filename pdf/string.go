@@ -38,6 +38,10 @@ func (s *String) Clone() Object {
 	return &newString
 }
 
+func (s *String) Dereference(...File) Object {
+	return s
+}
+
 func (s *String) Serialize(w Writer, file ...File) {
 	s.serializer(s, w)
 }

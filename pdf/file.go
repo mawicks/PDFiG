@@ -137,10 +137,9 @@ func OpenFile(filename string, mode int) (result *file,exists bool,err error) {
 
 	result.writeQueue = make(chan writeQueueEntry, 3)
 	result.writingFinished = make(chan int)
-
+	f.Seek(0,os.SEEK_END)
 	go result.gowriter()
 
-	f.Seek(0,os.SEEK_END)
 	return
 }
 

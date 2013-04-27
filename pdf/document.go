@@ -23,6 +23,9 @@ type Document struct {
 	DocumentInfo
 }
 
+// needPageTree() initializes the structures required to write a new
+// or modified page tree to this document.  It need not be called if
+// the document is only being read.
 func (d *Document) needPageTree() {
 	if d.pages == nil {
 		d.pages = NewArray()
@@ -47,6 +50,7 @@ func OpenDocument(filename string, mode int) *Document {
 	if d.existing {
 		d.DocumentInfo = DocumentInfo{d.file.Info(),false}
 		d.pageTreeRoot = oldPageTree(d.file).root
+		d.pageTreeRootIndirect = oldPageTree(d.file).rootReference
 		out := bufio.NewWriter(os.Stdout)
 		out.WriteString("page tree root: ")
 		d.pageTreeRoot.Serialize(out,d.file)

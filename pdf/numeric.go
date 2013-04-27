@@ -27,6 +27,10 @@ func (n *FloatNumeric) Clone() Object {
 	return n
 }
 
+func (n *FloatNumeric) Dereference(...File) Object {
+	return n
+}
+
 func (n *FloatNumeric) Serialize(w Writer, file ...File) {
 	w.WriteString(strconv.FormatFloat(float64(n.value), 'f', -1, 32))
 }
@@ -38,6 +42,10 @@ func (n *FloatNumeric) Value() float32 {
 func (n *IntNumeric) Clone() Object {
 	// Numerics are intended to be immutable, so return a pointer
 	// to the same instance
+	return n
+}
+
+func (n *IntNumeric) Dereference(...File) Object {
 	return n
 }
 
