@@ -7,11 +7,8 @@ import ( "strconv" )
 //	bufio.Writer
 type Indirect struct {
 	fileBindings map[File]ObjectNumber
-	existsInFile      bool
-	// Any file is any file that contains the object.  Having a
-	// separate member is easier than trying to find one key in a
-	// map.
-	anyFile File
+	// When not nil, sourceFile is a file this indirect object was read from.
+	sourceFile      File
 }
 
 /*
@@ -109,11 +106,10 @@ implemented in Go.
 func NewIndirect(file... File) *Indirect {
 	result := new(Indirect)
 	result.fileBindings = make(map[File]ObjectNumber,5)
-	result.existsInFile = false
+	result.sourceFile = nil
 
 	for _,f := range file {
 		result.ObjectNumber(f)
-		result.anyFile = f
 	}
 
 	return result
@@ -122,25 +118,19 @@ func NewIndirect(file... File) *Indirect {
 func newIndirectFromParse(objectNumber ObjectNumber, file File) *Indirect {
 	result := new(Indirect)
 	result.fileBindings = make(map[File]ObjectNumber,5)
-	result.existsInFile = true
+	result.sourceFile = file
 	result.fileBindings[file] = objectNumber
-	result.anyFile = file
 	return result
 }
 
-// Clones of Indirect are cloned as if Write() has been called.  Only
-// the original instance can be finalized, not copies. An attempt to
-// dereference a copy may fail if the original has not yet been
-// finalized because the object will not exist in the file.
 func (i *Indirect) Clone() Object {
 	newIndirect := new(Indirect)
 	newIndirect.fileBindings = i.fileBindings
-	newIndirect.anyFile = i.anyFile
-	newIndirect.existsInFile = true
+	newIndirect.sourceFile = i.sourceFile
 	return newIndirect
 }
 
-// Serialize() write a serial representation (as defined by the PDF
+// Serialize() writes a serial representation (as defined by the PDF
 // specification) of the object to the Writer.  Indirect references
 // are resolved and numbered as if they were being written to the
 // optional File argument.  Having separate arguments for Writer and
@@ -151,23 +141,23 @@ func (i *Indirect) Serialize(w Writer, file ...File) {
 	if len(file) == 0 {
 		panic("File parameter required for pdf.Indirect.Serialize()")
 	}
-	if i.existsInFile && !i.BoundToFile(file[0]) {
-		objectNumber := i.ObjectNumber(file[0])
-		// Grab the object from one of the files where it
-		// already exists.
-		o, err := i.anyFile.Object(objectNumber)
-		panic("Serializing a finalized object to a new file is not yet allowed. " +
-			"Try calling pdf.Indirect.ObjectNumber() before pdf.Indirect.Write() or use pdf.File.AddObject")
-		// And write it to the new file.
+
+	// Check binding first becuase Indirect.ObjectNumber() has the
+	// side effect of binding!
+	wasNotBound := !i.BoundToFile(file[0])
+	objectNumber := i.ObjectNumber(file[0])
+	// If the object was a pre-existing object, but has never been
+	// mapped to "file", silently add it to "file."
+	if i.sourceFile != nil && wasNotBound {
+		o, err := i.sourceFile.Object(objectNumber)
 		if err == nil {
 			i.fileBindings[file[0]] = objectNumber
 			file[0].AddObjectAt(objectNumber,o)
 		}
 	}
-	n := i.ObjectNumber(file[0])
-	w.WriteString(strconv.FormatInt(int64(n.number), 10))
+	w.WriteString(strconv.FormatInt(int64(objectNumber.number), 10))
 	w.WriteByte(' ')
-	w.WriteString(strconv.FormatInt(int64(n.generation), 10))
+	w.WriteString(strconv.FormatInt(int64(objectNumber.generation), 10))
 	w.WriteString(" R")
 }
 
@@ -180,8 +170,8 @@ func (i *Indirect) Serialize(w Writer, file ...File) {
 func (i *Indirect) Write(o Object) *Indirect{
 	for file, objectNumber := range i.fileBindings {
 		file.AddObjectAt(objectNumber, o)
+		i.sourceFile = file
 	}
-	i.existsInFile = true
 	return i
 }
 
@@ -201,7 +191,6 @@ func (i *Indirect) ObjectNumber(f File) ObjectNumber {
 	if !exists {
 		result = f.ReserveObjectNumber(i)
 		i.fileBindings[f] = result
-		i.anyFile = f
 	}
 	return result
 }
