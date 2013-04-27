@@ -27,7 +27,7 @@ func (n *FloatNumeric) Clone() Object {
 	return n
 }
 
-func (n *FloatNumeric) Dereference(...File) Object {
+func (n *FloatNumeric) Dereference() Object {
 	return n
 }
 
@@ -45,7 +45,7 @@ func (n *IntNumeric) Clone() Object {
 	return n
 }
 
-func (n *IntNumeric) Dereference(...File) Object {
+func (n *IntNumeric) Dereference() Object {
 	return n
 }
 

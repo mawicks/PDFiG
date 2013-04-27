@@ -19,7 +19,7 @@ func (d *Dictionary) Clone() Object {
 	return newDictionary
 }
 
-func (d *Dictionary) Dereference(...File) Object {
+func (d *Dictionary) Dereference() Object {
 	return d
 }
 
@@ -62,7 +62,7 @@ func (d *Dictionary) CheckNameValue (key string, expected string, file... File) 
 		return false
 	}
 
-	if value,ok := rawValue.Dereference(file...).(*Name); ok {
+	if value,ok := rawValue.Dereference().(*Name); ok {
 		if ok && value != nil && value.String() == expected {
 			return true
 		}

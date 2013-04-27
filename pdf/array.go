@@ -21,7 +21,7 @@ func (a *Array) Clone() Object {
 	return newArray
 }
 
-func (a *Array) Dereference(...File) Object {
+func (a *Array) Dereference() Object {
 	return a
 }
 

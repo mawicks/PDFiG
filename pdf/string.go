@@ -38,7 +38,7 @@ func (s *String) Clone() Object {
 	return &newString
 }
 
-func (s *String) Dereference(...File) Object {
+func (s *String) Dereference() Object {
 	return s
 }
 

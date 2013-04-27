@@ -25,7 +25,7 @@ func (n *Name) Clone() Object {
 	return n
 }
 
-func (n *Name) Dereference(...File) Object {
+func (n *Name) Dereference() Object {
 	return n
 }
 

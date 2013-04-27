@@ -20,6 +20,6 @@ func (n *Null) Clone() Object {
 	return n
 }
 
-func (n *Null) Dereference(...File) Object {
+func (n *Null) Dereference() Object {
 	return n
 }

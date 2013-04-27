@@ -4,7 +4,6 @@ import ("errors")
 
 
 type pageTree struct {
-	file File
 	root *Dictionary
 	rootReference *Indirect
 	pageCount uint
@@ -25,16 +24,15 @@ func oldPageTree(file File) *pageTree{
 		panic (errors.New(`/Pages entry missing or is not an indirect reference`))
 	}
 
-	if pageTreeRoot,ok = pageTreeRootReference.Dereference(file).(*Dictionary); !ok {
+	if pageTreeRoot,ok = pageTreeRootReference.Dereference().(*Dictionary); !ok {
 		panic (errors.New(`Page tree root object is not a dictionary`))
 	}
 
-	if pageCount,ok = pageTreeRoot.Get("Count").Dereference(file).(*IntNumeric); !ok {
+	if pageCount,ok = pageTreeRoot.Get("Count").Dereference().(*IntNumeric); !ok {
 		panic (errors.New(`/Count value is not an integer`))
 	}
 
 	pt := new(pageTree)
-	pt.file = file
 	pt.root = pageTreeRoot
 	pt.rootReference = pageTreeRootReference
 	pt.pageCount = uint(pageCount.Value())

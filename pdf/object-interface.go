@@ -27,10 +27,10 @@ type Object interface {
 	// Objects can be unserialized using Parser.Scan().
 	Serialize(Writer, ...File)
 
-	// If the target is an indirect refernece, Dereference()
+	// If the target is an indirect reference, Dereference()
 	// returns an object that is not an indirect reference.
 	// Otherwise it returns the target.
-	Dereference(...File) Object
+	Dereference() Object
 }
 
 // ObjectStringDecorator adds the String() method to Object; delegating all other methods to object.

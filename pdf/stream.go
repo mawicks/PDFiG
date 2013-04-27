@@ -23,7 +23,7 @@ func (s *Stream) Clone() Object {
 	return NewStreamFromContents(s.dictionary,s.buffer.Bytes())
 }
 
-func (s *Stream) Dereference(...File) Object {
+func (s *Stream) Dereference() Object {
 	return s
 }
 
