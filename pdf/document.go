@@ -163,6 +163,11 @@ func (d *Document) finishProcSet() {
 	}
 }
 
+// NewPage() returns a Page reference.  A Page reference implements
+// the io.writer interface which may be used to write raw PDF streams
+// to the page's contents stream.  Pages created with
+// Document.NewPage() are closed by the next call to
+// Document.NewPage() or the call to Document.Close().
 func (d *Document) NewPage() *Page {
 	d.finishCurrentPage()
 	d.currentPage = NewPage(d.file)

@@ -1,6 +1,8 @@
 package pdf
 
-import "strconv"
+import ("errors"
+	"fmt"
+	"strconv")
 
 type Page struct {
 	fileList []File
@@ -85,26 +87,36 @@ func (p *Page) setProcSet(i *Indirect) {
 	p.resources.Add("ProcSet", i)
 }
 
+func (p *Page) setBox (boxname string, llx, lly, urx, ury float64) {
+	if p.dictionary == nil {
+		panic (errors.New(fmt.Sprintf(`Attempt to set "%s" on a closed Page`, boxname)))
+	}
+	p.dictionary.Add(boxname, NewRectangle(llx, lly, urx, ury))
+}
+
 func (p *Page) SetMediaBox(llx, lly, urx, ury float64) {
-	p.dictionary.Add("MediaBox", NewRectangle(llx, lly, urx, ury))
+	p.setBox("MediaBox", llx, lly, urx, ury)
 }
 
 func (p *Page) SetCropBox(llx, lly, urx, ury float64) {
-	p.dictionary.Add("CropBox", NewRectangle(llx, lly, urx, ury))
+	p.setBox("CropBox", llx, lly, urx, ury)
 }
 
 func (p *Page) SetBleedBox(llx, lly, urx, ury float64) {
-	p.dictionary.Add("BleedBox", NewRectangle(llx, lly, urx, ury))
+	p.setBox("BleedBox", llx, lly, urx, ury)
 }
 
 func (p *Page) SetTrimBox(llx, lly, urx, ury float64) {
-	p.dictionary.Add("TrimBox", NewRectangle(llx, lly, urx, ury))
+	p.setBox("TrimBox", llx, lly, urx, ury)
 }
 
 func (p *Page) SetArtBox(llx, lly, urx, ury float64) {
-	p.dictionary.Add("ArtBox", NewRectangle(llx, lly, urx, ury))
+	p.setBox("ArtBox", llx, lly, urx, ury)
 }
 
 func (p *Page) Write(b []byte) (int, error) {
+	if p.contents == nil {
+		panic (errors.New("Attempt to write to a closed Page"))
+	}
 	return p.contents.Write(b)
 }
