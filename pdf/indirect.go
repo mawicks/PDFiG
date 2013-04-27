@@ -1,6 +1,6 @@
 package pdf
 
-import "strconv"
+import ( "strconv" )
 
 // Implements:
 // 	pdf.Object
@@ -13,7 +13,6 @@ type Indirect struct {
 	// map.
 	anyFile File
 }
-
 
 /*
 pdf.Indirect is one of the most important and most complex
@@ -129,7 +128,7 @@ func newIndirectFromParse(objectNumber ObjectNumber, file File) *Indirect {
 	return result
 }
 
-// Clones of Indirect are cloned as if they had been Writed.  Only
+// Clones of Indirect are cloned as if Write() has been called.  Only
 // the original instance can be finalized, not copies. An attempt to
 // dereference a copy may fail if the original has not yet been
 // finalized because the object will not exist in the file.

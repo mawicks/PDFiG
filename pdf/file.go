@@ -2,6 +2,8 @@ package pdf
 
 import (
 	"bufio"
+	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -19,6 +21,12 @@ type xrefEntry struct {
 	// "dirty" is true when the in-memory version of the object doesn't match
 	// the "file" copy.
 	dirty bool
+}
+
+type writeQueueEntry struct {
+	index uint32
+	generation uint16
+	serialization []byte
 }
 
 // Write xrefEntry to output stream using Writer.
@@ -78,6 +86,9 @@ type file struct {
 	// "file" must be used for low-level operations such as Seek(), so
 	// flush "writer" before using "file".
 	writer *bufio.Writer
+
+	writeQueue chan writeQueueEntry
+	writingFinished chan int
 }
 
 // OpenFile() construct a File object from either a new or a pre-existing filename.
@@ -123,13 +134,20 @@ func OpenFile(filename string, mode int) (result *file,exists bool,err error) {
 	if (result.originalSize == 0) {
 		writeHeader(result.writer)
 	}
+
+	result.writeQueue = make(chan writeQueueEntry, 3)
+	result.writingFinished = make(chan int)
+
+	go result.gowriter()
+
 	f.Seek(0,os.SEEK_END)
 	return
 }
 
 // Implements AddObject() in File interface
 func (f *file) AddObject(object Object) (reference *Indirect) {
-	return NewIndirect(f).Write(object)
+	returnValue := NewIndirect(f).Write(object)
+	return returnValue
 }
 
 // Implements DeleteObject() in File interface
@@ -194,6 +212,8 @@ func (f *file) ReserveObjectNumber(o Object) ObjectNumber {
 
 // Implements Close() in File interface
 func (f *file) Close() {
+	close(f.writeQueue)
+	<- f.writingFinished
 	if f.dirty {
 		// If client specified a catalog, use it.  Otherwise
 		// re-use use pre-existing catalog if it exists.
@@ -415,22 +435,38 @@ func (f *file) release() {
 	f.file = nil
 }
 
-// Implements AddObjectAt() in File interface
-func (f *file) AddObjectAt(object ObjectNumber, o Object) {
-	entry := (*f.xref.At(uint(object.number))).(*xrefEntry)
+func (f* file) gowriter () {
+	for entry := range f.writeQueue {
+		f.writeObject(entry)
+	}
+	f.writingFinished <- 1
+}
 
-	if entry.generation != object.generation {
+func (f *file) writeObject(queueEntry writeQueueEntry) {
+	xrefEntry := (*f.xref.At(uint(queueEntry.index))).(*xrefEntry)
+
+	if xrefEntry.generation != queueEntry.generation {
 		panic(fmt.Sprintf("Generation number mismatch: object %d current generation is %d but attempted to write %d",
-			object.number, entry.generation, object.generation))
+			queueEntry.index, xrefEntry.generation, queueEntry.generation))
 	}
 
-	entry.setInUse(uint64(f.Tell()))
+	xrefEntry.setInUse(uint64(f.Tell()))
 
-	fmt.Fprintf(f.writer, "%d %d obj\n", object.number, object.generation)
-	o.Serialize(f.writer, f)
+	fmt.Fprintf(f.writer, "%d %d obj\n", queueEntry.index, queueEntry.generation)
+	_,err := f.writer.Write(queueEntry.serialization)
+	if err != nil {
+		panic(errors.New("Unable to write serialized object in file.writeObject()"))
+	}
 	fmt.Fprintf(f.writer, "\nendobj\n")
 
 	f.dirty = true
+}
+
+// Implements AddObjectAt() in File interface
+func (f *file) AddObjectAt(objectNumber ObjectNumber, object Object) {
+	buffer := new(bytes.Buffer)
+	object.Serialize(buffer, f)
+	f.writeQueue<-writeQueueEntry{objectNumber.number,objectNumber.generation,buffer.Bytes()}
 }
 
 func (f *file) parseExistingFile() {
