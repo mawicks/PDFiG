@@ -5,58 +5,80 @@ import ("bufio"
 
 type Document struct {
 	file File
+	// existing is true if the xref and trailer were read from an
+	// existing document when the document was opened with
+	// OpenDocument().
 	existing bool
 
-	// Each element in the pages array is an Indirect reference to
-	// a Page dictionary returned by Page.Indirect().  The "pages"
-	// array is nil for pre-existing documents until NewPage() (or
-	// some other method that implies pages will be generated)
-	// gets called.  The "pages" array contains only *new* pages.
+	// Pre-existing documents are opened as if they are read-only
+	// until there's a reason to write something to them.  Adding
+	// pages to a pre-existing document requires modifying the
+	// page tree and rewriting it.  readyForNewPages is false for
+	// pre-existing documents until NewPage() or some other method
+	// is called that implies that new pages will be generated.
+	// readyForNewPage is false if and only if pages and
+	// procSetIndirect are both nil.
+	readyForNewPages bool
+
+	// When pages are added to a pre-existing document, the
+	// existing page tree root is inserted as the first element in
+	// the pages array.  Other elements in the pages array are
+	// Indirect references to a Page dictionary returned by
+	// page.Close() on a page obtained with NewPage()
 	pages *Array
+
 	// procSetIndirect is nil if there are no new pages.
 	procSetIndirect *Indirect
+
 	// currentPage is nil until NextPage() is called.
 	currentPage *Page
 
 	// When a pre-existing document is opened, pageTreeRoot and
 	// pageTreeRootIndirect are initialized with the pre-existing
-	// dictionary.
+	// dictionary.  Both are reset to a newly generated page tree
+	// root if pages are added to an existing document (or one of
+	// the page boxes is set).  Both are initialized using a newly
+	// generated page tree if a new document is opened.  They are
+	// not nil.
 	pageTreeRoot *Dictionary
 	pageTreeRootIndirect *Indirect
-	// pageCount is also initialized with the pre-existing page count.
+
+	// pageCount is initialized with the pre-existing page count.
 	pageCount uint
 
+	// DocumentInfo is initialized from a pre-existing documents
+	// document info dictionary.  Otherwise it is initialized to
+	// an empty dictionary.  It is not nil.
 	DocumentInfo
 }
 
-// needPageTree() initializes the structures required to write a new
-// or modified page tree to this document.  It need not be called if
-// the document is only being read.
-func (d *Document) needPageTree() {
-	if d.pages == nil {
-		d.pages = NewArray()
-		d.procSetIndirect = NewIndirect(d.file)
+// makeNewPageTree() initializes the structures required to write a
+// new or modified page tree to this document.  It need not be called
+// if the document is only being read.
+func (d *Document) makeNewPageTree() {
+	d.readyForNewPages = true
+	d.pages = NewArray()
+	d.procSetIndirect = NewIndirect(d.file)
 
-		newPageTreeRoot := NewDictionary()
-		newPageTreeRootIndirect := NewIndirect(d.file)
-		// If there is a pre-existing page tree insert the
-		// whole thing as the first element of the pages array
-		// (which will become /Kids).
-		if d.existing {
-			d.pages.Add(d.pageTreeRootIndirect)
-			// Link the old page tree to the new one. and
-			d.pageTreeRoot.Add("Parent", newPageTreeRootIndirect)
-			// Write out the revised version
-			d.pageTreeRootIndirect.Write(d.pageTreeRoot)
-		}
-		d.pageTreeRoot = newPageTreeRoot
-		d.pageTreeRootIndirect = newPageTreeRootIndirect
-		// SetMediaBox() must be called after d.pageTreeRoot
-		// is initialized For now, this is a default to be
-		// sure a box is set somewhere.  Clients can reset
-		// with their own call to SetMediaBox().
-		d.SetMediaBox(0, 0, 612, 792)
+	newPageTreeRoot := NewDictionary()
+	newPageTreeRootIndirect := NewIndirect(d.file)
+	// If there is a pre-existing page tree insert the
+	// whole thing as the first element of the pages array
+	// (which will become /Kids).
+	if d.existing {
+		d.pages.Add(d.pageTreeRootIndirect)
+		// Link the old page tree to the new one. and
+		d.pageTreeRoot.Add("Parent", newPageTreeRootIndirect)
+		// Write out the revised version
+		d.pageTreeRootIndirect.Write(d.pageTreeRoot)
 	}
+	d.pageTreeRoot = newPageTreeRoot
+	d.pageTreeRootIndirect = newPageTreeRootIndirect
+	// SetMediaBox() must be called after d.pageTreeRoot
+	// is initialized For now, this is a default to be
+	// sure a box is set somewhere.  Clients can reset
+	// with their own call to SetMediaBox().
+	d.SetMediaBox(0, 0, 612, 792)
 }
 
 // OpenDocument() constructs a document object from either a new or a pre-existing filename.
@@ -67,7 +89,7 @@ func OpenDocument(filename string, mode int) *Document {
 
 	if !d.existing {
 		d.DocumentInfo = NewDocumentInfo()
-		d.needPageTree()
+		d.makeNewPageTree()
 	} else {
 		d.DocumentInfo = DocumentInfo{Dictionary: d.file.Info(), dirty: false}
 		oldPageTree := oldPageTree(d.file)
@@ -145,7 +167,9 @@ func (d *Document) NewPage() *Page {
 	d.finishCurrentPage()
 	d.currentPage = NewPage(d.file)
 
-	d.needPageTree()
+	if !d.readyForNewPages {
+		d.makeNewPageTree()
+	}
 	d.currentPage.SetParent(d.pageTreeRootIndirect)
 	d.currentPage.setProcSet(d.procSetIndirect)
 
@@ -165,26 +189,36 @@ func (d *Document) Close() {
 }
 
 func (d *Document) SetMediaBox(llx, lly, urx, ury float64) {
-	d.needPageTree()
+	if !d.readyForNewPages {
+		d.makeNewPageTree()
+	}
 	d.pageTreeRoot.Add("MediaBox", NewRectangle(llx, lly, urx, ury))
 }
 
 func (d *Document) SetCropBox(llx, lly, urx, ury float64) {
-	d.needPageTree()
+	if !d.readyForNewPages {
+		d.makeNewPageTree()
+	}
 	d.pageTreeRoot.Add("CropBox", NewRectangle(llx, lly, urx, ury))
 }
 
 func (d *Document) SetBleedBox(llx, lly, urx, ury float64) {
-	d.needPageTree()
+	if !d.readyForNewPages {
+		d.makeNewPageTree()
+	}
 	d.pageTreeRoot.Add("BleedBox", NewRectangle(llx, lly, urx, ury))
 }
 
 func (d *Document) SetTrimBox(llx, lly, urx, ury float64) {
-	d.needPageTree()
+	if !d.readyForNewPages {
+		d.makeNewPageTree()
+	}
 	d.pageTreeRoot.Add("TrimBox", NewRectangle(llx, lly, urx, ury))
 }
 
 func (d *Document) SetArtBox(llx, lly, urx, ury float64) {
-	d.needPageTree()
+	if !d.readyForNewPages {
+		d.makeNewPageTree()
+	}
 	d.pageTreeRoot.Add("ArtBox", NewRectangle(llx, lly, urx, ury))
 }
