@@ -26,6 +26,11 @@ type Object interface {
 	// numbers as if it were contained in a specific PDF file.
 	// Objects can be unserialized using Parser.Scan().
 	Serialize(Writer, ...File)
+
+	// If the target is an indirect refernece, Dereference()
+	// returns an object that is not an indirect reference.
+	// Otherwise it returns the target.
+	Dereference(...File) Object
 }
 
 // ObjectStringDecorator adds the String() method to Object; delegating all other methods to object.

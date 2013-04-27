@@ -200,7 +200,7 @@ func TestDictionary(t *testing.T) {
 
 	// d is empty now.
 
-	if d.CheckNameValue("foo","fi") {
+	if d.CheckNameValue("foo","fi") {*
 		t.Error(`CheckNameValue returned true on empty dictionary`)
 	}
 

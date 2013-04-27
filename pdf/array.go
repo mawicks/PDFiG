@@ -21,6 +21,10 @@ func (a *Array) Clone() Object {
 	return newArray
 }
 
+func (a *Array) Dereference(...File) Object {
+	return a
+}
+
 func (a *Array) Add(o Object) {
 	a.array.PushBack(o)
 }

@@ -1,6 +1,10 @@
 package pdf
 
-import ( "strconv" )
+import (
+	"errors"
+	"fmt"
+	"strconv" )
+
 
 // Implements:
 // 	pdf.Object
@@ -138,6 +142,18 @@ func (i *Indirect) Clone() Object {
 	newIndirect.anyFile = i.anyFile
 	newIndirect.existsInFile = true
 	return newIndirect
+}
+
+func (i *Indirect) Dereference(f... File) Object {
+	if len(f) != 0 {
+		panic (errors.New(`Indirect.Dereference requires a File`))
+	}
+
+	object,err := f[0].Object(i.ObjectNumber(f[0]))
+	if err != nil {
+		panic (errors.New(fmt.Sprintf(`Unable to read object at %v`, i.ObjectNumber(f[0]))))
+	}
+	return object.Dereference(f[0])
 }
 
 // Serialize() write a serial representation (as defined by the PDF
