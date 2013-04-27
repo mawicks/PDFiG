@@ -1,14 +1,13 @@
 package pdf
 
-import (
-	"errors" )
+import ("errors")
 
 
 type pageTree struct {
 	file File
 	root *Dictionary
 	rootReference *Indirect
-	pageCount int
+	pageCount uint
 }
 
 func oldPageTree(file File) *pageTree{
@@ -38,8 +37,7 @@ func oldPageTree(file File) *pageTree{
 	pt.file = file
 	pt.root = pageTreeRoot
 	pt.rootReference = pageTreeRootReference
-	pt.pageCount = pageCount.Value()
-
+	pt.pageCount = uint(pageCount.Value())
 	return pt
 }
 

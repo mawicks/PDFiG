@@ -1,23 +1,29 @@
 package pdf
 
-import "bufio"
-import "os"
+import ("bufio"
+	"os")
 
 type Document struct {
 	file File
 	existing bool
 
+	// Each element in the pages array is an Indirect reference to
+	// a Page dictionary returned by Page.Indirect().  The "pages"
+	// array is nil for pre-existing documents until NewPage() (or
+	// some other method that implies pages will be generated)
+	// gets called.  The "pages" array contains only *new* pages.
+	pages *Array
+	// procSetIndirect is nil if there are no new pages.
+	procSetIndirect *Indirect
+	// currentPage is nil until NextPage() is called.
+	currentPage *Page
 
-	// Next four pointers are nil for pre-existing documents unless NewPage() is called
-	// Either all are nil or all are non-nil.
+	// When a pre-existing document is opened, pageTreeRoot and
+	// pageTreeRootIndirect are initialized with the pre-existing
+	// dictionary.
 	pageTreeRoot *Dictionary
 	pageTreeRootIndirect *Indirect
-	procSetIndirect *Indirect
-	// Each element in the pages array is an Indirect reference to a Page dictionary
-	// returned by Page.Indirect().
-	pages *Array
-
-	currentPage *Page
+	// pageCount is also initialized with the pre-existing page count.
 	pageCount uint
 
 	DocumentInfo
@@ -29,12 +35,26 @@ type Document struct {
 func (d *Document) needPageTree() {
 	if d.pages == nil {
 		d.pages = NewArray()
-		d.pageTreeRoot = NewDictionary()
-		d.pageTreeRootIndirect = NewIndirect(d.file)
 		d.procSetIndirect = NewIndirect(d.file)
 
-		// For now, this is a default to be sure a box is set somewhere.
-		// Clients can reset with their own call to SetMediaBox().
+		newPageTreeRoot := NewDictionary()
+		newPageTreeRootIndirect := NewIndirect(d.file)
+		// If there is a pre-existing page tree insert the
+		// whole thing as the first element of the pages array
+		// (which will become /Kids).
+		if d.existing {
+			d.pages.Add(d.pageTreeRootIndirect)
+			// Link the old page tree to the new one. and
+			d.pageTreeRoot.Add("Parent", newPageTreeRootIndirect)
+			// Write out the revised version
+			d.pageTreeRootIndirect.Write(d.pageTreeRoot)
+		}
+		d.pageTreeRoot = newPageTreeRoot
+		d.pageTreeRootIndirect = newPageTreeRootIndirect
+		// SetMediaBox() must be called after d.pageTreeRoot
+		// is initialized For now, this is a default to be
+		// sure a box is set somewhere.  Clients can reset
+		// with their own call to SetMediaBox().
 		d.SetMediaBox(0, 0, 612, 792)
 	}
 }
@@ -45,19 +65,20 @@ func OpenDocument(filename string, mode int) *Document {
 
 	d.file,d.existing,_ = OpenFile(filename, mode)
 
-	d.DocumentInfo = NewDocumentInfo()
-
-	if d.existing {
-		d.DocumentInfo = DocumentInfo{d.file.Info(),false}
-		d.pageTreeRoot = oldPageTree(d.file).root
-		d.pageTreeRootIndirect = oldPageTree(d.file).rootReference
+	if !d.existing {
+		d.DocumentInfo = NewDocumentInfo()
+		d.needPageTree()
+	} else {
+		d.DocumentInfo = DocumentInfo{Dictionary: d.file.Info(), dirty: false}
+		oldPageTree := oldPageTree(d.file)
+		d.pageTreeRoot = oldPageTree.root
+		d.pageTreeRootIndirect = oldPageTree.rootReference
+		d.pageCount = oldPageTree.pageCount
 		out := bufio.NewWriter(os.Stdout)
-		out.WriteString("page tree root: ")
+		out.WriteString("Pre-existing page tree root: ")
 		d.pageTreeRoot.Serialize(out,d.file)
 		out.WriteString("\n")
 		out.Flush()
-	} else {
-		d.needPageTree()
 	}
 
 	// Set a default producer field.  Clients calls to SetProducer() override this.
@@ -101,6 +122,7 @@ func (d *Document) finishPageTree() {
 		d.pageTreeRoot.Add("Type", NewName("Pages"))
 		d.pageTreeRoot.Add("Count", NewIntNumeric(int(d.pageCount)))
 		d.pageTreeRoot.Add("Kids", d.pages)
+
 		d.pageTreeRootIndirect.Write(d.pageTreeRoot)
 	}
 }

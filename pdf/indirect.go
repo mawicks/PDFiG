@@ -135,7 +135,7 @@ func (i *Indirect) Clone() Object {
 }
 
 func (i *Indirect) Dereference(f... File) Object {
-	if len(f) != 0 {
+	if len(f) == 0 {
 		panic (errors.New(`Indirect.Dereference requires a File`))
 	}
 
@@ -165,6 +165,7 @@ func (i *Indirect) Serialize(w Writer, file ...File) {
 	// If the object was a pre-existing object, but has never been
 	// mapped to "file", silently add it to "file."
 	if i.sourceFile != nil && wasNotBound {
+		fmt.Printf ("Copying object %d %d\n", objectNumber.number, objectNumber.generation)
 		o, err := i.sourceFile.Object(objectNumber)
 		if err == nil {
 			i.fileBindings[file[0]] = objectNumber

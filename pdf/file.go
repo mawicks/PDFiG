@@ -135,7 +135,7 @@ func OpenFile(filename string, mode int) (result *file,exists bool,err error) {
 		writeHeader(result.writer)
 	}
 
-	result.writeQueue = make(chan writeQueueEntry, 3)
+	result.writeQueue = make(chan writeQueueEntry)
 	result.writingFinished = make(chan int)
 	f.Seek(0,os.SEEK_END)
 	go result.gowriter()
@@ -439,6 +439,7 @@ func (f* file) gowriter () {
 		entry.xrefEntry.setInUse(uint64(f.Tell()))
 
 		fmt.Fprintf(f.writer, "%d %d obj\n", entry.index, entry.xrefEntry.generation)
+
 		_,err := f.writer.Write(entry.serialization)
 		if err != nil {
 			panic(errors.New("Unable to write serialized object in file.writeObject()"))
@@ -448,9 +449,6 @@ func (f* file) gowriter () {
 		f.dirty = true
 	}
 	f.writingFinished <- 1
-}
-
-func (f *file) writeObject(queueEntry writeQueueEntry) {
 }
 
 // Implements AddObjectAt() in File interface
