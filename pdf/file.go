@@ -25,7 +25,7 @@ type xrefEntry struct {
 
 type writeQueueEntry struct {
 	index uint32
-	generation uint16
+	xrefEntry *xrefEntry
 	serialization []byte
 }
 
@@ -437,36 +437,33 @@ func (f *file) release() {
 
 func (f* file) gowriter () {
 	for entry := range f.writeQueue {
-		f.writeObject(entry)
+		entry.xrefEntry.setInUse(uint64(f.Tell()))
+
+		fmt.Fprintf(f.writer, "%d %d obj\n", entry.index, entry.xrefEntry.generation)
+		_,err := f.writer.Write(entry.serialization)
+		if err != nil {
+			panic(errors.New("Unable to write serialized object in file.writeObject()"))
+		}
+		fmt.Fprintf(f.writer, "\nendobj\n")
+
+		f.dirty = true
 	}
 	f.writingFinished <- 1
 }
 
 func (f *file) writeObject(queueEntry writeQueueEntry) {
-	xrefEntry := (*f.xref.At(uint(queueEntry.index))).(*xrefEntry)
-
-	if xrefEntry.generation != queueEntry.generation {
-		panic(fmt.Sprintf("Generation number mismatch: object %d current generation is %d but attempted to write %d",
-			queueEntry.index, xrefEntry.generation, queueEntry.generation))
-	}
-
-	xrefEntry.setInUse(uint64(f.Tell()))
-
-	fmt.Fprintf(f.writer, "%d %d obj\n", queueEntry.index, queueEntry.generation)
-	_,err := f.writer.Write(queueEntry.serialization)
-	if err != nil {
-		panic(errors.New("Unable to write serialized object in file.writeObject()"))
-	}
-	fmt.Fprintf(f.writer, "\nendobj\n")
-
-	f.dirty = true
 }
 
 // Implements AddObjectAt() in File interface
 func (f *file) AddObjectAt(objectNumber ObjectNumber, object Object) {
+	xrefEntry := (*f.xref.At(uint(objectNumber.number))).(*xrefEntry)
+	if xrefEntry.generation != objectNumber.generation {
+		panic(fmt.Sprintf("Generation number mismatch: object %d current generation is %d but attempted to write %d",
+			objectNumber.number, xrefEntry.generation, objectNumber.generation))
+	}
 	buffer := new(bytes.Buffer)
 	object.Serialize(buffer, f)
-	f.writeQueue<-writeQueueEntry{objectNumber.number,objectNumber.generation,buffer.Bytes()}
+	f.writeQueue<-writeQueueEntry{objectNumber.number,xrefEntry,buffer.Bytes()}
 }
 
 func (f *file) parseExistingFile() {
