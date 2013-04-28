@@ -18,15 +18,20 @@ type xrefEntry struct {
 	generation uint16
 	inUse      bool
 
-	// "dirty" is true when the in-memory version of the object doesn't match
+	// "dirty" is true when the in-memory version of the xref entry doesn't match
 	// the "file" copy.
 	dirty bool
+
+	// serialization is used to hold a serialized version of the
+	// object while the object is being written to disk.  It is
+	// used by file.Object() to retrieve a requested object by
+	// number that has not yet been written to disk.
+	serialization []byte
 }
 
 type writeQueueEntry struct {
 	index uint32
 	xrefEntry *xrefEntry
-	serialization []byte
 }
 
 // Write xrefEntry to output stream using Writer.
@@ -90,6 +95,9 @@ type file struct {
 
 	writeQueue chan writeQueueEntry
 	writingFinished chan bool
+
+	// semaphore protects access to "file" and to "serialization"
+	// member of xref entries
 	semaphore chan bool
 }
 
@@ -110,7 +118,7 @@ func OpenFile(filename string, mode int) (result *file,exists bool,err error) {
 
 	if (result.originalSize == 0) {
 		// There is no xref so start one
-		result.xref.PushBack(&xrefEntry{0, 65535, false, true})
+		result.xref.PushBack(&xrefEntry{0, 65535, false, true, nil})
 		result.dirty = true
 	} else {
 		exists = true
@@ -150,8 +158,8 @@ func OpenFile(filename string, mode int) (result *file,exists bool,err error) {
 	return
 }
 
-// Implements AddObject() in File interface
-func (f *file) AddObject(object Object) (reference *Indirect) {
+// Implements WriteObject() in File interface
+func (f *file) WriteObject(object Object) (reference *Indirect) {
 	returnValue := NewIndirect(f).Write(object)
 	return returnValue
 }
@@ -178,15 +186,21 @@ func (f *file) DeleteObject(indirect *Indirect) {
 	f.dirty = true
 }
 
-// Object() retrieves an object that already exists in a PDF file.
-// Each call causes a new object to be unserialized directly from the
-// file so the caller has exclusive ownership of the returned object.
+// Object() retrieves an object that already exists (or is in the
+// process of being written to) a PDF file.  Each call causes a new
+// object to be unserialized from the file or a buffer so the caller
+// has exclusive ownership of the returned object.
 func (f *file) Object(o ObjectNumber) (Object,error) {
 	entry := (*f.xref.At(uint(o.number))).(*xrefEntry)
+	var r Scanner
 
 	<-f.semaphore
-	f.Seek(int64(entry.byteOffset),os.SEEK_SET)
-	r := bufio.NewReader(f.file)
+	if entry.serialization == nil {
+		f.Seek(int64(entry.byteOffset),os.SEEK_SET)
+		r = bufio.NewReader(f.file)
+	} else {
+		r = bytes.NewReader(entry.serialization)
+	}
 	object,err := NewParser(r).ScanIndirect(o, f)
 	f.semaphore<-true
 
@@ -206,7 +220,7 @@ func (f *file) ReserveObjectNumber(o Object) ObjectNumber {
 	if newNumber == 0 {
 		// Create a new xref entry
 		newNumber = uint32(f.xref.Size())
-		f.xref.PushBack(&xrefEntry{0, 0, false, true})
+		f.xref.PushBack(&xrefEntry{0, 0, false, true,nil})
 	} else {
 		// Adjust link in head of free list
 		freeHead := (*f.xref.At(0)).(*xrefEntry)
@@ -384,7 +398,7 @@ func readXrefSubsection(xref containers.Array, r *bufio.Reader, start, count uin
 
 		// Never overwrite a pre-existing entry.
 		if *xref.At(start+i) == nil {
-			*xref.At(start+i) = &xrefEntry{position, generation, inUse, false}
+			*xref.At(start+i) = &xrefEntry{position, generation, inUse, false, nil}
 		}
 	}
 }
@@ -454,12 +468,13 @@ func (f* file) gowriter () {
 		f.Seek(f.lastWritePosition, os.SEEK_SET)
 		fmt.Fprintf(f.writer, "%d %d obj\n", entry.index, entry.xrefEntry.generation)
 
-		_,err := f.writer.Write(entry.serialization)
+		_,err := f.writer.Write(entry.xrefEntry.serialization)
 		if err != nil {
 			panic(errors.New("Unable to write serialized object in file.writeObject()"))
 		}
 		fmt.Fprintf(f.writer, "\nendobj\n")
 		f.lastWritePosition = f.Tell()
+		entry.xrefEntry.serialization = nil
 		f.semaphore<-true
 
 		f.dirty = true
@@ -467,8 +482,8 @@ func (f* file) gowriter () {
 	f.writingFinished <- true
 }
 
-// Implements AddObjectAt() in File interface
-func (f *file) AddObjectAt(objectNumber ObjectNumber, object Object) {
+// Implements WriteObjectAt() in File interface
+func (f *file) WriteObjectAt(objectNumber ObjectNumber, object Object) {
 	xrefEntry := (*f.xref.At(uint(objectNumber.number))).(*xrefEntry)
 	if xrefEntry.generation != objectNumber.generation {
 		panic(fmt.Sprintf("Generation number mismatch: object %d current generation is %d but attempted to write %d",
@@ -476,7 +491,8 @@ func (f *file) AddObjectAt(objectNumber ObjectNumber, object Object) {
 	}
 	buffer := new(bytes.Buffer)
 	object.Serialize(buffer, f)
-	f.writeQueue<-writeQueueEntry{objectNumber.number,xrefEntry,buffer.Bytes()}
+	xrefEntry.serialization = buffer.Bytes()
+	f.writeQueue<-writeQueueEntry{objectNumber.number,xrefEntry}
 }
 
 func (f *file) parseExistingFile() {

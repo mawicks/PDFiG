@@ -61,7 +61,7 @@ func NewStandardFont(font StandardFont) Font {
 func (font *standardFont) Indirect(file File) *Indirect {
 	i,exists := font.fileBindings[file]
 	if (!exists) {
-		i = file.AddObject (font.dictionary)
+		i = file.WriteObject(font.dictionary)
 		font.fileBindings[file] = i
 	}
 	return i
