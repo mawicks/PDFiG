@@ -10,16 +10,16 @@ func ExampleFile_creation() {
 	f,_,_ := pdf.OpenFile("/tmp/test-file.pdf", os.O_RDWR|os.O_CREATE)
 
 	o1 := pdf.NewIndirect()
-	indirect1 := f.AddObject(o1)
+	indirect1 := f.WriteObject(o1)
 	o1.Write(pdf.NewNumeric(3.14))
 
-	indirect2 := f.AddObject(pdf.NewNumeric(2.718))
+	indirect2 := f.WriteObject(pdf.NewNumeric(2.718))
 
-	f.AddObject(pdf.NewName("foo"))
+	f.WriteObject(pdf.NewName("foo"))
 
 	// Delete the *indirect reference* to the 3.14 numeric
 	f.DeleteObject(indirect1)
-	f.AddObject(pdf.NewNumeric(3))
+	f.WriteObject(pdf.NewNumeric(3))
 
 	// Delete the 2.718 numeric object itself
 	f.DeleteObject(indirect2)

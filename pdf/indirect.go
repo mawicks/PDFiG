@@ -169,7 +169,7 @@ func (i *Indirect) Serialize(w Writer, file ...File) {
 		o, err := i.sourceFile.Object(objectNumber)
 		if err == nil {
 			i.fileBindings[file[0]] = objectNumber
-			file[0].AddObjectAt(objectNumber,o)
+			file[0].WriteObjectAt(objectNumber,o)
 		}
 	}
 	w.WriteString(strconv.FormatInt(int64(objectNumber.number), 10))
@@ -186,7 +186,7 @@ func (i *Indirect) Serialize(w Writer, file ...File) {
 //  a := NewIndirect(f).Write(object)
 func (i *Indirect) Write(o Object) *Indirect{
 	for file, objectNumber := range i.fileBindings {
-		file.AddObjectAt(objectNumber, o)
+		file.WriteObjectAt(objectNumber, o)
 		i.sourceFile = file
 	}
 	return i

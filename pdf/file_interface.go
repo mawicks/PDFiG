@@ -10,19 +10,19 @@ func NewObjectNumber(number uint32, generation uint16) ObjectNumber {
 }
 
 type File interface {
-	// AddObject() adds the passed object to the File.  The
+	// WriteObject() adds the passed object to the File.  The
 	// returned indirect reference may be used for backward
 	// references to the object.  A new object is created
 	// either at a new index in the xref or at an old index
 	// using a new generation.
-	AddObject(Object) (*Indirect)
+	WriteObject(Object) (*Indirect)
 
-	// AddObjectAt() adds the object to the File at the specified
+	// WriteObjectAt() adds the object to the File at the specified
 	// location.  ObjectNumber may have been obtained by an
 	// earlier call to ReserveObjectNumber(), or ObjectNumber may
 	// be a pre-existing (finalized) object that is being
 	// overwritten with a modified copy.
-	AddObjectAt(ObjectNumber, Object)
+	WriteObjectAt(ObjectNumber, Object)
 
 	// Object() retrieves a finalized object that has already been
 	// written to a PDF file.

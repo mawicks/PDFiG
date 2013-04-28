@@ -16,13 +16,13 @@ func NewMockFile(obj uint32, gen uint16) File {
 // Implements Close() in File interface
 func (f *mockFile) Close() {}
 
-// Implements AddObjectAt() in File interface
-func (f *mockFile) AddObjectAt(ObjectNumber, Object) {}
-
-// Implements AddObject() in File interface
-func (f *mockFile) AddObject(object Object) (reference *Indirect) {
+// Implements WriteObject() in File interface
+func (f *mockFile) WriteObject(object Object) (reference *Indirect) {
 	return NewIndirect(f).Write(object)
 }
+// Implements WriteObjectAt() in File interface
+func (f *mockFile) WriteObjectAt(ObjectNumber, Object) {}
+
 
 // Implements Object() in File interface
 func (f *mockFile) Object(o ObjectNumber) (Object,error) {
