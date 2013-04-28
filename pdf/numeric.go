@@ -11,8 +11,8 @@ type Numeric interface {
 	Object
 }
 
-// FloatNumeric implements Numeric
-type FloatNumeric struct {
+// RealNumeric implements Numeric
+type RealNumeric struct {
 	value float32
 }
 
@@ -21,21 +21,21 @@ type IntNumeric struct {
 	value int
 }
 
-func (n *FloatNumeric) Clone() Object {
+func (n *RealNumeric) Clone() Object {
 	// Numerics are intended to be immutable, so return a pointer
 	// to the same instance
 	return n
 }
 
-func (n *FloatNumeric) Dereference() Object {
+func (n *RealNumeric) Dereference() Object {
 	return n
 }
 
-func (n *FloatNumeric) Serialize(w Writer, file ...File) {
+func (n *RealNumeric) Serialize(w Writer, file ...File) {
 	w.WriteString(strconv.FormatFloat(float64(n.value), 'f', -1, 32))
 }
 
-func (n *FloatNumeric) Value() float32 {
+func (n *RealNumeric) Value() float32 {
 	return n.value
 }
 
@@ -57,7 +57,7 @@ func (n *IntNumeric) Value() int {
 	return n.value
 }
 
-func adjustFloatRange(v float64) (float32Value float32) {
+func adjustRealRange(v float64) (float32Value float32) {
 	switch {
 	case v > math.MaxFloat32:
 		float32Value = math.MaxFloat32
@@ -82,19 +82,19 @@ func NewIntNumeric(v int) Object {
 	return &IntNumeric{v}
 }
 
-func NewFloatNumeric(v float32) Object {
-	return &FloatNumeric{v}
+func NewRealNumeric(v float32) Object {
+	return &RealNumeric{v}
 }
 
 func NewNumeric(v float64) (result Object) {
 	var intValue = int(v)
 
 	// Use IntNumeric if value can be represented as int32;
-	// otherwise use FloatNumeric, which uses float32 internally
+	// otherwise use RealNumeric, which uses float32 internally
 	if float64(intValue) == v {
 		result = &IntNumeric{intValue}
 	} else {
-		result = &FloatNumeric{adjustFloatRange(v)}
+		result = &RealNumeric{adjustRealRange(v)}
 	}
 
 	return result

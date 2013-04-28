@@ -33,6 +33,10 @@ func NewBinaryString(s []byte) *String {
 	return &String{s, normalSerializer}
 }
 
+func (s *String) Bytes() (result []byte) {
+	return s.value
+}
+
 func (s *String) Clone() Object {
 	newString := *s
 	return &newString

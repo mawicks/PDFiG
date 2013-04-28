@@ -176,24 +176,32 @@ func TestDictionary(t *testing.T) {
 	d := pdf.NewDictionary()
 	testOneObject(t, "NewDictionary", d, nil, "<<>>")
 
-	d.Add("fee", pdf.NewNumeric(3.14))
-	testOneObject(t, "Dictionary.Add() test", d, nil, "<</fee 3.14>>")
+	d.Add("fee", pdf.NewNumeric(3))
+	testOneObject(t, "Dictionary.Add() test", d, nil, "<</fee 3>>")
 
 	b := d.Clone()
-	testOneObject(t, "Dictionary.Clone() test", b, nil, "<</fee 3.14>>")
+	testOneObject(t, "Dictionary.Clone() test", b, nil, "<</fee 3>>")
+
+	if i,ok := d.GetInt("fee"); !ok || i!=3 {
+		t.Error(`GetInt("fee") did not return 3`)
+	}
 
 	// Can't test beyond three entries very easily because the order of entries is not specified
 	// and the number of permutations makes it not worth the effort with our simple testOneObject() function.
 	d.Add("fi", pdf.NewNumeric(2.718))
-	testOneObject(t, "Dictionary.Remove() test", d, nil, "<</fee 3.14 /fi 2.718>>", "<</fi 2.718 /fee 3.14>>")
+	testOneObject(t, "Dictionary.Remove() test", d, nil, "<</fee 3 /fi 2.718>>", "<</fi 2.718 /fee 3>>")
+
+	if x,ok := d.GetReal("fi"); !ok || x!=2.718 {
+		t.Error(`GetInt("fi") did not return 2.718`)
+	}
 
 	// Make sure clone hasn't changed.
-	testOneObject(t, "Dictionary.Clone() test", b, nil, "<</fee 3.14>>")
+	testOneObject(t, "Dictionary.Clone() test", b, nil, "<</fee 3>>")
 
 	// Begin removing entries to test Remove() method.
 	d.Remove("fee")
 	testOneObject(t, "Dictionary.Remove() test", d, nil, "<</fi 2.718>>")
-	testOneObject(t, "Dictionary.Clone() test", b, nil, "<</fee 3.14>>")
+	testOneObject(t, "Dictionary.Clone() test", b, nil, "<</fee 3>>")
 
 	d.Remove("fi")
 	testOneObject(t, "Dictionary.Remove() test", d, nil, "<<>>")
