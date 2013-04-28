@@ -1,6 +1,7 @@
 package pdf
 
 import ("bufio"
+	"fmt"
 	"os")
 
 type Document struct {
@@ -91,7 +92,13 @@ func OpenDocument(filename string, mode int) *Document {
 		d.DocumentInfo = NewDocumentInfo()
 		d.makeNewPageTree()
 	} else {
-		d.DocumentInfo = DocumentInfo{Dictionary: d.file.Info(), dirty: false}
+		existingInfo := d.file.Info();
+		if existingInfo == nil {
+			d.DocumentInfo = NewDocumentInfo()
+		} else {
+			d.DocumentInfo = DocumentInfo{Dictionary: existingInfo, dirty: false}
+		}
+
 		oldPageTree := oldPageTree(d.file)
 		d.pageTreeRoot = oldPageTree.root
 		d.pageTreeRootIndirect = oldPageTree.rootReference
@@ -196,7 +203,27 @@ func (d *Document) Close() {
 // Page(n) returns the dictionary associated with page "n".
 // The first page is numbered 0.
 func (d *Document) Page(n uint) *Dictionary {
-	return d.pageTreeRoot.Page(n)
+
+	// Verify that we can retrieve an arbitrary object
+	writer := bufio.NewWriter(os.Stdout)
+
+	fmt.Fprintf (writer, "Page(%d) called on: ", n)
+	d.pageTreeRoot.Serialize(writer, d.file)
+	writer.WriteString("\n")
+	writer.Flush()
+
+	page := d.pageTreeRoot.Page(n)
+
+	if page == nil {
+		fmt.Fprintf (writer, "Page() returned nil\n")
+	} else {
+		fmt.Fprintf (writer, "Page() returned:")
+		page.Serialize(writer, d.file)
+		writer.WriteString("\n")
+	}
+	writer.Flush()
+
+	return page
 }
 
 func (d *Document) SetMediaBox(llx, lly, urx, ury float64) {

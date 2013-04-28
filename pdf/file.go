@@ -297,7 +297,7 @@ func (f *file) SetCatalog(catalog *Dictionary) {
 
 // Info() returns the current document info dictionary or nil if one
 // doesn't exist (either from a pre-existing file or from
-// file.SetCatalog())
+// file.SetInfo())
 func (f *file) Info() *Dictionary {
 	return f.dictionaryFromTrailer("Info")
 }

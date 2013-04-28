@@ -1,6 +1,7 @@
 package pdf
 
-import ("errors")
+import ("errors"
+	"fmt")
 
 
 type pageTree struct {
@@ -40,9 +41,16 @@ func oldPageTree(file File) *pageTree{
 }
 
 func (pt *Dictionary) Page (n uint) *Dictionary {
+	fmt.Printf ("page_tree.Page(%d) called on %v\n", n, pt)
 	var (
 		kids *Array
 		ok bool )
+
+	if t,ok := pt.GetName("Type"); !ok {
+		panic (errors.New(`Page tree node has no "Type" element`))
+	} else {
+		fmt.Printf ("   (this is a %s node)\n", t)
+	}
 
 	if kids,ok = pt.GetArray("Kids"); !ok {
 		panic (errors.New(`Page tree node has no "Kids" array`))
@@ -71,7 +79,7 @@ func (pt *Dictionary) Page (n uint) *Dictionary {
 					panic (errors.New(`Page tree node missing /Count`))
 				}
 				if n < uint(count) {
-					return kid.Page(uint(count))
+					return kid.Page(n)
 				}
 				n -= uint(count)
 			case "Page":
