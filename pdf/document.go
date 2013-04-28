@@ -61,10 +61,14 @@ func (d *Document) makeNewPageTree() {
 	d.procSetIndirect = NewIndirect(d.file)
 
 	newPageTreeRoot := NewDictionary()
+	newPageTreeRoot.Add("Type", NewName("Pages"))
+	newPageTreeRoot.Add("Count", NewIntNumeric(int(d.pageCount)))
+	newPageTreeRoot.Add("Kids", d.pages)
+
 	newPageTreeRootIndirect := NewIndirect(d.file)
 	// If there is a pre-existing page tree insert the
-	// whole thing as the first element of the pages array
-	// (which will become /Kids).
+	// whole thing as the first element of the pages array,
+	// which is the /Kids array.
 	if d.existing {
 		d.pages.Add(d.pageTreeRootIndirect)
 		// Link the old page tree to the new one. and
@@ -74,6 +78,7 @@ func (d *Document) makeNewPageTree() {
 	}
 	d.pageTreeRoot = newPageTreeRoot
 	d.pageTreeRootIndirect = newPageTreeRootIndirect
+
 	// SetMediaBox() must be called after d.pageTreeRoot
 	// is initialized For now, this is a default to be
 	// sure a box is set somewhere.  Clients can reset
@@ -130,6 +135,7 @@ func (d *Document) finishCurrentPage() {
 	if d.currentPage != nil {
 		d.pages.Add(d.currentPage.Close())
 		d.pageCount += 1
+		d.pageTreeRoot.Add("Count", NewIntNumeric(int(d.pageCount)))
 	}
 }
 
@@ -141,10 +147,6 @@ func (d *Document) finishDocumentInfo() {
 
 func (d *Document) finishPageTree() {
 	if d.pageTreeRoot != nil {
-		d.pageTreeRoot.Add("Type", NewName("Pages"))
-		d.pageTreeRoot.Add("Count", NewIntNumeric(int(d.pageCount)))
-		d.pageTreeRoot.Add("Kids", d.pages)
-
 		d.pageTreeRootIndirect.Write(d.pageTreeRoot)
 	}
 }

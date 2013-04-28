@@ -18,19 +18,20 @@ func modify_file() {
 	// Verify that we can retrieve an arbitrary object
 	writer := bufio.NewWriter(os.Stdout)
 	o,_ := f.Object(pdf.NewObjectNumber(10,0))
+	writer.WriteString("Object number 10: ")
 	o.Serialize(writer, f)
 	writer.WriteString("\n")
 	writer.Flush()
 
 	if info := f.Info(); info != nil {
-		writer.WriteString("Info: ")
+		writer.WriteString("Pre-existing document info: ")
 		info.Serialize(writer, f)
 		writer.WriteString("\n")
 		writer.Flush()
 	}
 
 	if catalog := f.Catalog(); catalog != nil {
-		writer.WriteString("Catalog: ")
+		writer.WriteString("Pre-existing document catalog: ")
 		catalog.Serialize(writer, f)
 		writer.WriteString("\n")
 		writer.Flush()

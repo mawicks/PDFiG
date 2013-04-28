@@ -86,6 +86,7 @@ type file struct {
 	// "file" must be used for low-level operations such as Seek(), so
 	// flush "writer" before using "file".
 	writer *bufio.Writer
+	lastWritePosition int64
 
 	writeQueue chan writeQueueEntry
 	writingFinished chan int
@@ -137,7 +138,10 @@ func OpenFile(filename string, mode int) (result *file,exists bool,err error) {
 
 	result.writeQueue = make(chan writeQueueEntry)
 	result.writingFinished = make(chan int)
-	f.Seek(0,os.SEEK_END)
+
+	result.lastWritePosition,_ = result.Seek(0,os.SEEK_END)
+	fmt.Printf ("lastwriteposition set to %d\n", result.lastWritePosition)
+
 	go result.gowriter()
 
 	return
@@ -436,8 +440,9 @@ func (f *file) release() {
 
 func (f* file) gowriter () {
 	for entry := range f.writeQueue {
-		entry.xrefEntry.setInUse(uint64(f.Tell()))
+		entry.xrefEntry.setInUse(uint64(f.lastWritePosition))
 
+		f.Seek(f.lastWritePosition, os.SEEK_SET)
 		fmt.Fprintf(f.writer, "%d %d obj\n", entry.index, entry.xrefEntry.generation)
 
 		_,err := f.writer.Write(entry.serialization)
@@ -445,6 +450,7 @@ func (f* file) gowriter () {
 			panic(errors.New("Unable to write serialized object in file.writeObject()"))
 		}
 		fmt.Fprintf(f.writer, "\nendobj\n")
+		f.lastWritePosition = f.Tell()
 
 		f.dirty = true
 	}
