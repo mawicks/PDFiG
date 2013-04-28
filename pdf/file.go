@@ -89,7 +89,8 @@ type file struct {
 	lastWritePosition int64
 
 	writeQueue chan writeQueueEntry
-	writingFinished chan int
+	writingFinished chan bool
+	semaphore chan bool
 }
 
 // OpenFile() construct a File object from either a new or a pre-existing filename.
@@ -137,7 +138,9 @@ func OpenFile(filename string, mode int) (result *file,exists bool,err error) {
 	}
 
 	result.writeQueue = make(chan writeQueueEntry)
-	result.writingFinished = make(chan int)
+	result.writingFinished = make(chan bool)
+	result.semaphore = make(chan bool, 1)
+	result.semaphore <- true
 
 	result.lastWritePosition,_ = result.Seek(0,os.SEEK_END)
 	fmt.Printf ("lastwriteposition set to %d\n", result.lastWritePosition)
@@ -178,11 +181,16 @@ func (f *file) DeleteObject(indirect *Indirect) {
 // Object() retrieves an object that already exists in a PDF file.
 // Each call causes a new object to be unserialized directly from the
 // file so the caller has exclusive ownership of the returned object.
-func (pdffile *file) Object(o ObjectNumber) (Object,error) {
-	entry := (*pdffile.xref.At(uint(o.number))).(*xrefEntry)
-	pdffile.Seek(int64(entry.byteOffset),os.SEEK_SET)
-	r := bufio.NewReader(pdffile.file)
-	return NewParser(r).ScanIndirect(o, pdffile)
+func (f *file) Object(o ObjectNumber) (Object,error) {
+	entry := (*f.xref.At(uint(o.number))).(*xrefEntry)
+
+	<-f.semaphore
+	f.Seek(int64(entry.byteOffset),os.SEEK_SET)
+	r := bufio.NewReader(f.file)
+	object,err := NewParser(r).ScanIndirect(o, f)
+	f.semaphore<-true
+
+	return object,err
 }
 
 // Implements ReserveObjectNumber() in File interface
@@ -381,7 +389,7 @@ func readXrefSubsection(xref containers.Array, r *bufio.Reader, start, count uin
 	}
 }
 
-func readTrailer(subsectionHeader string, r *bufio.Reader, pdffile *file) *Dictionary {
+func readTrailer(subsectionHeader string, r *bufio.Reader, f *file) *Dictionary {
 	var err error
 	tries := 0
 	const maxTries = 4
@@ -390,7 +398,7 @@ func readTrailer(subsectionHeader string, r *bufio.Reader, pdffile *file) *Dicti
 	}
 	if (err == nil && tries < maxTries) {
 		parser := NewParser (r)
-		object,err := parser.Scan(pdffile)
+		object,err := parser.Scan(f)
 		if err == nil {
 			if trailer,ok := object.(*Dictionary); ok {
 				return trailer
@@ -400,13 +408,13 @@ func readTrailer(subsectionHeader string, r *bufio.Reader, pdffile *file) *Dicti
 	return nil
 }
 
-func readOneXrefSection (pdffile *file, location int64) (prevXref int, trailer *Dictionary) {
+func readOneXrefSection (f *file, location int64) (prevXref int, trailer *Dictionary) {
 
-	if _,err := pdffile.file.Seek (location, os.SEEK_SET); err != nil {
+	if _,err := f.file.Seek (location, os.SEEK_SET); err != nil {
 		panic ("Seeking to xref position failed")
 	}
 
-	r := bufio.NewReader(pdffile.file)
+	r := bufio.NewReader(f.file)
  	if header,_ := ReadLine(r); header != "xref" {
 		panic (`"xref" not found at expected position`)
 	}
@@ -419,10 +427,10 @@ func readOneXrefSection (pdffile *file, location int64) (prevXref int, trailer *
 		if (err != nil || n != 2) {
 			break;
 		}
-		readXrefSubsection(pdffile.xref, r, start, count)
+		readXrefSubsection(f.xref, r, start, count)
 	}
 
-	trailer = readTrailer (subsectionHeader, r, pdffile)
+	trailer = readTrailer (subsectionHeader, r, f)
 	if trailer == nil {
 		panic ("Expected trailer not found")
 	} else if prevReference,ok := trailer.Get("Prev").(*IntNumeric); ok {
@@ -442,6 +450,7 @@ func (f* file) gowriter () {
 	for entry := range f.writeQueue {
 		entry.xrefEntry.setInUse(uint64(f.lastWritePosition))
 
+		<-f.semaphore
 		f.Seek(f.lastWritePosition, os.SEEK_SET)
 		fmt.Fprintf(f.writer, "%d %d obj\n", entry.index, entry.xrefEntry.generation)
 
@@ -451,10 +460,11 @@ func (f* file) gowriter () {
 		}
 		fmt.Fprintf(f.writer, "\nendobj\n")
 		f.lastWritePosition = f.Tell()
+		f.semaphore<-true
 
 		f.dirty = true
 	}
-	f.writingFinished <- 1
+	f.writingFinished <- true
 }
 
 // Implements AddObjectAt() in File interface
