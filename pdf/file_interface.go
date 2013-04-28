@@ -59,4 +59,7 @@ type File interface {
 	// Close() writes the xref, trailer, etc., and closes the
 	// underlying file.
 	Close()
+
+	// Closed() returns true if the file has been closed.
+	Closed() bool
 }

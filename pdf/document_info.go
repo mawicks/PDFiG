@@ -1,14 +1,11 @@
 package pdf
 
-import "fmt"
-
 type DocumentInfo struct {
 	*Dictionary
 	dirty bool
 }
 
 func NewDocumentInfo() DocumentInfo {
-	fmt.Printf("NewDocumentInfo()\n")
 	return DocumentInfo{NewDictionary(), false}
 }
 

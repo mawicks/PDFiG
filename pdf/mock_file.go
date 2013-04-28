@@ -4,17 +4,24 @@ package pdf
 type mockFile struct {
 	nextObjectNumber     uint32
 	nextGenerationNumber uint16
+	closed bool
 }
 
 // Constructor for mockFile object
 func NewMockFile(obj uint32, gen uint16) File {
-	return &mockFile{obj, gen}
+	return &mockFile{obj, gen, false}
 }
 
 // Public methods
 
 // Implements Close() in File interface
-func (f *mockFile) Close() {}
+func (f *mockFile) Close() {
+	f.closed = true
+}
+
+func (f *mockFile) Closed() bool {
+	return f.closed
+}
 
 // Implements WriteObject() in File interface
 func (f *mockFile) WriteObject(object Object) (reference *Indirect) {

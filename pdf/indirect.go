@@ -154,8 +154,11 @@ func (i *Indirect) Dereference() Object {
 // reference object numbers as if it were contained in a specific PDF
 // file.
 func (i *Indirect) Serialize(w Writer, file ...File) {
-	if len(file) == 0 {
-		panic("File parameter required for pdf.Indirect.Serialize()")
+	if len(file) != 1 {
+		panic("A single file parameter is required for pdf.Indirect.Serialize()")
+	}
+	if file[0].Closed() {
+		panic("Attempt to Serialize to a closed file")
 	}
 
 	// Check binding first becuase Indirect.ObjectNumber() has the
@@ -186,8 +189,12 @@ func (i *Indirect) Serialize(w Writer, file ...File) {
 //  a := NewIndirect(f).Write(object)
 func (i *Indirect) Write(o Object) *Indirect{
 	for file, objectNumber := range i.fileBindings {
-		file.WriteObjectAt(objectNumber, o)
-		i.sourceFile = file
+		if !file.Closed() {
+			file.WriteObjectAt(objectNumber, o)
+			if i.sourceFile == nil {
+				i.sourceFile = file
+			}
+		}
 	}
 	return i
 }

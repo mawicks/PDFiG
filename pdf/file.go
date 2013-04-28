@@ -99,6 +99,7 @@ type file struct {
 	// semaphore protects access to "file" and to "serialization"
 	// member of xref entries
 	semaphore chan bool
+	closed bool
 }
 
 // OpenFile() construct a File object from either a new or a pre-existing filename.
@@ -151,7 +152,6 @@ func OpenFile(filename string, mode int) (result *file,exists bool,err error) {
 	result.semaphore <- true
 
 	result.lastWritePosition,_ = result.Seek(0,os.SEEK_END)
-	fmt.Printf ("lastwriteposition set to %d\n", result.lastWritePosition)
 
 	go result.gowriter()
 
@@ -265,6 +265,10 @@ func (f *file) Close() {
 	f.file.Close()
 
 	f.release()
+}
+
+func (f *file) Closed() bool {
+	return f.closed
 }
 
 // ReadLine() reads a line from a PDF file interpreting end-of-line
@@ -454,10 +458,17 @@ func readOneXrefSection (f *file, location int64) (prevXref int, trailer *Dictio
 }
 
 func (f *file) release() {
-	f.xref.SetSize(0)
-	f.catalogIndirect = nil
-	f.trailerDictionary = nil
 	f.file = nil
+	f.xref.SetSize(0)
+	f.xref = nil
+	f.trailerDictionary = nil
+	f.catalogIndirect = nil
+	f.catalogIndirect = nil
+	f.writer = nil
+	f.writeQueue = nil
+	f.writingFinished = nil
+	f.semaphore = nil
+	f.closed = true
 }
 
 func (f* file) gowriter () {
