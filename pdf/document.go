@@ -193,6 +193,12 @@ func (d *Document) Close() {
 	d.release()
 }
 
+// Page(n) returns the dictionary associated with page "n".
+// The first page is numbered 0.
+func (d *Document) Page(n uint) *Dictionary {
+	return d.pageTreeRoot.Page(n)
+}
+
 func (d *Document) SetMediaBox(llx, lly, urx, ury float64) {
 	if !d.readyForNewPages {
 		d.makeNewPageTree()

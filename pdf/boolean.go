@@ -26,7 +26,7 @@ func (b TrueBoolean) Clone() Object {
 	return b
 }
 
-func (b TrueBoolean) Dereference(...File) Object {
+func (b TrueBoolean) Dereference() Object {
 	return b
 }
 
@@ -40,7 +40,7 @@ func (b FalseBoolean) Clone() Object {
 	return b
 }
 
-func (b FalseBoolean) Dereference(...File) Object {
+func (b FalseBoolean) Dereference() Object {
 	return b
 }
 

@@ -124,7 +124,7 @@ func scanNumeric (scanner Scanner, b byte) Object {
 
 	if float {
 		number,_ := strconv.ParseFloat(string(buffer),32)
-		return NewFloatNumeric(float32(number))
+		return NewRealNumeric(float32(number))
 	}
 	number,_ := strconv.ParseInt(string(buffer),10,32)
 	return NewIntNumeric(int(number))

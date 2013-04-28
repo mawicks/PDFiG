@@ -134,16 +134,16 @@ func (i *Indirect) Clone() Object {
 	return newIndirect
 }
 
-func (i *Indirect) Dereference(f... File) Object {
-	if len(f) == 0 {
-		panic (errors.New(`Indirect.Dereference requires a File`))
+func (i *Indirect) Dereference() Object {
+	if i.sourceFile == nil {
+		panic (errors.New(`Attempt to deference an object with no known source`))
 	}
 
-	object,err := f[0].Object(i.ObjectNumber(f[0]))
+	object,err := i.sourceFile.Object(i.ObjectNumber(i.sourceFile))
 	if err != nil {
-		panic (errors.New(fmt.Sprintf(`Unable to read object at %v`, i.ObjectNumber(f[0]))))
+		panic (errors.New(fmt.Sprintf(`Unable to read object at %v`, i.ObjectNumber(i.sourceFile))))
 	}
-	return object.Dereference(f[0])
+	return object.Dereference()
 }
 
 // Serialize() write a serial representation (as defined by the PDF
