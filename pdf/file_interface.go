@@ -30,7 +30,7 @@ type File interface {
 
 	// ReserveObjectNumber() reserves a position (ObjectNumber)
 	// for the passed object in the File.
-	ReserveObjectNumber(Object) ObjectNumber
+	ReserveObjectNumber() ObjectNumber
 
 	// Info() returns a copy of the Info dictionary.  Caller may
 	// modify the copy and use SetInfo() to replace the file's

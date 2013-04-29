@@ -79,9 +79,6 @@ type file struct {
 	// or is initialized to an empty dictionary
 	trailerDictionary *Dictionary
 
-	// catalogIndirect is never nil
-	catalogIndirect *Indirect
-
 	// "dirty" is true iff this PDF file requires an update (new
 	// xref, new trailer, etc.) when it is closed.
 	dirty bool
@@ -208,7 +205,7 @@ func (f *file) Object(o ObjectNumber) (Object,error) {
 }
 
 // Implements ReserveObjectNumber() in File interface
-func (f *file) ReserveObjectNumber(o Object) ObjectNumber {
+func (f *file) ReserveObjectNumber() ObjectNumber {
 	var (
 		newNumber uint32
 		generation uint16
@@ -237,27 +234,22 @@ func (f *file) ReserveObjectNumber(o Object) ObjectNumber {
 
 // Implements Close() in File interface
 func (f *file) Close() {
+	if f.trailerDictionary.Get("Root") == nil {
+		f.SetCatalog(NewDictionary())
+		fmt.Fprintf(logger, "Warning: No document catalog has been specified.  Creating empty dictionary.  Use File.SetCatalog() to set one.\n")
+	}
+
 	close(f.writeQueue)
 	<- f.writingFinished
+
 	if f.dirty {
-		// If client specified a catalog, use it.  Otherwise
-		// re-use use pre-existing catalog if it exists.
-		if f.catalogIndirect != nil {
-			f.trailerDictionary.Add("Root", f.catalogIndirect)
-		}
-
-		if f.trailerDictionary.Get("Root") == nil {
-			panic("No document catalog has been specified.  Use File.SetCatalog() to set one.")
-		}
-
-		f.trailerDictionary.Add("Size", NewIntNumeric(int(f.xref.Size())))
-
-		xrefPosition := f.Tell()
-
 //	 	dumpXref(f.xref)
 
+		f.Seek(f.lastWritePosition, os.SEEK_SET)
+		xrefPosition := f.Tell()
 		f.writeXref()
 
+		f.trailerDictionary.Add("Size", NewIntNumeric(int(f.xref.Size())))
 		f.writeTrailer(xrefPosition)
 	}
 
@@ -315,7 +307,7 @@ func (f *file) dictionaryToTrailer(name string, d *Dictionary) {
 	f.trailerDictionary.Add(name,NewIndirect(f).Write(d))
 }
 
-// Catalog() returns the current document catalog of nil if one doesn't
+// Catalog() returns the current document catalog or nil if one doesn't
 // exist (either from a pre-existing file or from file.SetCatalog())
 func (f *file) Catalog() *Dictionary {
 	return f.dictionaryFromTrailer("Root")
@@ -462,8 +454,6 @@ func (f *file) release() {
 	f.xref.SetSize(0)
 	f.xref = nil
 	f.trailerDictionary = nil
-	f.catalogIndirect = nil
-	f.catalogIndirect = nil
 	f.writer = nil
 	f.writeQueue = nil
 	f.writingFinished = nil

@@ -75,8 +75,8 @@ reference returned by pdf.File.AddObject() is bound only to one file.
 
 USE-CASE 2: A pdf.Indirect is created based on a finished direct
 object.  This is essentially the same as use-case 1.  An object is
-constructed and immediately Write()'d.  Subsequent invocations of
-Serialize() on files where it doesn't already exist cause it to be
+constructed and Write() is called immediately.  Subsequent invocations
+of Serialize() on files where it doesn't already exist cause it to be
 added to that file.  As with USE-CASE 1, this requires either
 retaining a reference in memory indefinitely (bad) or reading from one
 of the files where it is known to exist (not yet implemented).  For
@@ -105,8 +105,7 @@ implemented in Go.
 // convenience, if the files to which this indirect object should be
 // bound are known at construction time, they may be provided as
 // optional arguments.  Instead of providing these at construction,
-// the client may call Indirect.ObjectNumber() after construction, but
-// prior to finalization.
+// the client may call Indirect.ObjectNumber() after construction.
 func NewIndirect(file... File) *Indirect {
 	result := new(Indirect)
 	result.fileBindings = make(map[File]ObjectNumber,5)
@@ -143,10 +142,11 @@ func (i *Indirect) Dereference() Object {
 	if err != nil {
 		panic (errors.New(fmt.Sprintf(`Unable to read object at %v`, i.ObjectNumber(i.sourceFile))))
 	}
+	// TODO:  Think about whether Dereference() is a good idea here.
 	return object.Dereference()
 }
 
-// Serialize() write a serial representation (as defined by the PDF
+// Serialize() writes a serial representation (as defined by the PDF
 // specification) of the object to the Writer.  Indirect references
 // are resolved and numbered as if they were being written to the
 // optional File argument.  Having separate arguments for Writer and
@@ -161,20 +161,7 @@ func (i *Indirect) Serialize(w Writer, file ...File) {
 		panic("Attempt to Serialize to a closed file")
 	}
 
-	// Check binding first becuase Indirect.ObjectNumber() has the
-	// side effect of binding!
-	wasNotBound := !i.BoundToFile(file[0])
 	objectNumber := i.ObjectNumber(file[0])
-	// If the object was a pre-existing object, but has never been
-	// mapped to "file", silently add it to "file."
-	if i.sourceFile != nil && wasNotBound {
-		fmt.Printf ("Copying object %d %d\n", objectNumber.number, objectNumber.generation)
-		o, err := i.sourceFile.Object(objectNumber)
-		if err == nil {
-			i.fileBindings[file[0]] = objectNumber
-			file[0].WriteObjectAt(objectNumber,o)
-		}
-	}
 	w.WriteString(strconv.FormatInt(int64(objectNumber.number), 10))
 	w.WriteByte(' ')
 	w.WriteString(strconv.FormatInt(int64(objectNumber.generation), 10))
@@ -189,34 +176,41 @@ func (i *Indirect) Serialize(w Writer, file ...File) {
 //  a := NewIndirect(f).Write(object)
 func (i *Indirect) Write(o Object) *Indirect{
 	for file, objectNumber := range i.fileBindings {
-		if !file.Closed() {
-			file.WriteObjectAt(objectNumber, o)
-			if i.sourceFile == nil {
-				i.sourceFile = file
-			}
+		file.WriteObjectAt(objectNumber, o)
+		if i.sourceFile == nil {
+			i.sourceFile = file
 		}
 	}
 	return i
 }
 
 // ObjectNumber() binds its object to the passed pdf.File object and
-// returns the resulting object number associated with that file.
-// Normally it is called automatically whever an indirect reference is
+// returns an object number associated with that file.  Normally it is
+// called automatically and transparently whenever an indirect
+// reference is contained within some other object that is explicitly
 // written to a file.  Client code may call ObjectNumber() explicitly
-// if the underlying direct object is to be finalized before an
-// indirect reference is actually written.  In that case, the caller
-// should call ObjectNumber() one or more times *before* calling
-// Write().  Alternatively, client code may call File.AddObject(),
-// which returns an Indirect* that may be used for backward
-// references.  In the latter case, the reference will only be bound
-// to one file.
+// if the client intends to write the object to a number of files
+// using Indirect.Write().  that case, the caller should call
+// ObjectNumber() one or more times *before* calling Write().
+// Alternatively, client code may call File.Write(), which returns a
+// *Indirect that may be used for backward references.  In the latter
+// case, the reference will only be tied to only one file.
 func (i *Indirect) ObjectNumber(f File) ObjectNumber {
-	result,exists := i.fileBindings[f]
+	destObjectNumber,exists := i.fileBindings[f]
 	if !exists {
-		result = f.ReserveObjectNumber(i)
-		i.fileBindings[f] = result
+		destObjectNumber = f.ReserveObjectNumber()
+		i.fileBindings[f] = destObjectNumber
+		// If the object was a pre-existing object, silently
+		// add it to "file."
+		if i.sourceFile != nil {
+			sourceObjectNumber := i.fileBindings[i.sourceFile]
+			o, err := i.sourceFile.Object(sourceObjectNumber)
+			if err == nil {
+				f.WriteObjectAt(destObjectNumber,o)
+			}
+		}
 	}
-	return result
+	return destObjectNumber
 }
 
 func (i *Indirect) BoundToFile(f File) bool {

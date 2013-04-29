@@ -40,7 +40,7 @@ func (f *mockFile) Object(o ObjectNumber) (Object,error) {
 func (f *mockFile) DeleteObject(*Indirect) {}
 
 // Implements ReserveObjectNumber() in File interface
-func (f *mockFile) ReserveObjectNumber(o Object) ObjectNumber {
+func (f *mockFile) ReserveObjectNumber() ObjectNumber {
 	result := ObjectNumber{f.nextObjectNumber, f.nextGenerationNumber}
 	f.nextObjectNumber += 1
 	f.nextGenerationNumber += 1
