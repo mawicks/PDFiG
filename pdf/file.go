@@ -93,8 +93,8 @@ type file struct {
 	writeQueue chan writeQueueEntry
 	writingFinished chan bool
 
-	// semaphore protects access to "file" and to "serialization"
-	// member of xref entries
+	// semaphore protects access to "file" so that reads and
+	// writes are properly interleaved.
 	semaphore chan bool
 	closed bool
 }
@@ -143,7 +143,7 @@ func OpenFile(filename string, mode int) (result *file,exists bool,err error) {
 		writeHeader(result.writer)
 	}
 
-	result.writeQueue = make(chan writeQueueEntry)
+	result.writeQueue = make(chan writeQueueEntry, 5)
 	result.writingFinished = make(chan bool)
 	result.semaphore = make(chan bool, 1)
 	result.semaphore <- true
@@ -187,7 +187,7 @@ func (f *file) DeleteObject(indirect *Indirect) {
 // process of being written to) a PDF file.  Each call causes a new
 // object to be unserialized from the file or a buffer so the caller
 // has exclusive ownership of the returned object.
-func (f *file) Object(o ObjectNumber) (Object,error) {
+func (f *file) Object(o ObjectNumber) (object Object,err error) {
 	entry := (*f.xref.At(uint(o.number))).(*xrefEntry)
 	var r Scanner
 
@@ -195,10 +195,14 @@ func (f *file) Object(o ObjectNumber) (Object,error) {
 	if entry.serialization == nil {
 		f.Seek(int64(entry.byteOffset),os.SEEK_SET)
 		r = bufio.NewReader(f.file)
+		object,err = NewParser(r).ScanIndirect(o, f)
 	} else {
 		r = bytes.NewReader(entry.serialization)
+		// Cached entry does not contain "obj" header and "endobj" trailer
+		// so use Parser.Scan() rather than Parser.ScanIndirect().
+		object,err = NewParser(r).Scan(f)
+		fmt.Fprintf(logger, "Object pulled from cache: \"%v\"\n", string(entry.serialization))
 	}
-	object,err := NewParser(r).ScanIndirect(o, f)
 	f.semaphore<-true
 
 	return object,err
@@ -473,11 +477,11 @@ func (f* file) gowriter () {
 		if err != nil {
 			panic(errors.New("Unable to write serialized object in file.writeObject()"))
 		}
-		fmt.Fprintf(f.writer, "\nendobj\n")
+		f.writer.WriteString("\nendobj\n")
 		f.lastWritePosition = f.Tell()
-		entry.xrefEntry.serialization = nil
 		f.semaphore<-true
 
+		entry.xrefEntry.serialization = nil
 		f.dirty = true
 	}
 	f.writingFinished <- true
