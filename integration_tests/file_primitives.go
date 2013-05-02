@@ -1,13 +1,14 @@
 package main
 
 import (
+//	"fmt"
+	"bufio"
 	"os"
 	"github.com/mawicks/PDFiG/pdf" )
 
-// make_file() produces a file using low-level methods of the pdf.File
-// type.  It does not work at the document layer and it does *not*
-// produce a PDF document that a viewer will understand.
 func file_primitives() {
+	logger := bufio.NewWriter(os.Stderr)
+
 	catalog := pdf.NewDictionary()
 	catalog.Add("Type", pdf.NewName("Catalog"))
 
@@ -35,6 +36,13 @@ func file_primitives() {
 	// Retrieve object 2 (the dictionary) from file 1
 	o,_ := f1.Object(pdf.NewObjectNumber(2,0))
 
+	// Read back an object immediately to force a read from the
+	// serialization that is cached while writing
+	x,_ := f2.Object(f2.WriteObject(pdf.NewNumeric(3.14)).ObjectNumber(f2))
+	logger.WriteString("Object: ")
+	x.Serialize(logger, f2)
+	logger.WriteString("\n")
+
 	// Explicitly add it to file 2; object 1 will be added
 	// automatically.  The objects are renumbered automatically in
 	// the new file and are intentionally reversed (2 becomes 1; 1
@@ -45,4 +53,6 @@ func file_primitives() {
 
 	f1.Close()
 	f2.Close()
+
+	logger.Flush()
 }
