@@ -108,7 +108,7 @@ implemented in Go.
 // the client may call Indirect.ObjectNumber() after construction.
 func NewIndirect(file... File) *Indirect {
 	result := new(Indirect)
-	result.fileBindings = make(map[File]ObjectNumber,5)
+	result.fileBindings = make(map[File]ObjectNumber,1)
 	result.sourceFile = nil
 
 	for _,f := range file {
