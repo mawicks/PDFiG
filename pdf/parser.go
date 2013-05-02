@@ -173,7 +173,7 @@ func (p *Parser) scanNumericOrIndirectRef(b byte, file... File) Object {
 	} else {
 		number := uint32(n1.(*IntNumeric).Value())
 		generation := uint16(n2.(*IntNumeric).Value())
-		return newIndirectFromParse(ObjectNumber{number,generation}, file[0])
+		return file[0].Indirect(ObjectNumber{number,generation})
 	}
 	return nil
 }

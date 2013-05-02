@@ -118,7 +118,7 @@ func NewIndirect(file... File) *Indirect {
 	return result
 }
 
-func newIndirectFromParse(objectNumber ObjectNumber, file File) *Indirect {
+func newIndirectWithNumber(objectNumber ObjectNumber, file File) *Indirect {
 	result := new(Indirect)
 	result.fileBindings = make(map[File]ObjectNumber,5)
 	result.sourceFile = file
@@ -198,7 +198,7 @@ func (i *Indirect) Write(o Object) *Indirect{
 func (i *Indirect) ObjectNumber(f File) ObjectNumber {
 	destObjectNumber,exists := i.fileBindings[f]
 	if !exists {
-		destObjectNumber = f.ReserveObjectNumber()
+		destObjectNumber = f.ReserveObjectNumber(i)
 		i.fileBindings[f] = destObjectNumber
 		// If the object was a pre-existing object, silently
 		// add it to "file."

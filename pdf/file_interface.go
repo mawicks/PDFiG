@@ -24,13 +24,20 @@ type File interface {
 	// overwritten with a modified copy.
 	WriteObjectAt(ObjectNumber, Object)
 
-	// Object() retrieves a finalized object that has already been
-	// written to a PDF file.
+	// Indirect() returns an *Indirect that can be used to refer
+	// to ObjectNumber in this file.  If an Indirect already
+	// exists for this ObjectNumber, that Indirect is returned.
+	// Otherwise a new one is created. In either case, this should
+	// not return nil, even for a mock File.
+	Indirect(ObjectNumber) *Indirect
+
+	// Object() used ObjectNumber to retrieve a direct object that
+	// has already been written to a PDF file.
 	Object(ObjectNumber) (Object,error)
 
 	// ReserveObjectNumber() reserves a position (ObjectNumber)
 	// for the passed object in the File.
-	ReserveObjectNumber() ObjectNumber
+	ReserveObjectNumber(*Indirect) ObjectNumber
 
 	// Info() returns a copy of the Info dictionary.  Caller may
 	// modify the copy and use SetInfo() to replace the file's

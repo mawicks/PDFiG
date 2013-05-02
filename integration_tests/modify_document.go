@@ -7,7 +7,7 @@ import (
 
 func modify_document() {
 	fmt.Printf ("\nMODIFY DOCUMENT\n")
-	doc := pdf.OpenDocument("/tmp/test-document.pdf", os.O_RDWR|os.O_CREATE)
+	doc := pdf.OpenDocument(OutputDirectory  + "/test-document.pdf", os.O_RDWR|os.O_CREATE)
 
 	doc.Page(1)
 

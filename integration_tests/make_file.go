@@ -8,7 +8,7 @@ import (
 // type.  It does not work at the document layer and it does *not*
 // produce a PDF document that a viewer will understand.
 func make_file() {
-	f,_,_ := pdf.OpenFile("/tmp/test-file.pdf", os.O_RDWR|os.O_CREATE)
+	f,_,_ := pdf.OpenFile(OutputDirectory + "/test-file.pdf", os.O_RDWR|os.O_CREATE)
 	o1 := pdf.NewIndirect()
 	indirect1 := f.WriteObject(o1)
 	o1.Write(pdf.NewNumeric(3.14))

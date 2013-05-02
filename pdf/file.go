@@ -27,6 +27,16 @@ type xrefEntry struct {
 	// used by file.Object() to retrieve a requested object by
 	// number that has not yet been written to disk.
 	serialization []byte
+
+	// indirect is nil unless an Indirect has been created for
+	// this object, either via NewIndirect() or by
+	// newIndirectFromParse().  The reason for having this entry
+	// is to prevent duplicate references from being created by
+	// newIndirectFromParse().  When an indirect reference occurs
+	// (e.g., "10 0 R") while parsing some object, the indirect
+	// field (if it exists) is used as the reference rather than
+	// obtaining a new reference using newIndirectFromParse().
+	indirect *Indirect
 }
 
 type writeQueueEntry struct {
@@ -116,7 +126,13 @@ func OpenFile(filename string, mode int) (result *file,exists bool,err error) {
 
 	if (result.originalSize == 0) {
 		// There is no xref so start one
-		result.xref.PushBack(&xrefEntry{0, 65535, false, true, nil})
+		result.xref.PushBack(&xrefEntry{
+			byteOffset: 0,
+			generation: 65535,
+			inUse: false,
+			dirty: true,
+			serialization: nil,
+			indirect: nil})
 		result.dirty = true
 	} else {
 		exists = true
@@ -183,6 +199,18 @@ func (f *file) DeleteObject(indirect *Indirect) {
 	f.dirty = true
 }
 
+// Indirect() returns an *Indirect that can be used to refer
+// to ObjectNumber in this file.  If an Indirect already
+// exists for this ObjectNumber, that Indirect is returned.
+// Otherwise a new one is created.
+func (f *file) Indirect(o ObjectNumber) *Indirect {
+	entry := (*f.xref.At(uint(o.number))).(*xrefEntry)
+	if entry.indirect != nil {
+		return entry.indirect
+	}
+	return newIndirectWithNumber(o, f)
+}
+
 // Object() retrieves an object that already exists (or is in the
 // process of being written to) a PDF file.  Each call causes a new
 // object to be unserialized from the file or a buffer so the caller
@@ -209,7 +237,7 @@ func (f *file) Object(o ObjectNumber) (object Object,err error) {
 }
 
 // Implements ReserveObjectNumber() in File interface
-func (f *file) ReserveObjectNumber() ObjectNumber {
+func (f *file) ReserveObjectNumber(indirect* Indirect) ObjectNumber {
 	var (
 		newNumber uint32
 		generation uint16
@@ -221,7 +249,13 @@ func (f *file) ReserveObjectNumber() ObjectNumber {
 	if newNumber == 0 {
 		// Create a new xref entry
 		newNumber = uint32(f.xref.Size())
-		f.xref.PushBack(&xrefEntry{0, 0, false, true,nil})
+		f.xref.PushBack(&xrefEntry{
+			byteOffset: 0,
+			generation: 0,
+			inUse: false,
+			dirty: true,
+			serialization: nil,
+			indirect: indirect})
 	} else {
 		// Adjust link in head of free list
 		freeHead := (*f.xref.At(0)).(*xrefEntry)
@@ -398,7 +432,13 @@ func readXrefSubsection(xref containers.Array, r *bufio.Reader, start, count uin
 
 		// Never overwrite a pre-existing entry.
 		if *xref.At(start+i) == nil {
-			*xref.At(start+i) = &xrefEntry{position, generation, inUse, false, nil}
+			*xref.At(start+i) = &xrefEntry{
+				byteOffset: position,
+				generation: generation,
+				inUse: inUse,
+				dirty: false,
+				serialization: nil,
+				indirect: nil}
 		}
 	}
 }
