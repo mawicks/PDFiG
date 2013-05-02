@@ -202,8 +202,10 @@ func (d *Document) Close() {
 	d.release()
 }
 
-// Page(n) returns the dictionary associated with page "n".
-// The first page is numbered 0.
+// Page(n) returns the dictionary associated with page "n" of the
+// document.  The first page is numbered 0.  Any inheritable
+// attributes found while descending the page tree are copied into the
+// dictionary.
 func (d *Document) Page(n uint) *Dictionary {
 
 	// Verify that we can retrieve an arbitrary object
@@ -214,7 +216,7 @@ func (d *Document) Page(n uint) *Dictionary {
 	writer.WriteString("\n")
 	writer.Flush()
 
-	page := d.pageTreeRoot.Page(n)
+	page := pageFromTree(d.pageTreeRoot, n)
 
 	if page == nil {
 		fmt.Fprintf (writer, "Page() returned nil\n")

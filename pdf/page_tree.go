@@ -38,7 +38,20 @@ func oldPageTree(file File) *pageTree{
 	return pt
 }
 
-func (pt *Dictionary) Page (n uint) *Dictionary {
+func copyDictionaryEntries(dst, src *Dictionary, list []string) {
+	for _,name := range list {
+		if dst.Get(name) == nil {
+			if value := src.Get(name); value != nil {
+				dst.Add(name, value.Clone())
+			}
+		}
+	}
+}
+
+// Return the Page dictionary for the nth page in the tree.  The first
+// page is numbered 0.  Any inheritable attributes found while
+// descending the tree are copied into the dictionary.
+func pageFromTree (pt *Dictionary, n uint) *Dictionary {
 	var (
 		kids *Array
 		ok bool )
@@ -64,23 +77,24 @@ func (pt *Dictionary) Page (n uint) *Dictionary {
 		if nodeType,ok = kid.GetName("Type"); !ok {
 			panic (errors.New(`Node in page tree missing /Type entry.`))
 		}
-			switch nodeType {
-			case "Pages":
-				if count,ok = kid.GetInt("Count"); !ok {
-					panic (errors.New(`Page tree node missing /Count`))
-				}
-				if n < uint(count) {
-					return kid.Page(n)
-				}
-				n -= uint(count)
-			case "Page":
-				if n == 0 {
-					return kid
-				}
-				n -= 1
-			default:
-				panic (errors.New(`Unknown page tree node type`))
+		copyDictionaryEntries(kid,pt,[]string{"Resources", "MediaBox", "CropBox", "Rotate"})
+		switch nodeType {
+		case "Pages":
+			if count,ok = kid.GetInt("Count"); !ok {
+				panic (errors.New(`Page tree node missing /Count`))
 			}
+			if n < uint(count) {
+				return pageFromTree(kid,n)
+			}
+			n -= uint(count)
+		case "Page":
+			if n == 0 {
+				return kid
+			}
+			n -= 1
+		default:
+			panic (errors.New(`Unknown page tree node type`))
+		}
 	}
 	return nil
 }
