@@ -204,9 +204,21 @@ func (f *file) DeleteObject(indirect *Indirect) {
 // exists for this ObjectNumber, that Indirect is returned.
 // Otherwise a new one is created.
 func (f *file) Indirect(o ObjectNumber) *Indirect {
-	entry := (*f.xref.At(uint(o.number))).(*xrefEntry)
-	if entry.indirect != nil {
-		return entry.indirect
+	// Indirect() is called during parsing of trailer when xref
+	// has not been finished constructed.  Explicitly verify that
+	// the xref entry exists and is not nil.  In that case, there
+	// is little choice but to create a new Indirect.  It's
+	// possible that an unecessary duplicate reference gets
+	// constructed later.  As long as trailer reference are
+	// retained within the file object, not written to disk, and
+	// not provided to clients, the duplication is only in memory
+	// and not in an output file.
+	if o.number < uint32(f.xref.Size()) {
+		if entry,ok := (*f.xref.At(uint(o.number))).(*xrefEntry); ok {
+			if entry.indirect != nil {
+				return entry.indirect
+			}
+		}
 	}
 	return newIndirectWithNumber(o, f)
 }
@@ -443,7 +455,7 @@ func readXrefSubsection(xref containers.Array, r *bufio.Reader, start, count uin
 	}
 }
 
-func readTrailer(subsectionHeader string, r *bufio.Reader, f *file) *Dictionary {
+func readTrailer(subsectionHeader string, r *bufio.Reader, f *file) (*Dictionary,error) {
 	var err error
 	tries := 0
 	const maxTries = 4
@@ -452,14 +464,19 @@ func readTrailer(subsectionHeader string, r *bufio.Reader, f *file) *Dictionary 
 	}
 	if (err == nil && tries < maxTries) {
 		parser := NewParser (r)
-		object,err := parser.Scan(f)
-		if err == nil {
-			if trailer,ok := object.(*Dictionary); ok {
-				return trailer
-			}
+		object, err := parser.Scan(f)
+		if err != nil {
+			errmsg := fmt.Sprintf("%s\nLast data read before error: \"%s\"",
+				err.Error(), AsciiFromBytes(parser.GetContext()))
+			return nil, errors.New(errmsg)
 		}
+		trailer,ok := object.(*Dictionary)
+		if !ok {
+			return nil, errors.New(`Object in trailer position isn't a dictionary.`)
+		}
+		return trailer,nil
 	}
-	return nil
+	return nil,err
 }
 
 func readOneXrefSection (f *file, location int64) (prevXref int, trailer *Dictionary) {
@@ -484,9 +501,10 @@ func readOneXrefSection (f *file, location int64) (prevXref int, trailer *Dictio
 		readXrefSubsection(f.xref, r, start, count)
 	}
 
-	trailer = readTrailer (subsectionHeader, r, f)
-	if trailer == nil {
-		panic ("Expected trailer not found")
+	var err error
+	trailer,err = readTrailer (subsectionHeader, r, f)
+	if err != nil {
+		panic (err)
 	} else if prevReference,ok := trailer.Get("Prev").(*IntNumeric); ok {
 		prevXref = prevReference.Value()
 	}
@@ -552,6 +570,7 @@ func writeHeader(w *bufio.Writer) {
 }
 
 func dumpXref (xref containers.Array) {
+	fmt.Printf("Dump of xref follows:\n")
 	for i:=uint(0); i<xref.Size(); i++ {
 		reference := xref.At(i)
 		if reference == nil {
