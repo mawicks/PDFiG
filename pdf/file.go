@@ -98,10 +98,10 @@ type file struct {
 	// "file" must be used for low-level operations such as Seek(), so
 	// flush "writer" before using "file".
 	writer *bufio.Writer
-	lastWritePosition int64
 
 	writeQueue chan writeQueueEntry
 	writingFinished chan bool
+	readNesting int
 
 	// semaphore protects access to "file" so that reads and
 	// writes are properly interleaved.
@@ -158,13 +158,12 @@ func OpenFile(filename string, mode int) (result *file,exists bool,err error) {
 	if (result.originalSize == 0) {
 		writeHeader(result.writer)
 	}
+	result.Seek(0,os.SEEK_END)
 
 	result.writeQueue = make(chan writeQueueEntry, 5)
 	result.writingFinished = make(chan bool)
 	result.semaphore = make(chan bool, 1)
 	result.semaphore <- true
-
-	result.lastWritePosition,_ = result.Seek(0,os.SEEK_END)
 
 	go result.gowriter()
 
@@ -231,11 +230,30 @@ func (f *file) Object(o ObjectNumber) (object Object,err error) {
 	entry := (*f.xref.At(uint(o.number))).(*xrefEntry)
 	var r Scanner
 
-	<-f.semaphore
+	// Reads can trigger additional reads, so this routine is
+	// recursive (For example, read a stream dictionary containing
+	// an indirect reference to the stream length; read the length
+	// from another part of the file, then return to the original
+	// position to read the stream data.  All reads occur in main
+	// goroutine so there should never be more than one goroutine
+	// manipulating f.readNesting.
+	if f.readNesting == 0 {
+		// Block writes
+		<-f.semaphore
+	}
+	f.readNesting += 1
+
 	if entry.serialization == nil {
-		f.Seek(int64(entry.byteOffset),os.SEEK_SET)
+		// Save file position before moving for later restore
+		// so that f.Writer is unaware of the move.
+		position,_ := f.file.Seek(0, os.SEEK_CUR)
+		f.file.Seek(int64(entry.byteOffset),os.SEEK_SET)
+
 		r = bufio.NewReader(f.file)
 		object,err = NewParser(r).ScanIndirect(o, f)
+
+		// Restore position
+		f.file.Seek(position,os.SEEK_SET)
 	} else {
 		r = bytes.NewReader(entry.serialization)
 		// Cached entry does not contain "obj" header and "endobj" trailer
@@ -243,7 +261,12 @@ func (f *file) Object(o ObjectNumber) (object Object,err error) {
 		object,err = NewParser(r).Scan(f)
 		fmt.Fprintf(logger, "Object pulled from cache: \"%v\"\n", string(entry.serialization))
 	}
-	f.semaphore<-true
+
+	f.readNesting -= 1
+	if f.readNesting == 0 {
+		// Allow writes
+		f.semaphore<-true
+	}
 
 	return object,err
 }
@@ -295,8 +318,7 @@ func (f *file) Close() {
 	if f.dirty {
 //	 	dumpXref(f.xref)
 
-		f.Seek(f.lastWritePosition, os.SEEK_SET)
-		xrefPosition := f.Tell()
+		xrefPosition,_ := f.Seek(0, os.SEEK_END)
 		f.writeXref()
 
 		f.trailerDictionary.Add("Size", NewIntNumeric(int(f.xref.Size())))
@@ -398,7 +420,8 @@ func (f *file) Tell() int64 {
 	return position
 }
 
-// Scan the file for the xref location, returning with the original file position.
+// Scan the file for the xref location, returning with the original
+// file position unchanged.
 func findXrefLocation(f *os.File) (result int64) {
 	save,_ := f.Seek(0,os.SEEK_END)
 	regexp,_ := regexp.Compile (`\s*FOE%%\s*(\d+)(\s*ferxtrats)`)
@@ -525,10 +548,10 @@ func (f *file) release() {
 
 func (f* file) gowriter () {
 	for entry := range f.writeQueue {
-		entry.xrefEntry.setInUse(uint64(f.lastWritePosition))
+		position,_ := f.Seek(0, os.SEEK_CUR)
+		entry.xrefEntry.setInUse(uint64(position))
 
 		<-f.semaphore
-		f.Seek(f.lastWritePosition, os.SEEK_SET)
 		fmt.Fprintf(f.writer, "%d %d obj\n", entry.index, entry.xrefEntry.generation)
 
 		_,err := f.writer.Write(entry.xrefEntry.serialization)
@@ -536,7 +559,10 @@ func (f* file) gowriter () {
 			panic(errors.New("Unable to write serialized object in file.writeObject()"))
 		}
 		f.writer.WriteString("\nendobj\n")
-		f.lastWritePosition = f.Tell()
+
+		// Make sure writer is flushed so the object can be
+		// read before serialization is nulled.
+		f.writer.Flush()
 		f.semaphore<-true
 
 		entry.xrefEntry.serialization = nil

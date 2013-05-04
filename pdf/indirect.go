@@ -127,10 +127,9 @@ func newIndirectWithNumber(objectNumber ObjectNumber, file File) *Indirect {
 }
 
 func (i *Indirect) Clone() Object {
-	newIndirect := new(Indirect)
-	newIndirect.fileBindings = i.fileBindings
-	newIndirect.sourceFile = i.sourceFile
-	return newIndirect
+	// Return a reference since all indirect references to the
+	// same object should be the same.
+	return i
 }
 
 func (i *Indirect) Dereference() Object {

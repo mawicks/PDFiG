@@ -219,9 +219,9 @@ func (d *Document) Page(n uint) *Dictionary {
 	page := pageFromTree(d.pageTreeRoot, n)
 
 	if page == nil {
-		fmt.Fprintf (writer, "Page() returned nil\n")
+		fmt.Fprintf (writer, "Page(%d) returned nil\n", n)
 	} else {
-		fmt.Fprintf (writer, "Page() returned:")
+		fmt.Fprintf (writer, "Page(%d) returned: ", n)
 		page.Serialize(writer, d.file)
 		writer.WriteString("\n")
 	}
