@@ -23,7 +23,9 @@ func NewPage(file... File) *Page {
 //	p.contents.AddFilter(new(AsciiHexFilter))
 //	p.contents.AddFilter(new(LZWFilter))
 
-	p.contents.AddFilter(new(FlateFilter))
+	ff := new(FlateFilter)
+	ff.SetCompressionLevel(9)
+	p.contents.AddFilter(ff)
 
 	p.parent = nil
 

@@ -1,28 +1,33 @@
 package pdf
 
 import ( //"errors"
-	"compress/flate"
+	"compress/zlib"
 //	"fmt"
 	"io")
 
 type FlateFilter struct {
+	compressionLevel int
 }
 
-func (filter FlateFilter) Name() string {
+func (filter *FlateFilter) Name() string {
 	return "FlateDecode"
 }
 
-func (filter FlateFilter) NewEncoder(writer io.WriteCloser) io.WriteCloser {
-	flateWriter,_ := flate.NewWriter(writer,9)
+func (filter *FlateFilter) SetCompressionLevel(level int) {
+	filter.compressionLevel = level
+}
+
+func (filter *FlateFilter) NewEncoder(writer io.WriteCloser) io.WriteCloser {
+	flateWriter,_ := zlib.NewWriterLevel(writer,filter.compressionLevel)
 	return &FlateWriter{flateWriter,writer}
 }
 
-func (filter FlateFilter) NewDecoder(reader io.Reader) io.Reader {
-	flateReader := flate.NewReader(reader)
+func (filter *FlateFilter) NewDecoder(reader io.Reader) io.Reader {
+	flateReader,_ := zlib.NewReader(reader)
 	return &FlateReader{flateReader}
 }
 
-func (filter FlateFilter) DecodeParms(file ...File) Object {
+func (filter *FlateFilter) DecodeParms(file ...File) Object {
 	return NewNull()
 }
 
