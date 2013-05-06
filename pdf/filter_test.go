@@ -83,24 +83,19 @@ func testRoundTrip (t *testing.T, filter pdf.StreamFilter, data []byte) {
 
 
 func TestFilters(t *testing.T) {
+	// Test some specific cases that are easy enough to type
 	testDecoder (t, new(pdf.AsciiHexFilter), []byte("3332313>"), []byte("3210"))
 	testDecoder (t, new(pdf.AsciiHexFilter), []byte("33323130>"), []byte("3210"))
 	testEncoder (t, new(pdf.AsciiHexFilter), []byte("3210"), []byte("33323130>"))
-	testEncoder (t, new(pdf.FlateFilter), []byte("foo"), []byte("foo"))
 
-	testRoundTrip (t, new(pdf.AsciiHexFilter), randomBytes(16))
-	testRoundTrip (t, new(pdf.AsciiHexFilter), randomBytes(8))
-	testRoundTrip (t, new(pdf.AsciiHexFilter), randomBytes(4))
-	testRoundTrip (t, new(pdf.AsciiHexFilter), randomBytes(1))
-	testRoundTrip (t, new(pdf.AsciiHexFilter), randomBytes(0))
-
-	testRoundTrip (t, new(pdf.FlateFilter), randomBytes(16))
-
-	testRoundTrip (t, new(pdf.LZWFilter), []byte("test test test"))
-	testRoundTrip (t, new(pdf.LZWFilter), randomBytes(16))
-
-//	testDecoder (t, pdf.AsciiHexFilter{}, []byte("3332313>"), []byte("3210"))
-//	testDecoder (t, pdf.NewAsciiHexReader, []byte("33323130"), []byte("3210"))
-//	testRoundTrip (t, pdf.AsciiHexFilter{}, randomBytes(16))
+	// Then make sure random sequences can make the round trip.
+	flateFilter := new(pdf.FlateFilter)
+	flateFilter.SetCompressionLevel(9)
+	for i:=1; i<65536; i*=8 {
+		r := randomBytes (i-1)
+		testRoundTrip (t, new(pdf.AsciiHexFilter), r)
+		testRoundTrip (t, flateFilter, r)
+		testRoundTrip (t, new(pdf.LZWFilter), r)
+	}
 }
 
