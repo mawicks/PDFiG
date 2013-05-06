@@ -154,7 +154,7 @@ func (i *Indirect) Dereference() Object {
 // file.
 func (i *Indirect) Serialize(w Writer, file ...File) {
 	if len(file) != 1 {
-		panic("A single file parameter is required for pdf.Indirect.Serialize()")
+		panic(fmt.Sprintf("Serialize called with %d files.  A single file parameter is required for pdf.Indirect.Serialize()", len(file)))
 	}
 	if file[0].Closed() {
 		panic("Attempt to Serialize to a closed file")

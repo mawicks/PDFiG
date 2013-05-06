@@ -8,8 +8,20 @@ import ("errors"
 type AsciiHexFilter struct {
 }
 
-func (fileter AsciiHexFilter) Name() string {
+func (filter *AsciiHexFilter) Name() string {
 	return "ASCIIHexDecode"
+}
+
+func (filter *AsciiHexFilter) NewEncoder(writer io.WriteCloser) io.WriteCloser {
+	return &AsciiHexWriter{writer,0}
+}
+
+func (filter *AsciiHexFilter) NewDecoder(reader io.Reader) io.Reader {
+	return &AsciiHexReader{reader,nil}
+}
+
+func (filter *AsciiHexFilter) DecodeParms(file... File) Object {
+	return NewNull()
 }
 
 type AsciiHexWriter struct {
@@ -17,19 +29,13 @@ type AsciiHexWriter struct {
 	count int
 }
 
-func NewAsciiHexWriter(writer io.WriteCloser) io.WriteCloser {
-	return &AsciiHexWriter{writer,0}
-}
 
 func (ahw *AsciiHexWriter) Write(buffer []byte) (n int, err error) {
 	var m int
 	for n=0; n<len(buffer) && err == nil; n++ {
 		m,err = ahw.writer.Write([]byte{HexDigit(buffer[n]/16),HexDigit(buffer[n]%16)})
 		ahw.count += m
-		if ahw.count != 0 && ahw.count%40 == 0 && err == nil {
-			m,err = ahw.Write([]byte{'\n'})
-			ahw.count += m
-		}
+		// TODO:  Add ability to add newlines and options for enabling them.
 	}
 	return n,err
 }
@@ -44,10 +50,6 @@ func (ahw *AsciiHexWriter) Close() error {
 type AsciiHexReader struct {
 	reader io.Reader
 	err error
-}
-
-func NewAsciiHexReader(reader io.Reader) io.Reader {
-	return &AsciiHexReader{reader,nil}
 }
 
 func (ahr *AsciiHexReader) Read(buffer []byte) (n int, err error) {

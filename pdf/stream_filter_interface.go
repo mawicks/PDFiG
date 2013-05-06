@@ -1,11 +1,14 @@
 package pdf
 
-import "bytes"
+import (
+	"bytes"
+	"io")
 
 type StreamFilter interface {
-	Encode([]byte) []byte
-	Decode([]byte) (decoded []byte,ok bool)
 	Name() string
+	NewEncoder(io.WriteCloser) io.WriteCloser
+	NewDecoder(io.Reader) io.Reader
+	DecodeParms(file... File) Object
 }
 
 type BufferCloser struct {

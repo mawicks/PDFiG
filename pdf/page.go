@@ -18,6 +18,13 @@ func NewPage(file... File) *Page {
 	p := new(Page)
 	p.fileList = file
 	p.contents = NewStream()
+
+	// FIXME:  Temporary code
+//	p.contents.AddFilter(new(AsciiHexFilter))
+//	p.contents.AddFilter(new(LZWFilter))
+
+	p.contents.AddFilter(new(FlateFilter))
+
 	p.parent = nil
 
 	p.dictionary = NewDictionary()

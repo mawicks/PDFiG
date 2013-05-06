@@ -16,50 +16,27 @@ func randomBytes(n int) []byte {
 	return result
 }
 
-/*
-func testRoundTrip (t *testing.T, filter pdf.StreamFilter, data []byte) {
-	encoded := filter.Encode(data)
-	decoded,ok := filter.Decode(encoded)
-	if ok && !bytes.Equal(decoded,data) {
-		t.Errorf(`%s encode/decode failed round trip on "%s"`,
-			filter.Name(),
-			pdf.AsciiFromBytes(data))
-	}
-}
-*/
-
-/*
-func testDecoder (t *testing.T, filter pdf.StreamFilter, encoded, expected []byte) {
-	decoded,ok := filter.Decode(encoded)
-	if ok && !bytes.Equal(decoded, expected) {
-		t.Errorf(`AsciHexFilter.Decode("%s") produced "%s"; expected "%s"`,
-			pdf.AsciiFromBytes(encoded),
-			pdf.AsciiFromBytes(decoded),
-			pdf.AsciiFromBytes(expected))
-	}
-}
-*/
-
-func testDecoder(t *testing.T, decoderFactory func(io.Reader) io.Reader, encoded[]byte, expected []byte) {
-	decoder := decoderFactory(bytes.NewReader(encoded))
+func testDecoder(t *testing.T, filter pdf.StreamFilter, encoded[]byte, expected []byte) {
+	decoder := filter.NewDecoder(bytes.NewReader(encoded))
 	decoded := new(bytes.Buffer)
 
 	_,err := io.Copy(decoded, decoder)
 
 	if err != nil {
-		t.Errorf(`testDecoder: decoder returned error on "%s": "%v"`, pdf.AsciiFromBytes(encoded), err)
+		t.Errorf(`testDecoder: %s decoder returned error on "%s": "%v"`, filter.Name(), pdf.AsciiFromBytes(encoded), err)
 	}
 
 	if !bytes.Equal(decoded.Bytes(), expected) {
-		t.Errorf(`testDecoder produced "%s"; expected "%s"`,
+		t.Errorf(`testDecoder: %s decoder produced "%s"; expected "%s"`,
+			filter.Name(),
 			pdf.AsciiFromBytes(decoded.Bytes()),
 			pdf.AsciiFromBytes(expected))
 	}
 }
 
-func testEncoder (t *testing.T, encoderFactory func(io.WriteCloser) io.WriteCloser, data[]byte, expected []byte) {
+func testEncoder (t *testing.T, filter pdf.StreamFilter, data[]byte, expected []byte) {
 	encoded := pdf.NewBufferCloser()
-	encoder := encoderFactory(encoded)
+	encoder := filter.NewEncoder(encoded)
 	dataReader := bytes.NewReader(data)
 
 	_,err := io.Copy(encoder, dataReader)
@@ -67,55 +44,60 @@ func testEncoder (t *testing.T, encoderFactory func(io.WriteCloser) io.WriteClos
 	encoder.Close()
 
 	if err != nil {
-		t.Errorf(`testEncoder: encoder returned error on "%s": "%v"`, pdf.AsciiFromBytes(data), err)
+		t.Errorf(`testEncoder: %s encoder returned error on "%s": "%v"`, filter.Name(), pdf.AsciiFromBytes(data), err)
 	}
 
 	if !bytes.Equal(encoded.Bytes(), expected) {
-		t.Errorf(`testEncoder produced "%s"; expected "%s"`,
+		t.Errorf(`testEncoder: %s encoder produced "%s"; expected "%s"`,
+			filter.Name(),
 			pdf.AsciiFromBytes(encoded.Bytes()),
 			pdf.AsciiFromBytes(expected))
 	}
 
 }
 
-func testRoundTrip (t *testing.T, encoderFactory func(io.WriteCloser) io.WriteCloser, decoderFactory func(io.Reader) io.Reader, data []byte) {
+func testRoundTrip (t *testing.T, filter pdf.StreamFilter, data []byte) {
 	encoded := pdf.NewBufferCloser()
-	encoder := encoderFactory(encoded)
+	encoder := filter.NewEncoder(encoded)
 	_,err := io.Copy(encoder, bytes.NewReader(data))
 	if err != nil {
-		t.Errorf(`testEncoder: encoder returned error on "%s": "%v"`, pdf.AsciiFromBytes(data), err)
+		t.Errorf(`testEncoder: %s encoder returned error on "%s": "%v"`, filter.Name(), pdf.AsciiFromBytes(data), err)
 	} else {
 		encoder.Close()
 	}
 
 	roundTrip := pdf.NewBufferCloser()
-	decoder := decoderFactory(bytes.NewReader(encoded.Bytes()))
+	decoder := filter.NewDecoder(bytes.NewReader(encoded.Bytes()))
 	_,err = io.Copy(roundTrip, decoder)
 
 	if err != nil {
-		t.Errorf(`testEncoder: decoder returned error on "%s": "%v"`, pdf.AsciiFromBytes(encoded.Bytes()), err)
+		t.Errorf(`testEncoder: %s decoder returned error on "%s": "%v"`, filter.Name(), pdf.AsciiFromBytes(encoded.Bytes()), err)
 	}
 
 	if !bytes.Equal(data, roundTrip.Bytes()) {
-		t.Errorf(`Roundtrip failed on "%s"`,
+		t.Errorf(`Roundtrip for %s failed on "%s"`,
+			filter.Name(),
 			pdf.AsciiFromBytes(data))
 	}
 }
 
 
-func TestAsciiHexFilter(t *testing.T) {
-	testDecoder (t, pdf.NewAsciiHexReader, []byte("3332313>"), []byte("3210"))
-	testDecoder (t, pdf.NewAsciiHexReader, []byte("33323130>"), []byte("3210"))
+func TestFilters(t *testing.T) {
+	testDecoder (t, new(pdf.AsciiHexFilter), []byte("3332313>"), []byte("3210"))
+	testDecoder (t, new(pdf.AsciiHexFilter), []byte("33323130>"), []byte("3210"))
+	testEncoder (t, new(pdf.AsciiHexFilter), []byte("3210"), []byte("33323130>"))
+	testEncoder (t, new(pdf.FlateFilter), []byte("foo"), []byte("foo"))
 
-	testEncoder (t, pdf.NewAsciiHexWriter, []byte("3210"), []byte("33323130>"))
+	testRoundTrip (t, new(pdf.AsciiHexFilter), randomBytes(16))
+	testRoundTrip (t, new(pdf.AsciiHexFilter), randomBytes(8))
+	testRoundTrip (t, new(pdf.AsciiHexFilter), randomBytes(4))
+	testRoundTrip (t, new(pdf.AsciiHexFilter), randomBytes(1))
+	testRoundTrip (t, new(pdf.AsciiHexFilter), randomBytes(0))
 
-	testRoundTrip (t, pdf.NewAsciiHexWriter, pdf.NewAsciiHexReader, randomBytes(16))
-	testRoundTrip (t, pdf.NewAsciiHexWriter, pdf.NewAsciiHexReader, randomBytes(8))
-	testRoundTrip (t, pdf.NewAsciiHexWriter, pdf.NewAsciiHexReader, randomBytes(4))
-	testRoundTrip (t, pdf.NewAsciiHexWriter, pdf.NewAsciiHexReader, randomBytes(1))
-	testRoundTrip (t, pdf.NewAsciiHexWriter, pdf.NewAsciiHexReader, randomBytes(0))
+	testRoundTrip (t, new(pdf.FlateFilter), randomBytes(16))
 
-	testRoundTrip (t, pdf.NewFlateWriter, pdf.NewFlateReader, randomBytes(1600))
+	testRoundTrip (t, new(pdf.LZWFilter), []byte("test test test"))
+	testRoundTrip (t, new(pdf.LZWFilter), randomBytes(16))
 
 //	testDecoder (t, pdf.AsciiHexFilter{}, []byte("3332313>"), []byte("3210"))
 //	testDecoder (t, pdf.NewAsciiHexReader, []byte("33323130"), []byte("3210"))

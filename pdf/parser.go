@@ -355,7 +355,7 @@ func (p *Parser) scanDictionaryOrStream (file... File) Object {
 			p.scanner.UnreadByte()
 			s,err = ReadLine(p.scanner)
 			if err == nil && s == "endstream" {
-				stream = NewStreamFromContents (dictionary,contents)
+				stream = NewStreamFromContents (dictionary,contents,nil)
 			}
 		}
 	}
