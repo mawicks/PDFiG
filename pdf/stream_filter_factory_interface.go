@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"io")
 
-type StreamFilter interface {
+type StreamFilterFactory interface {
 	Name() string
 	NewEncoder(io.WriteCloser) io.WriteCloser
 	NewDecoder(io.Reader) io.Reader

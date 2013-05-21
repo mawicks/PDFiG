@@ -31,6 +31,8 @@ type Document struct {
 	// procSetIndirect is nil if there are no new pages.
 	procSetIndirect *Indirect
 
+	pageFactory *PageFactory
+
 	// currentPage is nil until NextPage() is called.
 	currentPage *Page
 
@@ -51,6 +53,15 @@ type Document struct {
 	// document info dictionary.  Otherwise it is initialized to
 	// an empty dictionary.  It is not nil.
 	DocumentInfo
+}
+
+var defaultPageFactory *PageFactory
+
+func init() {
+	defaultPageFactory = NewPageFactory()
+	ff := new(FlateFilter)
+	ff.SetCompressionLevel(9)
+	defaultPageFactory.AddFilter(ff)
 }
 
 // makeNewPageTree() initializes the structures required to write a
@@ -103,6 +114,8 @@ func OpenDocument(filename string, mode int) *Document {
 		} else {
 			d.DocumentInfo = DocumentInfo{Dictionary: existingInfo, dirty: false}
 		}
+
+		d.pageFactory = defaultPageFactory
 
 		oldPageTree := oldPageTree(d.file)
 		d.pageTreeRoot = oldPageTree.root
@@ -179,7 +192,7 @@ func (d *Document) finishProcSet() {
 // Document.NewPage() or the call to Document.Close().
 func (d *Document) NewPage() *Page {
 	d.finishCurrentPage()
-	d.currentPage = NewPage(d.file)
+	d.currentPage = d.pageFactory.New(d.file)
 
 	if !d.readyForNewPages {
 		d.makeNewPageTree()
@@ -229,6 +242,15 @@ func (d *Document) Page(n uint) *Dictionary {
 
 	return page
 }
+
+// SetPageFactory() sets the PageFactory used by the document for page
+// construction.  The client may call NewPageFactory(), add filters,
+// etc., and tell the document to use that factory.  The default factory
+// uses LZW encoded streams.
+func (d *Document) SetPageFactory(pf *PageFactory) {
+	d.pageFactory = pf
+}
+
 
 func (d *Document) SetMediaBox(llx, lly, urx, ury float64) {
 	if !d.readyForNewPages {

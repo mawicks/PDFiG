@@ -24,7 +24,7 @@ func ExampleFile_creation() {
 	// Delete the 2.718 numeric object itself
 	f.DeleteObject(indirect2)
 
-	p := pdf.NewPage(f)
+	p := pdf.NewPageFactory().New(f)
 	p.SetParent(indirect1)
 	p.SetMediaBox(0, 0, 612, 792)
 	p.Close()

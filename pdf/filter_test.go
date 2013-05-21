@@ -16,7 +16,7 @@ func randomBytes(n int) []byte {
 	return result
 }
 
-func testDecoder(t *testing.T, filter pdf.StreamFilter, encoded[]byte, expected []byte) {
+func testDecoder(t *testing.T, filter pdf.StreamFilterFactory, encoded[]byte, expected []byte) {
 	decoder := filter.NewDecoder(bytes.NewReader(encoded))
 	decoded := new(bytes.Buffer)
 
@@ -34,7 +34,7 @@ func testDecoder(t *testing.T, filter pdf.StreamFilter, encoded[]byte, expected 
 	}
 }
 
-func testEncoder (t *testing.T, filter pdf.StreamFilter, data[]byte, expected []byte) {
+func testEncoder (t *testing.T, filter pdf.StreamFilterFactory, data[]byte, expected []byte) {
 	encoded := pdf.NewBufferCloser()
 	encoder := filter.NewEncoder(encoded)
 	dataReader := bytes.NewReader(data)
@@ -56,7 +56,7 @@ func testEncoder (t *testing.T, filter pdf.StreamFilter, data[]byte, expected []
 
 }
 
-func testRoundTrip (t *testing.T, filter pdf.StreamFilter, data []byte) {
+func testRoundTrip (t *testing.T, filter pdf.StreamFilterFactory, data []byte) {
 	encoded := pdf.NewBufferCloser()
 	encoder := filter.NewEncoder(encoded)
 	_,err := io.Copy(encoder, bytes.NewReader(data))

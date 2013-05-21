@@ -30,7 +30,7 @@ func NewStreamFromContents(dictionary *Dictionary,b []byte, filterList *list.Lis
 	return &Stream{dictionary, *bytes.NewBuffer(b), filterList}
 }
 
-func (s *Stream) AddFilter(filter StreamFilter) {
+func (s *Stream) AddFilter(filter StreamFilterFactory) {
 	if s.filterList == nil {
 		s.filterList = list.New()
 	}
@@ -78,9 +78,9 @@ func (s *Stream) Serialize(w Writer, file ...File) {
 		needDecodeParameters := false
 
 		for item:=s.filterList.Front(); item != nil; item = item.Next() {
-			streamWriter = item.Value.(StreamFilter).NewEncoder(streamWriter)
-			filters.Add (NewName(item.Value.(StreamFilter).Name()))
-			decodeParms := item.Value.(StreamFilter).DecodeParms(file...)
+			streamWriter = item.Value.(StreamFilterFactory).NewEncoder(streamWriter)
+			filters.Add (NewName(item.Value.(StreamFilterFactory).Name()))
+			decodeParms := item.Value.(StreamFilterFactory).DecodeParms(file...)
 			decodeParameters.Add (decodeParms)
 			if decodeParms != NewNull() {
 				needDecodeParameters = true

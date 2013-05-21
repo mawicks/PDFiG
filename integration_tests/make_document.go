@@ -7,10 +7,17 @@ import (
 
 func make_document() {
 	doc := pdf.OpenDocument(OutputDirectory + "/test-document.pdf", os.O_RDWR|os.O_CREATE)
+
 	doc.SetAuthor("Mark Wicks")
 	doc.SetTitle("Test Document")
 	// Following is to test string encoding
 	doc.SetKeywords("Résumé")
+
+	pageFactory := pdf.NewPageFactory()
+	ff := new(pdf.FlateFilter)
+	ff.SetCompressionLevel(9)
+	pageFactory.AddFilter(ff)
+	doc.SetPageFactory(pageFactory)
 
 	// Page 1
 	page := doc.NewPage()

@@ -14,30 +14,6 @@ type Page struct {
 	fontMap map[Font] string
 }
 
-func NewPage(file... File) *Page {
-	p := new(Page)
-	p.fileList = file
-	p.contents = NewStream()
-
-	// FIXME:  Temporary code
-//	p.contents.AddFilter(new(AsciiHexFilter))
-//	p.contents.AddFilter(new(LZWFilter))
-
-	ff := new(FlateFilter)
-	ff.SetCompressionLevel(9)
-	p.contents.AddFilter(ff)
-
-	p.parent = nil
-
-	p.dictionary = NewDictionary()
-	p.resources = NewDictionary()
-	p.fontResources = nil
-
-	p.fontMap = make(map[Font]string, 15)
-
-	return p
-}
-
 func (p *Page) Close() *Indirect {
 	if (p.fontResources != nil) {
 		p.resources.Add("Font", p.fontResources)
