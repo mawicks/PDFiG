@@ -70,6 +70,8 @@ func (s *Stream) Write(bytes []byte) (int, error) {
 
 func (s *Stream) Serialize(w Writer, file ...File) {
 	streamBuffer := NewBufferCloser()
+	dictionary := s.dictionary.Clone().(*Dictionary)
+
 	var streamWriter io.WriteCloser = streamBuffer
 
 	if s.filterList != nil && s.filterList.Front() != nil {
@@ -86,16 +88,38 @@ func (s *Stream) Serialize(w Writer, file ...File) {
 				needDecodeParameters = true
 			}
 		}
+
+		if f,ok := s.dictionary.GetArray("Filter"); ok {
+			filters.Append(f)
+			if d,ok := s.dictionary.GetArray("DecodeParms"); ok {
+				decodeParameters.Append(d)
+				needDecodeParameters = true
+			} else if needDecodeParameters {
+				for i := 0; i<f.Size(); i++ {
+					decodeParameters.Add (NewNull())
+				}
+			}
+		}
+
+		if n,ok := s.dictionary.GetName("Filter"); ok {
+			filters.Add(NewName(n))
+			if d,ok := s.dictionary.GetName("DecodeParms"); ok {
+				decodeParameters.Add(NewName(d))
+			} else if needDecodeParameters {
+				decodeParameters.Add (NewNull())
+			}
+		}
+
 		// Eliminate the arrays if they have only one element.
 		if filters.Size() == 1 {
-			s.dictionary.Add("Filter", filters.At(0))
+			dictionary.Add("Filter", filters.At(0))
 			if needDecodeParameters {
-				s.dictionary.Add("DecodeParms", decodeParameters.At(0))
+				dictionary.Add("DecodeParms", decodeParameters.At(0))
 			}
 		} else {
-			s.dictionary.Add("Filter", filters)
+			dictionary.Add("Filter", filters)
 			if needDecodeParameters {
-				s.dictionary.Add("DecodeParms", decodeParameters)
+				dictionary.Add("DecodeParms", decodeParameters)
 			}
 		}
 	}
@@ -103,8 +127,8 @@ func (s *Stream) Serialize(w Writer, file ...File) {
 	streamWriter.Write(s.buffer.Bytes())
 	streamWriter.Close()
 
-	s.dictionary.Add("Length", NewIntNumeric(streamBuffer.Len()))
-	s.dictionary.Serialize(w, file...)
+	dictionary.Add("Length", NewIntNumeric(streamBuffer.Len()))
+	dictionary.Serialize(w, file...)
 
 	w.WriteString("\nstream\n")
 	w.Write(streamBuffer.Bytes())

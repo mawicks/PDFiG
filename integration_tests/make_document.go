@@ -14,6 +14,7 @@ func make_document() {
 	doc.SetKeywords("Résumé")
 
 	pageFactory := pdf.NewPageFactory()
+	pageFactory.AddFilter(new(pdf.AsciiHexFilter))
 	ff := new(pdf.FlateFilter)
 	ff.SetCompressionLevel(9)
 	pageFactory.AddFilter(ff)
