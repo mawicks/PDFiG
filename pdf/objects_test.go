@@ -168,6 +168,9 @@ func TestArray(t *testing.T) {
 	a.Add(pdf.NewName("f o o"))
 	testOneObject(t, "Array test", a, nil, "[3.14 2.718 /f#20o#20o]")
 
+	a.Append(b.(*pdf.Array))
+	testOneObject(t, "Array test", a, nil, "[3.14 2.718 /f#20o#20o 3.14 2.718]")
+
 	// Make sure clone hasn't changed
 	testOneObject(t, "Array test", b, nil, "[3.14 2.718]")
 }

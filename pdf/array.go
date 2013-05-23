@@ -29,6 +29,12 @@ func (a *Array) Add(o Object) {
 	a.array.PushBack(o)
 }
 
+func (a *Array) Append(op *Array) {
+	for i:=0; i<op.Size(); i++ {
+		a.Add(op.At(i))
+	}
+}
+
 func (a *Array) Size() int {
 	return int(a.array.Size())
 }
