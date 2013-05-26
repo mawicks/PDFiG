@@ -1,5 +1,8 @@
 package pdf
 
+// import (
+// 	"fmt" )
+
 type PageFactory struct {
 	*StreamFactory
 }
@@ -12,8 +15,8 @@ func NewPageFactory() *PageFactory {
 
 func (pf *PageFactory) New (file... File) *Page {
 	p := new(Page)
-	p.fileList = file
 
+	p.fileList = file
 	p.contents = pf.StreamFactory.New()
 
 	p.parent = nil

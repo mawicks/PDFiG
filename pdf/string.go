@@ -99,7 +99,7 @@ func stringAsciiEscapeByte(b byte) (result []byte) {
 	return result
 }
 
-func generalAsciiEscapeByte(b byte) (result []byte) {
+func GeneralAsciiEscapeByte(b byte) (result []byte) {
 	switch b {
 	case '\\':
 		result = []byte{'\\', b}

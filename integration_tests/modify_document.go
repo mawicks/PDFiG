@@ -10,8 +10,18 @@ func modify_document() {
 	fmt.Printf ("\nMODIFY DOCUMENT\n")
 	doc := pdf.OpenDocument(OutputDirectory  + "/test-document.pdf", os.O_RDWR|os.O_CREATE)
 
-	// Verify that we can retrieve an arbitrary object
-	oldPage := doc.Page(1)
+	// Verify that we can retrieve an arbitrary page
+	oldPage := doc.Page(1)	// Page 2
+	// Try to read the contents on the page.
+	if oldPageStream,ok := oldPage.GetStream("Contents"); ok {
+		r := oldPageStream.Reader()
+		c := []byte{0}
+		fmt.Printf ("Contents: ")
+		for n,_ := r.Read(c); n != 0; n,_ = r.Read(c) {
+			os.Stdout.Write(pdf.GeneralAsciiEscapeByte(c[0]))
+		}
+		fmt.Printf("\n")
+	}
 
 	writer := bufio.NewWriter(os.Stdout)
 	if oldPage == nil {

@@ -14,6 +14,8 @@ type Page struct {
 	fontMap map[Font] string
 }
 
+// There is no constructor here.  Pages are created by a PageFactory.New().
+
 func (p *Page) Close() *Indirect {
 	if (p.fontResources != nil) {
 		p.resources.Add("Font", p.fontResources)
@@ -105,3 +107,4 @@ func (p *Page) Write(b []byte) (int, error) {
 	}
 	return p.contents.Write(b)
 }
+

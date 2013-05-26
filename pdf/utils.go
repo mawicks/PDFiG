@@ -23,7 +23,7 @@ func ParseOctalDigit(b byte) (byte) {
 func AsciiFromBytes (b []byte) string {
 	escaped := make([]byte,0,len(b))
 	for i:=0; i<len(b); i++ {
-		escaped = append(escaped, generalAsciiEscapeByte(b[i])...)
+		escaped = append(escaped, GeneralAsciiEscapeByte(b[i])...)
 	}
 	return string(escaped)
 }
