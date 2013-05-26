@@ -9,8 +9,15 @@ type FlateFilter struct {
 	compressionLevel int
 }
 
+const ( flateDecoderName = "FlateDecode" )
+
+func init () {
+	RegisterFilterFactoryFactory(flateDecoderName,
+		func(*Dictionary) StreamFilterFactory { return new(FlateFilter) })
+}
+
 func (filter *FlateFilter) Name() string {
-	return "FlateDecode"
+	return flateDecoderName
 }
 
 func (filter *FlateFilter) SetCompressionLevel(level int) {

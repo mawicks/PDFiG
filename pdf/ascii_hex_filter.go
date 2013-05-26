@@ -8,8 +8,15 @@ import ("errors"
 type AsciiHexFilter struct {
 }
 
+const ( asciiHexDecoderName = "ASCIIHexDecode" )
+
+func init () {
+	RegisterFilterFactoryFactory(asciiHexDecoderName,
+		func(*Dictionary) StreamFilterFactory { return new(AsciiHexFilter) })
+}
+
 func (filter *AsciiHexFilter) Name() string {
-	return "ASCIIHexDecode"
+	return asciiHexDecoderName
 }
 
 func (filter *AsciiHexFilter) NewEncoder(writer io.WriteCloser) io.WriteCloser {

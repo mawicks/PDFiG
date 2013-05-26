@@ -156,15 +156,18 @@ func (i *Indirect) Serialize(w Writer, file ...File) {
 	if len(file) != 1 {
 		panic(fmt.Sprintf("Serialize called with %d files.  A single file parameter is required for pdf.Indirect.Serialize()", len(file)))
 	}
-	if file[0].Closed() {
-		panic("Attempt to Serialize to a closed file")
+	if file[0] == nil {
+		w.WriteString("? ? R")
+	} else {
+		if file[0].Closed() {
+			panic("Attempt to Serialize to a closed file")
+		}
+		objectNumber := i.ObjectNumber(file[0])
+		w.WriteString(strconv.FormatInt(int64(objectNumber.number), 10))
+		w.WriteByte(' ')
+		w.WriteString(strconv.FormatInt(int64(objectNumber.generation), 10))
+		w.WriteString(" R")
 	}
-
-	objectNumber := i.ObjectNumber(file[0])
-	w.WriteString(strconv.FormatInt(int64(objectNumber.number), 10))
-	w.WriteByte(' ')
-	w.WriteString(strconv.FormatInt(int64(objectNumber.generation), 10))
-	w.WriteString(" R")
 }
 
 // Write() writes the passed object as an indirect object (complete

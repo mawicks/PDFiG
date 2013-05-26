@@ -220,25 +220,14 @@ func (d *Document) Close() {
 // attributes found while descending the page tree are copied into the
 // dictionary.
 func (d *Document) Page(n uint) *Dictionary {
-
-	// Verify that we can retrieve an arbitrary object
 	writer := bufio.NewWriter(os.Stdout)
 
-	fmt.Fprintf (writer, "Page(%d) called on: ", n)
+	fmt.Fprintf (writer, "Page(%d) called with page root: ", n)
 	d.pageTreeRoot.Serialize(writer, d.file)
 	writer.WriteString("\n")
 	writer.Flush()
 
 	page := pageFromTree(d.pageTreeRoot, n)
-
-	if page == nil {
-		fmt.Fprintf (writer, "Page(%d) returned nil\n", n)
-	} else {
-		fmt.Fprintf (writer, "Page(%d) returned: ", n)
-		page.Serialize(writer, d.file)
-		writer.WriteString("\n")
-	}
-	writer.Flush()
 
 	return page
 }

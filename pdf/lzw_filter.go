@@ -8,8 +8,21 @@ import ( //"errors"
 type LZWFilter struct {
 }
 
+const ( lzwDecoderName = "LZWDecode" )
+
+func init () {
+	RegisterFilterFactoryFactory(lzwDecoderName,
+		func(d *Dictionary) StreamFilterFactory {
+			if d != nil {
+				if v,ok := d.GetInt("EarlyChange"); ok && v == 0 {
+					return new(LZWFilter) }
+			}
+			return nil
+		})
+}
+
 func (filter LZWFilter) Name() string {
-	return "LZWDecode"
+	return lzwDecoderName
 }
 
 func (filter LZWFilter) NewEncoder(writer io.WriteCloser) io.WriteCloser {
@@ -25,7 +38,9 @@ func (filter LZWFilter) NewDecoder(reader io.Reader) io.Reader {
 func (filter LZWFilter) DecodeParms(file ...File) Object {
 	d := NewDictionary()
 	// This parameter is necessary due to an incompability between
-	// the Go LZW library and what PDF expects.
+	// the Go LZW library and the default value in the PDF spec.
+	// Unfortunately, this means we cannot decode PDF created with
+	// the default value.
 	d.Add ("EarlyChange", NewIntNumeric(0))
 	return d
 }

@@ -56,8 +56,32 @@ func (s *Stream) Add(key string, o Object) {
 	s.dictionary.Add(key, o)
 }
 
-func (s *Stream) Reader() *bytes.Reader {
-	return bytes.NewReader(s.buffer.Bytes())
+func (s *Stream) Reader() (result io.Reader) {
+	result = bytes.NewReader(s.buffer.Bytes())
+	if filters,ok := s.dictionary.GetArray("Filter"); ok {
+		parms,_ := s.dictionary.GetArray("DecodeParms")
+		for i:=0; i<filters.Size(); i++ {
+			if n,ok := filters.At(i).(*Name); ok {
+				var d *Dictionary
+				if parms != nil && i < parms.Size() {
+					d,_ = parms.At(i).(*Dictionary)
+				}
+				if sff := FilterFactory(n.String(),d); sff != nil {
+					result = sff.NewDecoder(result)
+				} else {
+					return nil
+				}
+			}
+		}
+	} else if n,ok := s.dictionary.GetName("Filter"); ok {
+		d,_ := s.dictionary.GetDictionary("DecodeParms")
+		if sff := FilterFactory(n,d); sff != nil {
+			result = sff.NewDecoder(result)
+		} else {
+			return nil
+		}
+	}
+	return result
 }
 
 func (s *Stream) Remove(key string) {
