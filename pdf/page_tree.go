@@ -8,7 +8,7 @@ type pageTree struct {
 	pageCount uint
 }
 
-func oldPageTree(file File) *pageTree{
+func existingPageTree(file File) *pageTree {
 	var (
 		catalog, pageTreeRoot *Dictionary
 		pageTreeRootReference *Indirect
@@ -31,11 +31,7 @@ func oldPageTree(file File) *pageTree{
 		panic (errors.New(`/Count value is not an integer`))
 	}
 
-	pt := new(pageTree)
-	pt.root = pageTreeRoot
-	pt.rootReference = pageTreeRootReference
-	pt.pageCount = uint(pageCount)
-	return pt
+	return &pageTree{pageTreeRoot,pageTreeRootReference,uint(pageCount)}
 }
 
 func copyDictionaryEntries(dst, src *Dictionary, list []string) {
@@ -48,15 +44,17 @@ func copyDictionaryEntries(dst, src *Dictionary, list []string) {
 	}
 }
 
-// Return the Page dictionary for the nth page in the tree.  The first
-// page is numbered 0.  Any inheritable attributes found while
-// descending the tree are copied into the dictionary.
-func pageFromTree (pt *Dictionary, n uint) *Dictionary {
+// Return the Page dictionary and an indirect object corresponding to
+// the nth page in the tree.  The first page is numbered 0.  Any
+// inheritable attributes found while descending the tree are copied
+// into the dictionary, so the dictionary returned does not exactly
+// match the one in the file.
+func pageFromTree (node *Dictionary, n uint) *ExistingPage {
 	var (
 		kids *Array
 		ok bool )
 
-	if kids,ok = pt.GetArray("Kids"); !ok {
+	if kids,ok = node.GetArray("Kids"); !ok {
 		panic (errors.New(`Page tree node has no "Kids" array`))
 	}
 
@@ -77,7 +75,7 @@ func pageFromTree (pt *Dictionary, n uint) *Dictionary {
 		if nodeType,ok = kid.GetName("Type"); !ok {
 			panic (errors.New(`Node in page tree missing /Type entry.`))
 		}
-		copyDictionaryEntries(kid,pt,[]string{"Resources", "MediaBox", "CropBox", "Rotate"})
+		copyDictionaryEntries(kid,node,[]string{"Resources", "MediaBox", "CropBox", "Rotate"})
 		switch nodeType {
 		case "Pages":
 			if count,ok = kid.GetInt("Count"); !ok {
@@ -89,7 +87,7 @@ func pageFromTree (pt *Dictionary, n uint) *Dictionary {
 			n -= uint(count)
 		case "Page":
 			if n == 0 {
-				return kid
+				return &ExistingPage{kid,kidReference}
 			}
 			n -= 1
 		default:

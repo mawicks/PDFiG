@@ -58,20 +58,7 @@ func (da *DynamicArray) At (i uint) *interface{} {
 	return at (i, da.tree, da.capacity)
 }
 
-func (da *DynamicArray) PushBack (v interface{}) {
-	da.SetSize (da.size + 1)
-	*da.At (da.size-1) = v
-}
-
-func (da *DynamicArray) PopBack () interface{} {
-	result := *da.At(da.size-1)
-	da.SetSize(da.size-1)
-	return result
-}
-
 func (da *DynamicArray) SetSize (newSize uint) {
-//	fmt.Printf ("\nshrinkOrGrow: newSize=%v, da.capacity=%v, da.clusterSize=%v, da.tree=%v\n",
-//		newSize, da.capacity,da.clusterSize,da.tree)
 	// Shrink if necessary
 	for newCap := da.capacity/da.clusterSize; newCap >= newSize && newCap > 1; newCap /= da.clusterSize {
 		da.tree = da.tree[0].([]interface{})
@@ -101,7 +88,6 @@ func (da *DynamicArray) SetSize (newSize uint) {
 		release (newSize-1, da.tree, da.capacity)
 	}
 	da.size = newSize
-//	fmt.Printf ("Shrink or grow returning: size=%v, tree=%v, capacity=%v\n", da.size, da.tree, da.capacity)
 }
 
 func (da *DynamicArray) Size() uint {

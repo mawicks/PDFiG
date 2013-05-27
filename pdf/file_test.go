@@ -27,7 +27,7 @@ func ExampleFile_creation() {
 	p := pdf.NewPageFactory().New(f)
 	p.SetParent(indirect1)
 	p.SetMediaBox(0, 0, 612, 792)
-	p.Close()
+	p.Finish()
 
 	catalog := pdf.NewDictionary()
 	catalog.Add("Type", pdf.NewName("Catalog"))

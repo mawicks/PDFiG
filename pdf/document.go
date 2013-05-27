@@ -117,10 +117,10 @@ func OpenDocument(filename string, mode int) *Document {
 
 		d.pageFactory = defaultPageFactory
 
-		oldPageTree := oldPageTree(d.file)
-		d.pageTreeRoot = oldPageTree.root
-		d.pageTreeRootIndirect = oldPageTree.rootReference
-		d.pageCount = oldPageTree.pageCount
+		existingPageTree := existingPageTree(d.file)
+		d.pageTreeRoot = existingPageTree.root
+		d.pageTreeRootIndirect = existingPageTree.rootReference
+		d.pageCount = existingPageTree.pageCount
 		out := bufio.NewWriter(os.Stdout)
 		out.WriteString("Pre-existing page tree root: ")
 		d.pageTreeRoot.Serialize(out,d.file)
@@ -153,7 +153,7 @@ func (d *Document) finishCatalog() {
 
 func (d *Document) finishCurrentPage() {
 	if d.currentPage != nil {
-		d.pages.Add(d.currentPage.Close())
+		d.pages.Add(d.currentPage.Finish())
 		d.pageCount += 1
 		d.pageTreeRoot.Add("Count", NewIntNumeric(int(d.pageCount)))
 	}
@@ -215,11 +215,13 @@ func (d *Document) Close() {
 	d.release()
 }
 
-// Page(n) returns the dictionary associated with page "n" of the
-// document.  The first page is numbered 0.  Any inheritable
-// attributes found while descending the page tree are copied into the
-// dictionary.
-func (d *Document) Page(n uint) *Dictionary {
+// Page(n) returns the dictionary and an indirect object associated
+// with page "n" of the document.  The first page is numbered 0.  Any
+// inheritable attributes found while descending the page tree are
+// copied into the dictionary, so the dictionary may not exactly match
+// the one in the file.
+
+func (d *Document) Page(n uint) *ExistingPage {
 	writer := bufio.NewWriter(os.Stdout)
 
 	fmt.Fprintf (writer, "Page(%d) called with page root: ", n)
@@ -227,9 +229,7 @@ func (d *Document) Page(n uint) *Dictionary {
 	writer.WriteString("\n")
 	writer.Flush()
 
-	page := pageFromTree(d.pageTreeRoot, n)
-
-	return page
+	return pageFromTree(d.pageTreeRoot, n)
 }
 
 // SetPageFactory() sets the PageFactory used by the document for page

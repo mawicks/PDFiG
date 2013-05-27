@@ -38,7 +38,7 @@ type ObjectStringDecorator struct {
 	Object
 }
 
-func (o *ObjectStringDecorator) String(file ...File) string {
+func (o ObjectStringDecorator) String(file ...File) string {
 	var buffer bytes.Buffer
 	f := bufio.NewWriter(&buffer)
 	o.Serialize(f, file...)

@@ -13,8 +13,7 @@ func modify_document() {
 	// Verify that we can retrieve an arbitrary page
 	oldPage := doc.Page(1)	// Page 2
 	// Try to read the contents on the page.
-	if oldPageStream,ok := oldPage.GetStream("Contents"); ok {
-		r := oldPageStream.Reader()
+	if r := oldPage.Reader(); r != nil {
 		c := []byte{0}
 		fmt.Printf ("Contents: ")
 		for n,_ := r.Read(c); n != 0; n,_ = r.Read(c) {
@@ -22,7 +21,7 @@ func modify_document() {
 		}
 		fmt.Printf("\n")
 	}
-
+	
 	writer := bufio.NewWriter(os.Stdout)
 	if oldPage == nil {
 		fmt.Fprintf (writer, "Page(1) returned nil\n")

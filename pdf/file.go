@@ -82,7 +82,7 @@ type file struct {
 	originalSize int64
 	// Location of xref for pre-existing files.
 	xrefLocation int64
-	xref containers.Array
+	xref containers.ArrayStack
 
 	// trailerDictionary is never nil
 	// It is initialized from a pre-existing trailer
@@ -121,7 +121,7 @@ func OpenFile(filename string, mode int) (result *file,exists bool,err error) {
 	result.file = f
 	result.mode = mode
 
-	result.xref = containers.NewDynamicArray(1024)
+	result.xref = &containers.StackArrayDecorator{containers.NewDynamicArray(1024)}
 	result.originalSize,_ = f.Seek(0, os.SEEK_END)
 
 	if (result.originalSize == 0) {

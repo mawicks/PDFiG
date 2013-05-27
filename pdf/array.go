@@ -3,12 +3,12 @@ package pdf
 import "github.com/mawicks/PDFiG/containers"
 
 type Array struct {
-	array containers.Array
+	array containers.ArrayStack
 }
 
 // Constructor for Name object
 func NewArray() *Array {
-	return &Array{containers.NewDynamicArray(4)}
+	return &Array{containers.StackArrayDecorator{containers.NewDynamicArray(4)}}
 }
 
 func (a *Array) Clone() Object {

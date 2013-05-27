@@ -16,7 +16,7 @@ type Page struct {
 
 // There is no constructor here.  Pages are created by a PageFactory.New().
 
-func (p *Page) Close() *Indirect {
+func (p *Page) Finish() *Indirect {
 	if (p.fontResources != nil) {
 		p.resources.Add("Font", p.fontResources)
 		p.fontResources = nil

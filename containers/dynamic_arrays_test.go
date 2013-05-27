@@ -45,15 +45,27 @@ func TestDynamicArray (t *testing.T) {
 		}
 	}
 
-	d = NewDynamicArray (3)
+	s := &StackArrayDecorator{NewDynamicArray (3)}
 	for i:=0; i<10; i++ {
-		d.PushBack(i+1);
+		s.PushBack(i+1);
 	}
 
 	for i:=10; i>0; i-- {
-		v := d.PopBack()
+		v := s.PopBack()
 		if v != i {
 			t.Errorf ("PushBack/PopBack: PopBack() == %v; expected %v", v, i)
+		}
+	}
+
+	s = &StackArrayDecorator{NewDynamicArray (3)}
+	for i:=0; i<10; i++ {
+		s.PushFront(i+1)
+	}
+	
+	for i:=10; i>0; i-- {
+		v := s.PopFront()
+		if v != i {
+			t.Errorf ("PushFront/PopFront: PopBack() = %v; expected %v", v, i)
 		}
 	}
 }
