@@ -35,7 +35,7 @@ func (ep *ExistingPage) Rewrite() {
 	ep.reference.Write(ep.Dictionary)
 }
 
-func (ep *ExistingPage) ensureContentsIsArray() *Array {
+func (ep *ExistingPage) ensureContentsArray() *Array {
 	if pageContentsArray,ok := ep.GetArray("Contents"); ok {
 		return pageContentsArray
 	}
@@ -48,7 +48,25 @@ func (ep *ExistingPage) ensureContentsIsArray() *Array {
 	return nil
 }
 
-func (ep *ExistingPage) PrependWriter(file... File) {
-//	contentsArray := ep.ensureContentsIsArray()
-//	newStream := NewIndirect(file...)
+type ContentsWriter struct {
+	*Stream
+	streamReference *Indirect
+}
+
+func (ep *ExistingPage) PrependWriter(file... File) *ContentsWriter {
+	contentsArray := ep.ensureContentsArray()
+	newStreamReference := NewIndirect(file...)
+	contentsArray.PushFront(newStreamReference)
+	return &ContentsWriter{NewStream(),newStreamReference}
+}
+
+func (ep *ExistingPage) AppendWriter(file... File) *ContentsWriter {
+	contentsArray := ep.ensureContentsArray()
+	newStreamReference := NewIndirect(file...)
+	contentsArray.Add(newStreamReference)
+	return &ContentsWriter{NewStream(),newStreamReference}
+}
+
+func (cw *ContentsWriter) Close() {
+	cw.streamReference.Write(cw.Stream)
 }

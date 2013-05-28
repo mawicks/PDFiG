@@ -32,6 +32,7 @@ type Document struct {
 	procSetIndirect *Indirect
 
 	pageFactory *PageFactory
+	streamFactory *StreamFactory
 
 	// currentPage is nil until NextPage() is called.
 	currentPage *Page
@@ -55,13 +56,14 @@ type Document struct {
 	DocumentInfo
 }
 
-var defaultPageFactory *PageFactory
+var (
+	defaultStreamFactory *StreamFactory)
 
 func init() {
-	defaultPageFactory = NewPageFactory()
+	defaultStreamFactory = NewStreamFactory()
 	ff := new(FlateFilter)
 	ff.SetCompressionLevel(9)
-	defaultPageFactory.AddFilter(ff)
+	defaultStreamFactory.AddFilter(ff)
 }
 
 // makeNewPageTree() initializes the structures required to write a
@@ -114,8 +116,7 @@ func OpenDocument(filename string, mode int) *Document {
 		} else {
 			d.DocumentInfo = DocumentInfo{Dictionary: existingInfo, dirty: false}
 		}
-
-		d.pageFactory = defaultPageFactory
+		
 
 		existingPageTree := existingPageTree(d.file)
 		d.pageTreeRoot = existingPageTree.root
@@ -127,6 +128,10 @@ func OpenDocument(filename string, mode int) *Document {
 		out.WriteString("\n")
 		out.Flush()
 	}
+
+	d.streamFactory = defaultStreamFactory
+	d.pageFactory = NewPageFactory()
+	d.pageFactory.SetStreamFactory(d.streamFactory)
 
 	// Set a default producer field.  Clients calls to SetProducer() override this.
 	d.SetProducer("PDFiG")
@@ -232,14 +237,14 @@ func (d *Document) Page(n uint) *ExistingPage {
 	return pageFromTree(d.pageTreeRoot, n)
 }
 
-// SetPageFactory() sets the PageFactory used by the document for page
-// construction.  The client may call NewPageFactory(), add filters,
-// etc., and tell the document to use that factory.  The default factory
-// uses LZW encoded streams.
-func (d *Document) SetPageFactory(pf *PageFactory) {
-	d.pageFactory = pf
+// SetStreamFactory() sets the StreamFactory used by the document for
+// constructing page stream.  The client may call NewStreamFactory(),
+// add filters, etc., and tell the document to use that factory.  The
+// default factory uses LZW encoded streams.
+func (d *Document) SetStreamFactory(sf *StreamFactory) {
+	d.streamFactory = sf
+	d.pageFactory.SetStreamFactory(sf)
 }
-
 
 func (d *Document) SetMediaBox(llx, lly, urx, ury float64) {
 	if !d.readyForNewPages {

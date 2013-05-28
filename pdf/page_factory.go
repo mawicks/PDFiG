@@ -28,3 +28,7 @@ func (pf *PageFactory) New (file... File) *Page {
 
 	return p
 }
+
+func (pf *PageFactory) SetStreamFactory (sf *StreamFactory) {
+	pf.StreamFactory = sf
+}

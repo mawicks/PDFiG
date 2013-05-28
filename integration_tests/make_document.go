@@ -13,12 +13,12 @@ func make_document() {
 	// Following is to test string encoding
 	doc.SetKeywords("Résumé")
 
-	pageFactory := pdf.NewPageFactory()
-	pageFactory.AddFilter(new(pdf.AsciiHexFilter))
+	streamFactory := pdf.NewStreamFactory()
+	streamFactory.AddFilter(new(pdf.AsciiHexFilter))
 	ff := new(pdf.FlateFilter)
 	ff.SetCompressionLevel(9)
-	pageFactory.AddFilter(ff)
-	doc.SetPageFactory(pageFactory)
+	streamFactory.AddFilter(ff)
+	doc.SetStreamFactory(streamFactory)
 
 	// Page 1
 	page := doc.NewPage()
