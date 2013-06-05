@@ -1,7 +1,6 @@
 package pdf
 
 import ("errors"
-	"fmt"
 	"strconv")
 
 type Page struct {
@@ -9,7 +8,8 @@ type Page struct {
 	contents *Stream
 	parent *Indirect
 
-	dictionary, resources, fontResources *Dictionary
+	dictionary *PageDictionary
+	resources, fontResources *Dictionary
 
 	fontMap map[Font] string
 }
@@ -22,21 +22,19 @@ func (p *Page) Finish() *Indirect {
 		p.fontResources = nil
 	}
 
-	p.dictionary.Add("Resources", NewIndirect(p.fileList...).Write(p.resources))
+	p.dictionary.SetResources(NewIndirect(p.fileList...).Write(p.resources))
 	p.resources = nil
 
-	p.dictionary.Add("Contents", NewIndirect(p.fileList...).Write(p.contents))
+	p.dictionary.SetContents(NewIndirect(p.fileList...).Write(p.contents))
 	p.contents = nil
 
 	if p.parent == nil {
 		panic("No parent specified")
 	}
-	p.dictionary.Add("Parent", p.parent)
+	p.dictionary.SetParent(p.parent)
 	p.parent = nil
 
-	p.dictionary.Add("Type", NewName("Page"))
-
-	indirect := NewIndirect(p.fileList...).Write(p.dictionary)
+	indirect := p.dictionary.Write(NewIndirect(p.fileList...))
 	p.dictionary = nil
 
 	return indirect
@@ -74,31 +72,39 @@ func (p *Page) setProcSet(i *Indirect) {
 	p.resources.Add("ProcSet", i)
 }
 
-func (p *Page) setBox (boxname string, llx, lly, urx, ury float64) {
-	if p.dictionary == nil {
-		panic (errors.New(fmt.Sprintf(`Attempt to set "%s" on a closed Page`, boxname)))
-	}
-	p.dictionary.Add(boxname, NewRectangle(llx, lly, urx, ury))
-}
-
 func (p *Page) SetMediaBox(llx, lly, urx, ury float64) {
-	p.setBox("MediaBox", llx, lly, urx, ury)
+	if p.dictionary == nil {
+		panic ("SetMediaBox() called on closed page")
+	}
+	p.dictionary.SetMediaBox(llx, lly, urx, ury)
 }
 
 func (p *Page) SetCropBox(llx, lly, urx, ury float64) {
-	p.setBox("CropBox", llx, lly, urx, ury)
+	if p.dictionary == nil {
+		panic ("SetCropBox() called on closed page")
+	}
+	p.dictionary.SetCropBox(llx, lly, urx, ury)
 }
 
 func (p *Page) SetBleedBox(llx, lly, urx, ury float64) {
-	p.setBox("BleedBox", llx, lly, urx, ury)
+	if p.dictionary == nil {
+		panic ("SetBleedBox() called on closed page")
+	}
+	p.dictionary.SetBleedBox(llx, lly, urx, ury)
 }
 
 func (p *Page) SetTrimBox(llx, lly, urx, ury float64) {
-	p.setBox("TrimBox", llx, lly, urx, ury)
+	if p.dictionary == nil {
+		panic ("SetTrimBox() called on closed page")
+	}
+	p.dictionary.SetTrimBox(llx, lly, urx, ury)
 }
 
 func (p *Page) SetArtBox(llx, lly, urx, ury float64) {
-	p.setBox("ArtBox", llx, lly, urx, ury)
+	if p.dictionary == nil {
+		panic ("SetArtBox() called on closed page")
+	}
+	p.dictionary.SetArtBox(llx, lly, urx, ury)
 }
 
 func (p *Page) Write(b []byte) (int, error) {

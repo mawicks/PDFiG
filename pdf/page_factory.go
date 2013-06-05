@@ -20,7 +20,7 @@ func (pf *PageFactory) New (file... File) *Page {
 	p.contents = pf.StreamFactory.New()
 
 	p.parent = nil
-	p.dictionary = NewDictionary()
+	p.dictionary = NewPageDictionary()
 	p.resources = NewDictionary()
 
 	p.fontResources = nil
