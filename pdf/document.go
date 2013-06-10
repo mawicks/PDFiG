@@ -220,12 +220,11 @@ func (d *Document) Close() {
 	d.release()
 }
 
-// Page(n) returns the dictionary and an indirect object associated
+// Page(n) returns the PageDictionary and an Indirect object associated
 // with page "n" of the document.  The first page is numbered 0.  Any
 // inheritable attributes found while descending the page tree are
 // copied into the dictionary, so the dictionary may not exactly match
 // the one in the file.
-
 func (d *Document) Page(n uint) *ExistingPage {
 	writer := bufio.NewWriter(os.Stdout)
 

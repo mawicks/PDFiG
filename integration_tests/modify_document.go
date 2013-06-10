@@ -27,7 +27,7 @@ func modify_document() {
 		fmt.Fprintf (writer, "Page(1) returned nil\n")
 	} else {
 		fmt.Fprintf (writer, "Page(1) returned: ")
-		oldPage.Serialize(writer, nil)
+		oldPage.CloneDictionary().Serialize(writer, nil)
 		writer.WriteString("\n")
 	}
 	writer.Flush()

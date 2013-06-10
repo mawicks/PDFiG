@@ -18,6 +18,11 @@ func NewPageDictionary() *PageDictionary {
 	return &PageDictionary{pd,false}
 }
 
+func (pd *PageDictionary) CloneDictionary() *Dictionary {
+	dictionary,_ := pd.dictionary.Clone().(*Dictionary)
+	return dictionary
+}
+
 // Return an io.Reader that will read the page's contents.  Stream
 // filters are applied and segments from multi-segment streams are
 // concatenated.
