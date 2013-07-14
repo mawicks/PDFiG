@@ -28,12 +28,6 @@ func (p *Page) Finish() *Indirect {
 	p.dictionary.SetContents(NewIndirect(p.fileList...).Write(p.contents))
 	p.contents = nil
 
-	if p.parent == nil {
-		panic("No parent specified")
-	}
-	p.dictionary.SetParent(p.parent)
-	p.parent = nil
-
 	indirect := p.dictionary.Write(NewIndirect(p.fileList...))
 	p.dictionary = nil
 
@@ -65,7 +59,7 @@ func (p *Page) AddFont (font Font) string {
 }
 
 func (p *Page) SetParent(i *Indirect) {
-	p.parent = i
+	p.dictionary.SetParent(i)
 }
 
 func (p *Page) setProcSet(i *Indirect) {

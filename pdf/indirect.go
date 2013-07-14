@@ -177,11 +177,16 @@ func (i *Indirect) Serialize(w Writer, file ...File) {
 // Write() returns its Indirect object for constructions such as
 //  a := NewIndirect(f).Write(object)
 func (i *Indirect) Write(o Object) *Indirect{
+	wroteSomething := false
 	for file, objectNumber := range i.fileBindings {
 		file.WriteObjectAt(objectNumber, o)
+		wroteSomething = true
 		if i.sourceFile == nil {
 			i.sourceFile = file
 		}
+	}
+	if !wroteSomething {
+		panic(fmt.Sprintf("Indirect.Write() called on an object with no file bindings."))
 	}
 	return i
 }

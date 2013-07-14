@@ -220,11 +220,11 @@ func (d *Document) Close() {
 	d.release()
 }
 
-// Page(n) returns the PageDictionary and an Indirect object associated
-// with page "n" of the document.  The first page is numbered 0.  Any
-// inheritable attributes found while descending the page tree are
-// copied into the dictionary, so the dictionary may not exactly match
-// the one in the file.
+// Page(n) returns the ExistingPage (which contains a PageDictionary
+// and an Indirect object) associated with page "n" of the document.
+// The first page is numbered 0.  Any inheritable attributes found
+// while descending the page tree are copied into the dictionary, so
+// the dictionary may not exactly match the one in the file.
 func (d *Document) Page(n uint) *ExistingPage {
 	writer := bufio.NewWriter(os.Stdout)
 
@@ -278,4 +278,8 @@ func (d *Document) SetArtBox(llx, lly, urx, ury float64) {
 		d.makeNewPageTree()
 	}
 	d.pageTreeRoot.Add("ArtBox", NewRectangle(llx, lly, urx, ury))
+}
+
+func (d *Document) WriteObject(object Object) *Indirect {
+	return NewIndirect(d.file).Write(object)
 }

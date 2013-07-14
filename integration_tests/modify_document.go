@@ -21,7 +21,14 @@ func modify_document() {
 		}
 		fmt.Printf("\n")
 	}
-	
+
+	backgroundStream := pdf.NewStreamFactory().New()
+	backgroundStream.Write([]byte("q 0.9 g 0.9 G 0 768 612 24 re b Q"))
+	id := doc.WriteObject(backgroundStream)
+
+	oldPage.PrependContents(id)
+	oldPage.Rewrite()
+
 	writer := bufio.NewWriter(os.Stdout)
 	if oldPage == nil {
 		fmt.Fprintf (writer, "Page(1) returned nil\n")

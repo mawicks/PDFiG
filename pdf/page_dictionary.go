@@ -1,6 +1,7 @@
 package pdf
 
 import (
+	"bytes"
 	"errors"
 	"io"
 )
@@ -36,18 +37,27 @@ func (pd *PageDictionary) Reader() io.Reader {
 	// concatenated.
 	if pageStreamArray,ok := pd.dictionary.GetArray("Contents"); ok {
 		n := pageStreamArray.Size()
-		readers := make([]io.Reader, n)
-		for i:=0; i<n; i++ {
-			if streamReference,ok := pageStreamArray.At(i).(*Indirect); ok {
-				if stream,ok := streamReference.Dereference().(*Stream); ok {
-					readers[i] = stream.Reader()
+		if n > 0 {
+			readers := make([]io.Reader, 2*n-1)
+			nr := 0
+			for i:=0; i<n; i++ {
+				if i != 0 {
+				// Insert whitespace between each stream
+					readers[nr] = bytes.NewReader([]byte(" "))
+					nr += 1
 				}
+				if streamReference,ok := pageStreamArray.At(i).(*Indirect); ok {
+					if stream,ok := streamReference.Dereference().(*Stream); ok {
+						readers[nr] = stream.Reader()
+					}
+				}
+				if readers[nr] == nil {
+					return nil
+				}
+				nr += 1
 			}
-			if readers[i] == nil {
-				return nil
-			}
+			return io.MultiReader (readers...)
 		}
-		return io.MultiReader (readers...)
 	}
 	// Otherwise, the dictionary is partially constructed or the
 	// PDF file is invalid.

@@ -629,8 +629,8 @@ func (f *file) writeXref() {
 		fmt.Fprintf(f.writer, "%d %d\n", s, l)
 		for i := s; i < s+l; i++ {
 			entry := (*f.xref.At(uint(i))).(*xrefEntry)
-			if entry.byteOffset == 0 && entry.inUse {
-				panic(fmt.Sprintf("Object %d reserved but never added or finalized", i))
+			if entry.byteOffset == 0 && entry.generation != 65535 {
+				fmt.Fprintf(logger, "Warning: Object %d reserved but never written\n", i)
 			}
 			entry.Serialize(f.writer)
 		}
