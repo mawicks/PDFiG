@@ -191,7 +191,7 @@ func (d *dictionary) GetName(key string) (string,bool) {
 	if value == nil {
 		return "", false
 	}
-	if name,ok := value.Dereference().(*Name); ok {
+	if name,ok := value.Dereference().(Name); ok {
 		return name.String(),true
 	}
 	return "", false
@@ -270,7 +270,7 @@ func (d *dictionary) CheckNameValue (key string, expected string, file... File) 
 		return false
 	}
 
-	if value,ok := rawValue.Dereference().(*Name); ok {
+	if value,ok := rawValue.Dereference().(Name); ok {
 		if ok && value != nil && value.String() == expected {
 			return true
 		}

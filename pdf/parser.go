@@ -310,7 +310,7 @@ func (p *Parser) scanDictionary(file... File) Dictionary {
 	b,err := nextNonWhiteByte(p.scanner)
 	for ; err == nil && b != '>'; b,err=p.scanner.ReadByte() {
 		p.scanner.UnreadByte()
-		name,ok := p.scanObject().(*Name)
+		name,ok := p.scanObject().(Name)
 		if (!ok) {
 			panic(expectingName)
 		}

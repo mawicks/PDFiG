@@ -76,7 +76,7 @@ func (s *stream) Reader() (result io.Reader) {
 	if filters,ok := s.dictionary.GetArray("Filter"); ok {
 		parms,_ := s.dictionary.GetArray("DecodeParms")
 		for i:=0; i<filters.Size(); i++ {
-			if n,ok := filters.At(i).(*Name); ok {
+			if n,ok := filters.At(i).(Name); ok {
 				var d Dictionary
 				if parms != nil && i < parms.Size() {
 					d,_ = parms.At(i).(Dictionary)

@@ -1,12 +1,17 @@
 package pdf
 
-type Name struct {
+type Name interface {
+	Object
+	String() string
+}
+
+type name struct {
 	name string
 }
 
-// Constructor for Name object
-func NewName(s string) *Name {
-	return &Name{s}
+// Constructor for standard Name implementation
+func NewName(s string) Name {
+	return &name{s}
 }
 
 func nameEscapeByte(b byte) (result []byte) {
@@ -19,17 +24,17 @@ func nameEscapeByte(b byte) (result []byte) {
 	return result
 }
 
-func (n *Name) Clone() Object {
+func (n *name) Clone() Object {
 	// Names are intended to be immutable, so return a pointer
 	// to the same instance
 	return n
 }
 
-func (n *Name) Dereference() Object {
+func (n *name) Dereference() Object {
 	return n
 }
 
-func (n *Name) Serialize(w Writer, file ...File) {
+func (n *name) Serialize(w Writer, file ...File) {
 	w.WriteByte('/')
 	for _, b := range []byte(n.name) {
 		w.Write(nameEscapeByte(b))
@@ -37,6 +42,6 @@ func (n *Name) Serialize(w Writer, file ...File) {
 	return
 }
 
-func (n *Name) String() string {
+func (n *name) String() string {
 	return n.name
 }
