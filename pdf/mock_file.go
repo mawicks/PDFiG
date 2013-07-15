@@ -24,14 +24,14 @@ func (f *mockFile) Closed() bool {
 }
 
 // Implements WriteObject() in File interface
-func (f *mockFile) WriteObject(object Object) (reference *Indirect) {
+func (f *mockFile) WriteObject(object Object) (reference Indirect) {
 	return NewIndirect(f).Write(object)
 }
 // Implements WriteObjectAt() in File interface
 func (f *mockFile) WriteObjectAt(ObjectNumber, Object) {}
 
 // Indirect() is required to implement File interface
-func (f *mockFile) Indirect(o ObjectNumber) *Indirect {
+func (f *mockFile) Indirect(o ObjectNumber) Indirect {
 	return newIndirectWithNumber(o, f)
 }
 
@@ -41,10 +41,10 @@ func (f *mockFile) Object(o ObjectNumber) (Object,error) {
 }
 
 // Implements DeleteObject() in File interface
-func (f *mockFile) DeleteObject(*Indirect) {}
+func (f *mockFile) DeleteObject(Indirect) {}
 
 // Implements ReserveObjectNumber() in File interface
-func (f *mockFile) ReserveObjectNumber(*Indirect) ObjectNumber {
+func (f *mockFile) ReserveObjectNumber(Indirect) ObjectNumber {
 	result := ObjectNumber{f.nextObjectNumber, f.nextGenerationNumber}
 	f.nextObjectNumber += 1
 	f.nextGenerationNumber += 1

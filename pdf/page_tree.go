@@ -4,7 +4,7 @@ import ("errors")
 
 type pageTree struct {
 	root Dictionary
-	rootReference *Indirect
+	rootReference Indirect
 	pageCount uint
 }
 
@@ -12,7 +12,7 @@ func existingPageTree(file File) *pageTree {
 	var (
 		catalog, pageTreeRoot Dictionary
 		d ReadOnlyDictionary
-		pageTreeRootReference *Indirect
+		pageTreeRootReference Indirect
 		pageCount int
 		ok bool )
 
@@ -65,10 +65,10 @@ func pageFromTree (node Dictionary, n uint) *ExistingPage {
 		var (
 			count int
 			kid Dictionary
-			kidReference *Indirect
+			kidReference Indirect
 			nodeType string )
 
-		if kidReference,ok = kids.At(i).(*Indirect); !ok {
+		if kidReference,ok = kids.At(i).(Indirect); !ok {
 			panic (errors.New(`Kids array contains an object that isn't an indirect reference.`))
 		}
 		if kid,ok = kidReference.Dereference().(Dictionary); !ok {

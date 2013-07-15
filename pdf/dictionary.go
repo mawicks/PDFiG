@@ -28,7 +28,7 @@ type ReadOnlyDictionary interface {
 	// Indirect object (no dereferencing is attempted).  The boolean
 	// return value indicates whether the entry exists with the expected
 	// name and type.
-	GetIndirect(key string) (*Indirect,bool)
+	GetIndirect(key string) (Indirect,bool)
 
 	// GetInt() attempts to retrieve the dictionary entry as an
 	// integer, dereferencing as necessary.  The boolean returns
@@ -157,12 +157,12 @@ func (d *dictionary) GetDictionary(key string) (ReadOnlyDictionary,bool) {
 // Indirect object (no dereferencing is attempted).  The boolean
 // returns value indicates whether the entry exists with the expected
 // name and type.
-func (d *dictionary) GetIndirect(key string) (*Indirect,bool) {
+func (d *dictionary) GetIndirect(key string) (Indirect,bool) {
 	value := d.Get(key)
 	if value == nil {
 		return nil, false
 	}
-	if indirect,ok := value.(*Indirect); ok {
+	if indirect,ok := value.(Indirect); ok {
 		return indirect,true
 	}
 	return nil, false

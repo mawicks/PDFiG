@@ -5,11 +5,21 @@ import (
 	"fmt"
 	"strconv" )
 
-
 // Implements:
 // 	pdf.Object
-//	bufio.Writer
-type Indirect struct {
+
+type ReadOnlyIndirect interface {
+	Object
+	ObjectNumber(f File) ObjectNumber
+	BoundToFile(f File) bool
+}
+
+type Indirect interface {
+	ReadOnlyIndirect
+	Write(o Object) Indirect
+}
+
+type indirect struct {
 	fileBindings map[File]ObjectNumber
 	// When not nil, sourceFile is a file this indirect object was read from.
 	sourceFile      File
@@ -100,8 +110,8 @@ but weak references are not implemented in Go.
 // bound are known at construction time, they may be provided as
 // optional arguments.  Instead of providing these at construction,
 // the client may call Indirect.ObjectNumber() after construction.
-func NewIndirect(file... File) *Indirect {
-	result := new(Indirect)
+func NewIndirect(file... File) Indirect {
+	result := new(indirect)
 	result.fileBindings = make(map[File]ObjectNumber,1)
 	result.sourceFile = nil
 
@@ -112,21 +122,21 @@ func NewIndirect(file... File) *Indirect {
 	return result
 }
 
-func newIndirectWithNumber(objectNumber ObjectNumber, file File) *Indirect {
-	result := new(Indirect)
+func newIndirectWithNumber(objectNumber ObjectNumber, file File) Indirect {
+	result := new(indirect)
 	result.fileBindings = make(map[File]ObjectNumber,5)
 	result.sourceFile = file
 	result.fileBindings[file] = objectNumber
 	return result
 }
 
-func (i *Indirect) Clone() Object {
+func (i *indirect) Clone() Object {
 	// Return a reference since all indirect references to the
 	// same object should be the same.
 	return i
 }
 
-func (i *Indirect) Dereference() Object {
+func (i *indirect) Dereference() Object {
 	if i.sourceFile == nil {
 		panic (errors.New(`Attempt to deference an object with no known source`))
 	}
@@ -146,7 +156,7 @@ func (i *Indirect) Dereference() Object {
 // File allows writing an object to stdout, but using the indirect
 // reference object numbers as if it were contained in a specific PDF
 // file.
-func (i *Indirect) Serialize(w Writer, file ...File) {
+func (i *indirect) Serialize(w Writer, file ...File) {
 	if len(file) != 1 {
 		panic(fmt.Sprintf("Serialize called with %d files.  A single file parameter is required for pdf.Indirect.Serialize()", len(file)))
 	}
@@ -170,7 +180,7 @@ func (i *Indirect) Serialize(w Writer, file ...File) {
 // Write() may be used to replace an existing object.
 // Write() returns its Indirect object for constructions such as
 //  a := NewIndirect(f).Write(object)
-func (i *Indirect) Write(o Object) *Indirect{
+func (i *indirect) Write(o Object) Indirect{
 	wroteSomething := false
 	for file, objectNumber := range i.fileBindings {
 		file.WriteObjectAt(objectNumber, o)
@@ -194,9 +204,9 @@ func (i *Indirect) Write(o Object) *Indirect{
 // using Indirect.Write().  that case, the caller should call
 // ObjectNumber() one or more times *before* calling Write().
 // Alternatively, client code may call File.Write(), which returns a
-// *Indirect that may be used for backward references.  In the latter
+// Indirect that may be used for backward references.  In the latter
 // case, the reference will only be tied to only one file.
-func (i *Indirect) ObjectNumber(f File) ObjectNumber {
+func (i *indirect) ObjectNumber(f File) ObjectNumber {
 	destObjectNumber,exists := i.fileBindings[f]
 	if !exists {
 		destObjectNumber = f.ReserveObjectNumber(i)
@@ -214,7 +224,7 @@ func (i *Indirect) ObjectNumber(f File) ObjectNumber {
 	return destObjectNumber
 }
 
-func (i *Indirect) BoundToFile(f File) bool {
+func (i *indirect) BoundToFile(f File) bool {
 	_,exists := i.fileBindings[f]
 	return exists
 }

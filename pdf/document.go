@@ -29,7 +29,7 @@ type Document struct {
 	pages Array
 
 	// procSetIndirect is nil if there are no new pages.
-	procSetIndirect *Indirect
+	procSetIndirect Indirect
 
 	pageFactory *PageFactory
 	streamFactory *StreamFactory
@@ -45,7 +45,7 @@ type Document struct {
 	// generated page tree if a new document is opened.  They are
 	// not nil.
 	pageTreeRoot Dictionary
-	pageTreeRootIndirect *Indirect
+	pageTreeRootIndirect Indirect
 
 	// pageCount is initialized with the pre-existing page count.
 	pageCount uint
@@ -280,6 +280,6 @@ func (d *Document) SetArtBox(llx, lly, urx, ury float64) {
 	d.pageTreeRoot.Add("ArtBox", NewRectangle(llx, lly, urx, ury))
 }
 
-func (d *Document) WriteObject(object Object) *Indirect {
+func (d *Document) WriteObject(object Object) Indirect {
 	return NewIndirect(d.file).Write(object)
 }

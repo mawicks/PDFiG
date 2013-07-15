@@ -1,7 +1,7 @@
 package pdf
 
 type Font interface {
-	Indirect(f File) *Indirect
+	Indirect(f File) Indirect
 }
 
 type StandardFont uint8
@@ -40,13 +40,13 @@ func StandardFontToName (font StandardFont)  (result string) {
 }
 
 type standardFont struct {
-	fileBindings map[File]*Indirect
+	fileBindings map[File] Indirect
 	dictionary Dictionary
 }
 
 func NewStandardFont(font StandardFont) Font {
 	result := new(standardFont)
-	result.fileBindings = make(map[File]*Indirect,5)
+	result.fileBindings = make(map[File] Indirect,5)
 	result.dictionary = NewDictionary()
 	result.dictionary.Add ("Type", NewName("Font"))
 	result.dictionary.Add ("Subtype", NewName("Type1"))
@@ -58,7 +58,7 @@ func NewStandardFont(font StandardFont) Font {
 	return result
 }
 
-func (font *standardFont) Indirect(file File) *Indirect {
+func (font *standardFont) Indirect(file File) Indirect {
 	i,exists := font.fileBindings[file]
 	if (!exists) {
 		i = file.WriteObject(font.dictionary)

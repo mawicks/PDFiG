@@ -46,7 +46,7 @@ func (pd *PageDictionary) Reader() io.Reader {
 					readers[nr] = bytes.NewReader([]byte(" "))
 					nr += 1
 				}
-				if streamReference,ok := pageStreamArray.At(i).(*Indirect); ok {
+				if streamReference,ok := pageStreamArray.At(i).(Indirect); ok {
 					if stream,ok := streamReference.Dereference().(Stream); ok {
 						readers[nr] = stream.Reader()
 					}
@@ -90,7 +90,7 @@ func (pd *PageDictionary) ensureContentsIsArray() Array {
 // must reference a stream) in front of the page contents.  The client is
 // responsible for ensuring the indirect reference is associated with
 // a stream object.
-func (pd *PageDictionary) PrependContents(is *Indirect) {
+func (pd *PageDictionary) PrependContents(is Indirect) {
 	if contentsArray := pd.ensureContentsIsArray(); contentsArray != nil {
 		contentsArray.PushFront(is)
 	} else {
@@ -102,7 +102,7 @@ func (pd *PageDictionary) PrependContents(is *Indirect) {
 // reference a stream) onto the page contents.  The client is
 // responsible for ensuring the indirect reference is associated with
 // a stream object.
-func (pd *PageDictionary) AppendContents(is *Indirect) {
+func (pd *PageDictionary) AppendContents(is Indirect) {
 	if contentsArray := pd.ensureContentsIsArray(); contentsArray != nil {
 		contentsArray.Add(is)
 	} else {
@@ -114,7 +114,7 @@ func (pd *PageDictionary) AppendContents(is *Indirect) {
 // passed indirect reference.  The client is responsible for ensuring
 // that the indirect reference is associated with a stream or possibly
 // with an array of stream references.
-func (pd *PageDictionary) SetContents(is *Indirect) {
+func (pd *PageDictionary) SetContents(is Indirect) {
 	if is == nil {
 		panic ("Indirect object is nil")
 	}
@@ -124,7 +124,7 @@ func (pd *PageDictionary) SetContents(is *Indirect) {
 // SetResources() sets the Resources value in the page dictionary to the
 // passed indirect reference.  The client is responsible for ensuring
 // that the indirect reference is a valid Resource dictionary.
-func (pd *PageDictionary) SetResources(ir *Indirect) {
+func (pd *PageDictionary) SetResources(ir Indirect) {
 	if ir == nil {
 		panic ("Indirect object is nil")
 	}
@@ -135,7 +135,7 @@ func (pd *PageDictionary) SetResources(ir *Indirect) {
 // passed indirect reference.  The client is responsible for ensuring
 // that the indirect reference is a valid page dictionary or pages node
 // reference.
-func (pd *PageDictionary) SetParent(ip *Indirect) {
+func (pd *PageDictionary) SetParent(ip Indirect) {
 	if ip == nil {
 		panic ("Indirect object is nil")
 	}
@@ -167,7 +167,7 @@ func (pd *PageDictionary) SetArtBox(llx, lly, urx, ury float64) {
 	pd.setBox("ArtBox", llx, lly, urx, ury)
 }
 
-func (pd *PageDictionary) Write(id *Indirect) *Indirect {
+func (pd *PageDictionary) Write(id Indirect) Indirect {
 	if !pd.hasParent {
 		panic("PageDictionary has no Parent")
 	}

@@ -36,7 +36,7 @@ type xrefEntry struct {
 	// (e.g., "10 0 R") while parsing some object, the indirect
 	// field (if it exists) is used as the reference rather than
 	// obtaining a new reference using newIndirectFromParse().
-	indirect *Indirect
+	indirect Indirect
 }
 
 type writeQueueEntry struct {
@@ -171,12 +171,12 @@ func OpenFile(filename string, mode int) (result *file,exists bool,err error) {
 }
 
 // Implements WriteObject() in File interface
-func (f *file) WriteObject(object Object) *Indirect {
+func (f *file) WriteObject(object Object) Indirect {
 	return NewIndirect(f).Write(object)
 }
 
 // Implements DeleteObject() in File interface
-func (f *file) DeleteObject(indirect *Indirect) {
+func (f *file) DeleteObject(indirect Indirect) {
 	objectNumber := indirect.ObjectNumber(f)
 	entry := (*f.xref.At(uint(objectNumber.number))).(*xrefEntry)
 	if objectNumber.generation != entry.generation {
@@ -197,11 +197,11 @@ func (f *file) DeleteObject(indirect *Indirect) {
 	f.dirty = true
 }
 
-// Indirect() returns an *Indirect that can be used to refer
+// Indirect() returns an Indirect that can be used to refer
 // to ObjectNumber in this file.  If an Indirect already
 // exists for this ObjectNumber, that Indirect is returned.
 // Otherwise a new one is created.
-func (f *file) Indirect(o ObjectNumber) *Indirect {
+func (f *file) Indirect(o ObjectNumber) Indirect {
 	// Indirect() is called during parsing of trailer when xref
 	// has not been finished constructed.  Explicitly verify that
 	// the xref entry exists and is not nil.  In that case, there
@@ -271,7 +271,7 @@ func (f *file) Object(o ObjectNumber) (object Object,err error) {
 }
 
 // Implements ReserveObjectNumber() in File interface
-func (f *file) ReserveObjectNumber(indirect* Indirect) ObjectNumber {
+func (f *file) ReserveObjectNumber(indirect Indirect) ObjectNumber {
 	var (
 		newNumber uint32
 		generation uint16
@@ -364,7 +364,7 @@ func ReadLine(r io.ByteScanner) (result string, err error) {
 
 func (f *file) dictionaryFromTrailer(name string) Dictionary {
 	if infoValue := f.trailerDictionary.Get(name); infoValue != nil {
-		indirect := infoValue.(*Indirect)
+		indirect := infoValue.(Indirect)
 		if direct,_ := f.Object(indirect.ObjectNumber(f)); direct != nil {
 			if info,ok := direct.(Dictionary); ok {
 				return info

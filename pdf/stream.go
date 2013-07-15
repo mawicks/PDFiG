@@ -14,14 +14,14 @@ type ReadOnlyStream interface {
 }
 
 // Implements:
-//	bufio.Writer
+//	io.Writer
 
 type Stream interface {
 	ReadOnlyStream
+	io.Writer
 	AddFilter(filter StreamFilterFactory)
 	Add(key string, o Object)
 	Remove(key string)
-	Write(bytes []byte) (int, error)
 }
 
 type stream struct {

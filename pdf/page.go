@@ -6,7 +6,7 @@ import ("errors"
 type Page struct {
 	fileList []File
 	contents Stream
-	parent *Indirect
+	parent Indirect
 
 	dictionary *PageDictionary
 	resources, fontResources Dictionary
@@ -16,7 +16,7 @@ type Page struct {
 
 // There is no constructor here.  Pages are created by a PageFactory.New().
 
-func (p *Page) Finish() *Indirect {
+func (p *Page) Finish() Indirect {
 	if (p.fontResources != nil) {
 		p.resources.Add("Font", p.fontResources)
 		p.fontResources = nil
@@ -58,11 +58,11 @@ func (p *Page) AddFont (font Font) string {
 	return name
 }
 
-func (p *Page) SetParent(i *Indirect) {
+func (p *Page) SetParent(i Indirect) {
 	p.dictionary.SetParent(i)
 }
 
-func (p *Page) setProcSet(i *Indirect) {
+func (p *Page) setProcSet(i Indirect) {
 	p.resources.Add("ProcSet", i)
 }
 

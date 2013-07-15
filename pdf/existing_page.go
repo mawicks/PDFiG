@@ -2,7 +2,7 @@ package pdf
 
 type ExistingPage struct {
 	*PageDictionary
-	reference *Indirect
+	reference Indirect
 }
 
 func (ep *ExistingPage) Rewrite() {
