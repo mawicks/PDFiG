@@ -21,7 +21,7 @@ func NewStreamFactory() *StreamFactory {
 	return new(StreamFactory)
 }
 
-func (sf *StreamFactory) New() *Stream {
+func (sf *StreamFactory) New() Stream {
 	newStream := NewStream()
 	if sf.filterList != nil {
 		for item:=sf.filterList.Front(); item != nil; item = item.Next() {

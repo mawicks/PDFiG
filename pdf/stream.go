@@ -7,9 +7,24 @@ import (
 
 // Implements:
 // 	pdf.Object
+
+type ReadOnlyStream interface {
+	Object
+	Reader() (result io.Reader)
+}
+
+// Implements:
 //	bufio.Writer
 
-type Stream struct {
+type Stream interface {
+	ReadOnlyStream
+	AddFilter(filter StreamFilterFactory)
+	Add(key string, o Object)
+	Remove(key string)
+	Write(bytes []byte) (int, error)
+}
+
+type stream struct {
 	dictionary Dictionary
 	buffer     bytes.Buffer
 	// filterList is only used for writing.  Streams are fully
@@ -21,23 +36,23 @@ type Stream struct {
 	filterList *list.List
 }
 
-// Constructor for Stream object
-func NewStream() *Stream {
-	return &Stream{NewDictionary(), bytes.Buffer{}, nil}
+// Constructor for standard implementation of Stream.
+func NewStream() Stream {
+	return &stream{NewDictionary(), bytes.Buffer{}, nil}
 }
 
-func NewStreamFromContents(dictionary Dictionary,b []byte, filterList *list.List) *Stream {
-	return &Stream{dictionary, *bytes.NewBuffer(b), filterList}
+func NewStreamFromContents(dictionary Dictionary,b []byte, filterList *list.List) Stream {
+	return &stream{dictionary, *bytes.NewBuffer(b), filterList}
 }
 
-func (s *Stream) AddFilter(filter StreamFilterFactory) {
+func (s *stream) AddFilter(filter StreamFilterFactory) {
 	if s.filterList == nil {
 		s.filterList = list.New()
 	}
 	s.filterList.PushBack(filter)
 }
 
-func (s *Stream) Clone() Object {
+func (s *stream) Clone() Object {
 	var newFilterList *list.List
 	if s.filterList != nil {
 		newFilterList = list.New()
@@ -48,15 +63,15 @@ func (s *Stream) Clone() Object {
 	return NewStreamFromContents(s.dictionary,s.buffer.Bytes(), newFilterList)
 }
 
-func (s *Stream) Dereference() Object {
+func (s *stream) Dereference() Object {
 	return s
 }
 
-func (s *Stream) Add(key string, o Object) {
+func (s *stream) Add(key string, o Object) {
 	s.dictionary.Add(key, o)
 }
 
-func (s *Stream) Reader() (result io.Reader) {
+func (s *stream) Reader() (result io.Reader) {
 	result = bytes.NewReader(s.buffer.Bytes())
 	if filters,ok := s.dictionary.GetArray("Filter"); ok {
 		parms,_ := s.dictionary.GetArray("DecodeParms")
@@ -84,15 +99,15 @@ func (s *Stream) Reader() (result io.Reader) {
 	return result
 }
 
-func (s *Stream) Remove(key string) {
+func (s *stream) Remove(key string) {
 	s.dictionary.Remove(key)
 }
 
-func (s *Stream) Write(bytes []byte) (int, error) {
+func (s *stream) Write(bytes []byte) (int, error) {
 	return s.buffer.Write(bytes)
 }
 
-func (s *Stream) Serialize(w Writer, file ...File) {
+func (s *stream) Serialize(w Writer, file ...File) {
 	streamBuffer := NewBufferCloser()
 	dictionary := s.dictionary.Clone().(Dictionary)
 

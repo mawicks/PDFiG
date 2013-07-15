@@ -47,7 +47,7 @@ func (pd *PageDictionary) Reader() io.Reader {
 					nr += 1
 				}
 				if streamReference,ok := pageStreamArray.At(i).(*Indirect); ok {
-					if stream,ok := streamReference.Dereference().(*Stream); ok {
+					if stream,ok := streamReference.Dereference().(Stream); ok {
 						readers[nr] = stream.Reader()
 					}
 				}

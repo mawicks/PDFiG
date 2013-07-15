@@ -49,7 +49,7 @@ type ReadOnlyDictionary interface {
 
 	// GetStream() attempts to retrieve the dictionary entry as a Stream,
 	// dereferencing as necessary.
-	GetStream(key string) (*Stream,bool)
+	GetStream(key string) (Stream,bool)
 
 	// GetString() attempts to retrieve the dictionary entry as a string,
 	// dereferencing as necessary.  The raw byte sequence is returned.
@@ -228,12 +228,12 @@ func (d *dictionary) GetString(key string) ([]byte,bool) {
 
 // GetStream() attempts to retrieve the dictionary entry as a Stream,
 // dereferencing as necessary.
-func (d *dictionary) GetStream(key string) (*Stream,bool) {
+func (d *dictionary) GetStream(key string) (Stream,bool) {
 	value := d.Get(key)
 	if value == nil {
 		return nil, false
 	}
-	if stream,ok := value.Dereference().(*Stream); ok {
+	if stream,ok := value.Dereference().(Stream); ok {
 		return stream,true
 	}
 	return nil, false

@@ -5,7 +5,7 @@ import ("errors"
 
 type Page struct {
 	fileList []File
-	contents *Stream
+	contents Stream
 	parent *Indirect
 
 	dictionary *PageDictionary
