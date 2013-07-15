@@ -11,16 +11,16 @@ type StreamFilterFactory interface {
 	DecodeParms(file... File) Object
 }
 
-var registeredFilterFactoryFactories map[string] func (*Dictionary) StreamFilterFactory
+var registeredFilterFactoryFactories map[string] func (ReadOnlyDictionary) StreamFilterFactory
 
-func RegisterFilterFactoryFactory(name string, sfff func (*Dictionary) StreamFilterFactory) {
+func RegisterFilterFactoryFactory(name string, sfff func (ReadOnlyDictionary) StreamFilterFactory) {
 	if registeredFilterFactoryFactories == nil {
-		registeredFilterFactoryFactories = make(map[string]func (*Dictionary) StreamFilterFactory, 5)
+		registeredFilterFactoryFactories = make(map[string]func (ReadOnlyDictionary) StreamFilterFactory, 5)
 	}
 	registeredFilterFactoryFactories[name] = sfff
 }
 
-func FilterFactory(name string, d *Dictionary) StreamFilterFactory {
+func FilterFactory(name string, d ReadOnlyDictionary) StreamFilterFactory {
 	if sfff,ok := registeredFilterFactoryFactories[name]; ok {
 		return sfff(d)
 	}

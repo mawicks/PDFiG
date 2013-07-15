@@ -1,7 +1,7 @@
 package pdf
 
 type DocumentInfo struct {
-	*Dictionary
+	Dictionary
 	dirty bool
 }
 

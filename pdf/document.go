@@ -44,7 +44,7 @@ type Document struct {
 	// the page boxes is set).  Both are initialized using a newly
 	// generated page tree if a new document is opened.  They are
 	// not nil.
-	pageTreeRoot *Dictionary
+	pageTreeRoot Dictionary
 	pageTreeRootIndirect *Indirect
 
 	// pageCount is initialized with the pre-existing page count.

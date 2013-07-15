@@ -48,30 +48,28 @@ a file.  A pdf.Indirect can be written before the direct object it
 references has been defined.  A pdf.Indirect obtains and reserves an
 object number whenever it is written to a file, whether or not the
 object being referenced has yet been specified.  Eventually, the
-Write() method must be called passing the object being referenced.
-At that moment, the object being referenced is written to all files to
+Write() method must be called passing the object being referenced.  At
+that moment, the object being referenced is written to all files to
 which the pdf.Indirect was written.  If the pdf.Indirect is
-subsequently added to additional files, the Write()ed object must
-also written to those files.  This, however, would require either
-retaining a reference in memory indefinitely (bad) or reading it from
-one of the files where it is known to exist (reading is not yet
-implemented; it must be read as opposed to just copied because any
-indirect references contained within it also need to be read and added
-to the file accordingly).  For the time being, we elect not to keep
-references in memory.  Until parsing is implemented, indirect objects
-may be explicitly bound to files either (1) by using ObjectNumber()
-prior to calling Write or (2) by calling pdf.File.AddObject().
-Serialize()ing a pdf.Indirect to a new file after calling Write()
-without an earlier call to Serialize() or ObjectNumber() will
-generate an error.  The complete list of files that will contain the
-refence must be known when Write() is called.
+subsequently added to additional files, the Write()ed object must also
+written to those files.  This, however, would require either retaining
+a reference in memory indefinitely (bad) or reading it from one of the
+files where it is known to exist (any indirect references contained
+within it also need to be read and added to the file accordingly).
+For the time being, we elect not to keep references in memory.
+Indirect objects may be explicitly bound to files either (1) by using
+ObjectNumber() prior to calling Write() or (2) by calling
+pdf.File.WriteObject().  Serialize()ing a pdf.Indirect to a new file
+after calling Write() without an earlier call to Serialize() or
+ObjectNumber() will generate an error.  The complete list of files
+that will contain the reference must be known when Write() is called.
 
 The call to ObjectNumber() is handled transparently and automatically
-for forward references.  The client need not call it explicitly.  A
+for forward references; the client need not call it explicitly.  A
 call to ObjectNumber() is required, however, for indirect objects that
-are backward references.  An alternative way to obtain a backward
-reference is using the return value from pdf.File.AddObject().  The
-reference returned by pdf.File.AddObject() is bound only to one file.
+are backward references.  An alternative way to obtain a reference is
+using the return value from pdf.File.WriteObject().  The reference
+returned by pdf.File.WriteObject() is bound only to one file.
 
 USE-CASE 2: A pdf.Indirect is created based on a finished direct
 object.  This is essentially the same as use-case 1.  An object is
@@ -79,25 +77,21 @@ constructed and Write() is called immediately.  Subsequent invocations
 of Serialize() on files where it doesn't already exist cause it to be
 added to that file.  As with USE-CASE 1, this requires either
 retaining a reference in memory indefinitely (bad) or reading from one
-of the files where it is known to exist (not yet implemented).  For
-the time being, we elect not to keep references in memory. Until
-parsing is implemented, so Serialize()ing a pdf.Indirect to a file
-after calling Write() is an error.
+of the files where it is known to exist.  For the time being, we elect
+not to keep references in memory.
 
 USE-CASE 3: A pdf.Indirect is constructed when a token of the form "10
 1 R" is read from file X.  The underlying direct object is unknown at
 that moment, but it exists in X.  Since the object exists statically
-in X, it is considered to have been finalized.  If the same object is
-Serialize()'ed to file Y, then it should immediately be added to file
-Y.  The objects contents are obtained from X.
+in X, it is considered to have been finalized.  If the same indirect
+object reference is Serialize()'ed to file Y, then the associated
+indirect object should be added to file Y.  The objects contents are
+obtained from X.
 
-POSSIBLE TEMPORARY BEHAVIOR: The referenced object is retained by the
-pdf.Indirect so that it can be "dereferenced" or written to additional
-files.  In future versions that are able to parse PDF files, the
-object may be discarded from memory once written and read back from
-disk if it is dererenced or written to another file.  Even better
-would be a weak-reference to the object, but weak references are not
-implemented in Go.
+Currently, objects are discarded from memory once written.  They are
+re-read and read back from from disk when dererenced or written to
+another file.  Even better would be a weak-reference to the object,
+but weak references are not implemented in Go.
 
 */
 

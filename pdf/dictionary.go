@@ -2,32 +2,106 @@ package pdf
 
 // Implements the pdf.Object interface
 
-type Dictionary struct {
+type ReadOnlyDictionary interface {
+	Object	// A Dictionary must implement the Object interface.
+
+	// Get() returns the object stored under the specified key.
+	Get(key string) Object
+
+	// GetArray() attempts to retrieve the dictionary entry as an Array,
+	// dereferencing as necessary.  The boolean returns value indicates
+	// whether the entry exists with the expected name and type.
+	GetArray(key string) (*Array, bool)
+
+	// GetBoolean() attempts to retrieve the dictionary entry as a Boolean
+	// dereferencing as necessary.  The boolean second return value indicates
+	// whether a boolean entry exists.  If so, the first return value is the
+	// value of the Boolean.
+	GetBoolean(key string) (bool,bool)
+
+	// GetDictionary() attempts to retrieve the dictionary entry as a
+	// Dictionary dereferencing as necessary.  The boolean returns value
+	// indicates whether the entry exists with the expected name and type.
+	GetDictionary(key string) (ReadOnlyDictionary,bool)
+
+	// GetIndirect() attempts to retrieve the dictionary entry as an
+	// Indirect object (no dereferencing is attempted).  The boolean
+	// return value indicates whether the entry exists with the expected
+	// name and type.
+	GetIndirect(key string) (*Indirect,bool)
+
+	// GetInt() attempts to retrieve the dictionary entry as an
+	// integer, dereferencing as necessary.  The boolean returns
+	// value indicates whether the entry exists with the expected
+	// name and type.
+	GetInt(key string) (int,bool)
+
+	// GetName() attempts to retrieve the dictionary entry as a Name,
+	// dereferencing as necessary.  The string value of the name is
+	// returned.  The boolean returns value indicates whether the entry
+	// exists with the expected name and type.
+	GetName(key string) (string,bool)
+
+	// GetReal() attempts to retrieve the dictionary entry as a real,
+	// dereferencing as necessary.  The boolean returns value indicates
+	// whether the entry exists with the expected name and type.
+	GetReal(key string) (float32,bool)
+
+	// GetStream() attempts to retrieve the dictionary entry as a Stream,
+	// dereferencing as necessary.
+	GetStream(key string) (*Stream,bool)
+
+	// GetString() attempts to retrieve the dictionary entry as a string,
+	// dereferencing as necessary.  The raw byte sequence is returned.
+	// The boolean return value indicates whether the entry exists with
+	// the expected name and type.
+	GetString(key string) ([]byte,bool)
+
+	// CheckNameValue() determines whether the value of associated with the
+	// is a name corresponding to the expected string (after applying
+	// name decoding).
+	CheckNameValue (key string, expected string, file... File) bool
+
+	// Size() returns the number of key-value pairs
+	Size() int
+}
+
+type Dictionary interface {
+	ReadOnlyDictionary
+	// Add() stores an object under the specified key.
+	Add(key string, object Object)
+	
+	// Remove() removes the key and value stored under the specified key.
+	Remove(key string)
+}
+
+type dictionary struct {
 	dictionary map[string]Object
 }
 
 // Constructor for Dictionary object
-func NewDictionary() *Dictionary {
-	return &Dictionary{make(map[string]Object, 16)}
+func NewDictionary() Dictionary {
+	return &dictionary{make(map[string]Object, 16)}
+	
 }
 
-func (d *Dictionary) Clone() Object {
-	newDictionary := NewDictionary()
+func (d *dictionary) Clone() Object {
+	newDictionary := NewDictionary().(*dictionary)
 	for key,value := range d.dictionary {
 		newDictionary.dictionary[key] = value.Clone()
 	}
 	return newDictionary
 }
 
-func (d *Dictionary) Dereference() Object {
+func (d *dictionary) Dereference() Object {
 	return d
 }
 
-func (d *Dictionary) Add(key string, o Object) {
+func (d *dictionary) Add(key string, o Object) {
 	d.dictionary[key] = o
 }
 
-func (d *Dictionary) Get(key string) Object {
+func (d *dictionary) Get(key string) Object {
 	return d.dictionary[key]
 }
 
@@ -37,7 +111,7 @@ func (d *Dictionary) Get(key string) Object {
 // GetArray() attempts to retrieve the dictionary entry as an Array,
 // dereferencing as necessary.  The boolean returns value indicates
 // whether the entry exists with the expected name and type.
-func (d *Dictionary) GetArray(key string) (*Array,bool) {
+func (d *dictionary) GetArray(key string) (*Array,bool) {
 	value := d.Get(key)
 	if value == nil {
 		return nil, false
@@ -48,10 +122,10 @@ func (d *Dictionary) GetArray(key string) (*Array,bool) {
 	return nil, false
 }
 
-// GetArray() attempts to retrieve the dictionary entry as Boolean
+// GetBoolean() attempts to retrieve the dictionary entry as Boolean
 // dereferencing as necessary.  The boolean returns value indicates
 // whether the entry exists with the expected name and type.
-func (d *Dictionary) GetBoolean(key string) (bool,bool) {
+func (d *dictionary) GetBoolean(key string) (bool,bool) {
 	value := d.Get(key)
 	if value == nil {
 		return false, false
@@ -65,25 +139,25 @@ func (d *Dictionary) GetBoolean(key string) (bool,bool) {
 	return false,false
 }
 
-// GetArray() attempts to retrieve the dictionary entry as a
+// GetDictionary() attempts to retrieve the dictionary entry as a
 // Dictionary dereferencing as necessary.  The boolean returns value
 // indicates whether the entry exists with the expected name and type.
-func (d *Dictionary) GetDictionary(key string) (*Dictionary,bool) {
+func (d *dictionary) GetDictionary(key string) (ReadOnlyDictionary,bool) {
 	value := d.Get(key)
 	if value == nil {
 		return nil, false
 	}
-	if dictionary,ok := value.Dereference().(*Dictionary); ok {
+	if dictionary,ok := value.Dereference().(*dictionary); ok {
 		return dictionary,true
 	}
 	return nil, false
 }
 
-// GetArray() attempts to retrieve the dictionary entry as a an
+// GetIndirect() attempts to retrieve the dictionary entry as a an
 // Indirect object (no dereferencing is attempted).  The boolean
 // returns value indicates whether the entry exists with the expected
 // name and type.
-func (d *Dictionary) GetIndirect(key string) (*Indirect,bool) {
+func (d *dictionary) GetIndirect(key string) (*Indirect,bool) {
 	value := d.Get(key)
 	if value == nil {
 		return nil, false
@@ -94,10 +168,10 @@ func (d *Dictionary) GetIndirect(key string) (*Indirect,bool) {
 	return nil, false
 }
 
-// GetArray() attempts to retrieve the dictionary entry as a integer,
+// GetInt() attempts to retrieve the dictionary entry as a integer,
 // dereferencing as necessary.  The boolean returns value indicates
 // whether the entry exists with the expected name and type.
-func (d *Dictionary) GetInt(key string) (int,bool) {
+func (d *dictionary) GetInt(key string) (int,bool) {
 	value := d.Get(key)
 	if value == nil {
 		return 0, false
@@ -108,11 +182,11 @@ func (d *Dictionary) GetInt(key string) (int,bool) {
 	return 0, false
 }
 
-// GetArray() attempts to retrieve the dictionary entry as a Name,
+// GetName() attempts to retrieve the dictionary entry as a Name,
 // dereferencing as necessary.  The string value of the name is
 // returned.  The boolean returns value indicates whether the entry
 // exists with the expected name and type.
-func (d *Dictionary) GetName(key string) (string,bool) {
+func (d *dictionary) GetName(key string) (string,bool) {
 	value := d.Get(key)
 	if value == nil {
 		return "", false
@@ -123,10 +197,10 @@ func (d *Dictionary) GetName(key string) (string,bool) {
 	return "", false
 }
 
-// GetArray() attempts to retrieve the dictionary entry as a real,
+// GetReal() attempts to retrieve the dictionary entry as a real,
 // dereferencing as necessary.  The boolean returns value indicates
 // whether the entry exists with the expected name and type.
-func (d *Dictionary) GetReal(key string) (float32,bool) {
+func (d *dictionary) GetReal(key string) (float32,bool) {
 	value := d.Get(key)
 	if value == nil {
 		return 0.0, false
@@ -137,11 +211,11 @@ func (d *Dictionary) GetReal(key string) (float32,bool) {
 	return 0, false
 }
 
-// GetArray() attempts to retrieve the dictionary entry as a string,
+// GetString() attempts to retrieve the dictionary entry as a string,
 // dereferencing as necessary.  The raw byte sequence is returned.
 // The boolean returns value indicates whether the entry exists with
 // the expected name and type.
-func (d *Dictionary) GetString(key string) ([]byte,bool) {
+func (d *dictionary) GetString(key string) ([]byte,bool) {
 	value := d.Get(key)
 	if value == nil {
 		return nil, false
@@ -152,9 +226,9 @@ func (d *Dictionary) GetString(key string) ([]byte,bool) {
 	return nil, false
 }
 
-// GetArray() attempts to retrieve the dictionary entry as a Stream,
+// GetStream() attempts to retrieve the dictionary entry as a Stream,
 // dereferencing as necessary.
-func (d *Dictionary) GetStream(key string) (*Stream,bool) {
+func (d *dictionary) GetStream(key string) (*Stream,bool) {
 	value := d.Get(key)
 	if value == nil {
 		return nil, false
@@ -165,12 +239,11 @@ func (d *Dictionary) GetStream(key string) (*Stream,bool) {
 	return nil, false
 }
 
-
-func (d *Dictionary) Remove(key string) {
+func (d *dictionary) Remove(key string) {
 	delete(d.dictionary, key)
 }
 
-func (d *Dictionary) Serialize(w Writer, file ...File) {
+func (d *dictionary) Serialize(w Writer, file ...File) {
 	w.WriteString("<<")
 	haveAny := false
 	for key, value := range d.dictionary {
@@ -186,11 +259,11 @@ func (d *Dictionary) Serialize(w Writer, file ...File) {
 }
 
 // Size() returns the number of key-value pairs
-func (d *Dictionary) Size() int {
+func (d *dictionary) Size() int {
 	return len(d.dictionary)
 }
 
-func (d *Dictionary) CheckNameValue (key string, expected string, file... File) bool {
+func (d *dictionary) CheckNameValue (key string, expected string, file... File) bool {
 	var rawValue Object
 
 	if rawValue = d.Get(key); rawValue == nil {

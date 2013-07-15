@@ -9,7 +9,7 @@ type Page struct {
 	parent *Indirect
 
 	dictionary *PageDictionary
-	resources, fontResources *Dictionary
+	resources, fontResources Dictionary
 
 	fontMap map[Font] string
 }

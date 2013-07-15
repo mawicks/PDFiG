@@ -42,22 +42,22 @@ type File interface {
 	// Info() returns a copy of the Info dictionary.  Caller may
 	// modify the copy and use SetInfo() to replace the file's
 	// info dictionary
-	Info() *Dictionary
+	Info() Dictionary
 
 	// Catalog() returns a copy of the Info dictionary.  Caller
 	// may modify the copy and use SetCatalog() to replace the
 	// file's info dictionary
-	Catalog() *Dictionary
+	Catalog() Dictionary
 
 	// SetCatalog() sets the catalog dictionary
-	SetCatalog(*Dictionary)
+	SetCatalog(Dictionary)
 
 	// SetInfo() sets the Info dictionary
 	SetInfo(DocumentInfo)
 
 	// Trailer() returns a copy of the current contents of the
 	// trailer dictionary
-	Trailer() *Dictionary
+	Trailer() Dictionary
 
 	// DeleteObject() deletes the specified object from the file.
 	// It must be an indirect object.

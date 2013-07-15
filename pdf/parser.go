@@ -304,8 +304,8 @@ func (p *Parser) scanArray (file... File) *Array {
 	return array
 }
 
-func (p *Parser) scanDictionary(file... File) *Dictionary {
-	var d *Dictionary = NewDictionary()
+func (p *Parser) scanDictionary(file... File) Dictionary {
+	var d Dictionary = NewDictionary()
 
 	b,err := nextNonWhiteByte(p.scanner)
 	for ; err == nil && b != '>'; b,err=p.scanner.ReadByte() {

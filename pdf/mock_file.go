@@ -51,21 +51,21 @@ func (f *mockFile) ReserveObjectNumber(*Indirect) ObjectNumber {
 	return result
 }
 
-func (f *mockFile) SetCatalog(i *Dictionary) {
+func (f *mockFile) SetCatalog(i Dictionary) {
 }
 
 func (f *mockFile) SetInfo(i DocumentInfo) {
 }
 
-func (f *mockFile) Info() *Dictionary {
+func (f *mockFile) Info() Dictionary {
 	return nil
 }
 
-func (f *mockFile) Catalog() *Dictionary {
+func (f *mockFile) Catalog() Dictionary {
 	return nil
 }
 
-func (f *mockFile) Trailer() *Dictionary {
+func (f *mockFile) Trailer() Dictionary {
 	return nil
 }
 

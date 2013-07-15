@@ -13,7 +13,7 @@ const ( flateDecoderName = "FlateDecode" )
 
 func init () {
 	RegisterFilterFactoryFactory(flateDecoderName,
-		func(*Dictionary) StreamFilterFactory { return new(FlateFilter) })
+		func(ReadOnlyDictionary) StreamFilterFactory { return new(FlateFilter) })
 }
 
 func (filter *FlateFilter) Name() string {

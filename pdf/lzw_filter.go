@@ -12,7 +12,7 @@ const ( lzwDecoderName = "LZWDecode" )
 
 func init () {
 	RegisterFilterFactoryFactory(lzwDecoderName,
-		func(d *Dictionary) StreamFilterFactory {
+		func(d ReadOnlyDictionary) StreamFilterFactory {
 			if d != nil {
 				if v,ok := d.GetInt("EarlyChange"); ok && v == 0 {
 					return new(LZWFilter) }

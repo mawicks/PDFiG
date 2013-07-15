@@ -10,7 +10,7 @@ import (
 //	bufio.Writer
 
 type Stream struct {
-	dictionary *Dictionary
+	dictionary Dictionary
 	buffer     bytes.Buffer
 	// filterList is only used for writing.  Streams are fully
 	// decoded when read and the in-memory stream contents are no
@@ -26,7 +26,7 @@ func NewStream() *Stream {
 	return &Stream{NewDictionary(), bytes.Buffer{}, nil}
 }
 
-func NewStreamFromContents(dictionary *Dictionary,b []byte, filterList *list.List) *Stream {
+func NewStreamFromContents(dictionary Dictionary,b []byte, filterList *list.List) *Stream {
 	return &Stream{dictionary, *bytes.NewBuffer(b), filterList}
 }
 
@@ -62,9 +62,9 @@ func (s *Stream) Reader() (result io.Reader) {
 		parms,_ := s.dictionary.GetArray("DecodeParms")
 		for i:=0; i<filters.Size(); i++ {
 			if n,ok := filters.At(i).(*Name); ok {
-				var d *Dictionary
+				var d Dictionary
 				if parms != nil && i < parms.Size() {
-					d,_ = parms.At(i).(*Dictionary)
+					d,_ = parms.At(i).(Dictionary)
 				}
 				if sff := FilterFactory(n.String(),d); sff != nil {
 					result = sff.NewDecoder(result)
@@ -94,7 +94,7 @@ func (s *Stream) Write(bytes []byte) (int, error) {
 
 func (s *Stream) Serialize(w Writer, file ...File) {
 	streamBuffer := NewBufferCloser()
-	dictionary := s.dictionary.Clone().(*Dictionary)
+	dictionary := s.dictionary.Clone().(Dictionary)
 
 	var streamWriter io.WriteCloser = streamBuffer
 

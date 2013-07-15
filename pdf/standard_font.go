@@ -41,7 +41,7 @@ func StandardFontToName (font StandardFont)  (result string) {
 
 type standardFont struct {
 	fileBindings map[File]*Indirect
-	dictionary *Dictionary
+	dictionary Dictionary
 }
 
 func NewStandardFont(font StandardFont) Font {

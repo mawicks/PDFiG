@@ -87,7 +87,7 @@ type file struct {
 	// trailerDictionary is never nil
 	// It is initialized from a pre-existing trailer
 	// or is initialized to an empty dictionary
-	trailerDictionary *Dictionary
+	trailerDictionary Dictionary
 
 	// "dirty" is true iff this PDF file requires an update (new
 	// xref, new trailer, etc.) when it is closed.
@@ -171,9 +171,8 @@ func OpenFile(filename string, mode int) (result *file,exists bool,err error) {
 }
 
 // Implements WriteObject() in File interface
-func (f *file) WriteObject(object Object) (reference *Indirect) {
-	returnValue := NewIndirect(f).Write(object)
-	return returnValue
+func (f *file) WriteObject(object Object) *Indirect {
+	return NewIndirect(f).Write(object)
 }
 
 // Implements DeleteObject() in File interface
@@ -363,11 +362,11 @@ func ReadLine(r io.ByteScanner) (result string, err error) {
 }
 
 
-func (f *file) dictionaryFromTrailer(name string) *Dictionary {
+func (f *file) dictionaryFromTrailer(name string) Dictionary {
 	if infoValue := f.trailerDictionary.Get(name); infoValue != nil {
 		indirect := infoValue.(*Indirect)
 		if direct,_ := f.Object(indirect.ObjectNumber(f)); direct != nil {
-			if info,ok := direct.(*Dictionary); ok {
+			if info,ok := direct.(Dictionary); ok {
 				return info
 			}
 		}
@@ -375,24 +374,24 @@ func (f *file) dictionaryFromTrailer(name string) *Dictionary {
 	return nil
 }
 
-func (f *file) dictionaryToTrailer(name string, d *Dictionary) {
+func (f *file) dictionaryToTrailer(name string, d Dictionary) {
 	f.trailerDictionary.Add(name,NewIndirect(f).Write(d))
 }
 
 // Catalog() returns the current document catalog or nil if one doesn't
 // exist (either from a pre-existing file or from file.SetCatalog())
-func (f *file) Catalog() *Dictionary {
+func (f *file) Catalog() Dictionary {
 	return f.dictionaryFromTrailer("Root")
 }
 
-func (f *file) SetCatalog(catalog *Dictionary) {
+func (f *file) SetCatalog(catalog Dictionary) {
 	f.dictionaryToTrailer("Root",catalog)
 }
 
 // Info() returns the current document info dictionary or nil if one
 // doesn't exist (either from a pre-existing file or from
 // file.SetInfo())
-func (f *file) Info() *Dictionary {
+func (f *file) Info() Dictionary {
 	return f.dictionaryFromTrailer("Info")
 }
 
@@ -401,9 +400,9 @@ func (f *file) SetInfo(info DocumentInfo) {
 }
 
 // Trailer() returns the current trailer, which is never nil
-func (f *file) Trailer() *Dictionary {
+func (f *file) Trailer() Dictionary {
 	// Return a clone so nobody can alter the real dictionary
-	return f.trailerDictionary.Clone().(*Dictionary)
+	return f.trailerDictionary.Clone().(Dictionary)
 }
 
 // Using pdf.file.Seek() rather than calling pdf.file.file.Seek()
@@ -478,7 +477,7 @@ func readXrefSubsection(xref containers.Array, r *bufio.Reader, start, count uin
 	}
 }
 
-func readTrailer(subsectionHeader string, r *bufio.Reader, f *file) (*Dictionary,error) {
+func readTrailer(subsectionHeader string, r *bufio.Reader, f *file) (Dictionary,error) {
 	var err error
 	tries := 0
 	const maxTries = 4
@@ -493,7 +492,7 @@ func readTrailer(subsectionHeader string, r *bufio.Reader, f *file) (*Dictionary
 				err.Error(), AsciiFromBytes(parser.GetContext()))
 			return nil, errors.New(errmsg)
 		}
-		trailer,ok := object.(*Dictionary)
+		trailer,ok := object.(Dictionary)
 		if !ok {
 			return nil, errors.New(`Object in trailer position isn't a dictionary.`)
 		}
@@ -502,7 +501,7 @@ func readTrailer(subsectionHeader string, r *bufio.Reader, f *file) (*Dictionary
 	return nil,err
 }
 
-func readOneXrefSection (f *file, location int64) (prevXref int, trailer *Dictionary) {
+func readOneXrefSection (f *file, location int64) (prevXref int, trailer Dictionary) {
 
 	if _,err := f.file.Seek (location, os.SEEK_SET); err != nil {
 		panic ("Seeking to xref position failed")

@@ -9,7 +9,7 @@ import (
 // A PageDictionary wraps a Dictionary to simplify access and to limit
 // the operations to those that are valid for a page dictionary.
 type PageDictionary struct {
-	dictionary *Dictionary
+	dictionary Dictionary
 	hasParent bool
 }
 
@@ -19,8 +19,8 @@ func NewPageDictionary() *PageDictionary {
 	return &PageDictionary{pd,false}
 }
 
-func (pd *PageDictionary) CloneDictionary() *Dictionary {
-	dictionary,_ := pd.dictionary.Clone().(*Dictionary)
+func (pd *PageDictionary) CloneDictionary() Dictionary {
+	dictionary,_ := pd.dictionary.Clone().(Dictionary)
 	return dictionary
 }
 
