@@ -8,13 +8,22 @@ import "unicode/utf16"
 // PDF "String" object
 // Implements:
 //	pdf.Object
-type String struct {
+
+type String interface {
+	Object
+	Bytes() []byte
+	SetNormalOutput()
+	SetHexOutput()
+	SetAsciiOutput()
+}
+
+type string_impl struct {
 	value      []byte
-	serializer func(t *String, w Writer)
+	serializer func(t *string_impl, w Writer)
 }
 
 // Constructor for Name object
-func NewTextString(s string) *String {
+func NewTextString(s string) String {
 	// If PDFDocEncoding works, use that
 	result,ok := PDFDocEncoding ([]rune(s))
 	// Otherwise use UTF16-BE
@@ -26,27 +35,27 @@ func NewTextString(s string) *String {
 			result = append(result, byte(w>>8), byte(w&0xff))
 		}
 	}
-	return &String{result, normalSerializer}
+	return &string_impl{result, normalSerializer}
 }
 
-func NewBinaryString(s []byte) *String {
-	return &String{s, normalSerializer}
+func NewBinaryString(s []byte) String {
+	return &string_impl{s, normalSerializer}
 }
 
-func (s *String) Bytes() (result []byte) {
+func (s *string_impl) Bytes() (result []byte) {
 	return s.value
 }
 
-func (s *String) Clone() Object {
+func (s *string_impl) Clone() Object {
 	newString := *s
 	return &newString
 }
 
-func (s *String) Dereference() Object {
+func (s *string_impl) Dereference() Object {
 	return s
 }
 
-func (s *String) Serialize(w Writer, file ...File) {
+func (s *string_impl) Serialize(w Writer, file ...File) {
 	s.serializer(s, w)
 }
 
@@ -60,7 +69,7 @@ func stringMinimalEscapeByte(b byte) (result []byte) {
 	return result
 }
 
-func normalSerializer(s *String, w Writer) {
+func normalSerializer(s *string_impl, w Writer) {
 	w.WriteByte('(')
 	for _, b := range s.value {
 		w.Write(stringMinimalEscapeByte(b))
@@ -129,7 +138,7 @@ func GeneralAsciiEscapeByte(b byte) (result []byte) {
 	return result
 }
 
-func asciiSerializer(s *String, w Writer) {
+func asciiSerializer(s *string_impl, w Writer) {
 	w.WriteByte('(')
 	for _, b := range []byte(s.value) {
 		w.Write(stringAsciiEscapeByte(b))
@@ -138,7 +147,7 @@ func asciiSerializer(s *String, w Writer) {
 	return
 }
 
-func hexSerializer(s *String, w Writer) {
+func hexSerializer(s *string_impl, w Writer) {
 	w.WriteByte('<')
 	for _, b := range []byte(s.value) {
 		w.WriteByte(HexDigit(b / 16))
@@ -147,14 +156,32 @@ func hexSerializer(s *String, w Writer) {
 	w.WriteByte('>')
 }
 
-func (s *String) SetNormalOutput() {
+func (s *string_impl) SetNormalOutput() {
 	s.serializer = normalSerializer
 }
 
-func (s *String) SetHexOutput() {
+func (s *string_impl) SetHexOutput() {
 	s.serializer = hexSerializer
 }
 
-func (s *String) SetAsciiOutput() {
+func (s *string_impl) SetAsciiOutput() {
 	s.serializer = asciiSerializer
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

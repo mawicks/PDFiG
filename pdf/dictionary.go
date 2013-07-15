@@ -220,7 +220,7 @@ func (d *dictionary) GetString(key string) ([]byte,bool) {
 	if value == nil {
 		return nil, false
 	}
-	if stringObject,ok := value.Dereference().(*String); ok {
+	if stringObject,ok := value.Dereference().(String); ok {
 		return stringObject.Bytes(),true
 	}
 	return nil, false

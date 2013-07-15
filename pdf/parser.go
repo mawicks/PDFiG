@@ -247,7 +247,7 @@ func scanEscape (scanner Scanner) (b byte) {
 	return
 }
 
-func scanNormalString (scanner Scanner) *String {
+func scanNormalString (scanner Scanner) String {
 	var openCount = 0
 	var buffer[]byte = make([]byte, 0, 128)
 	b,err :=scanner.ReadByte()
@@ -272,7 +272,7 @@ func scanNormalString (scanner Scanner) *String {
 	return NewBinaryString(buffer)
 }
 
-func scanHexString (scanner Scanner,b byte) *String {
+func scanHexString (scanner Scanner,b byte) String {
 	var buffer[]byte = make([]byte, 0, 128)
 	var err error
 	for ; err == nil && b != '>'; b,err=scanner.ReadByte() {
