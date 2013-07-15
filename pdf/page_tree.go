@@ -53,7 +53,7 @@ func copyDictionaryEntries(dst, src Dictionary, list []string) {
 // match the one in the file.
 func pageFromTree (node Dictionary, n uint) *ExistingPage {
 	var (
-		kids *Array
+		kids Array
 		ok bool )
 
 	if kids,ok = node.GetArray("Kids"); !ok {

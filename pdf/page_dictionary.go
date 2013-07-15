@@ -67,7 +67,7 @@ func (pd *PageDictionary) Reader() io.Reader {
 // If the dictionary's Contents field is not an array, make it one.
 // The dictionary's Contents field should be either an array or an
 // indirect object.
-func (pd *PageDictionary) ensureContentsIsArray() *Array {
+func (pd *PageDictionary) ensureContentsIsArray() Array {
 
 	if pageContentsArray,ok := pd.dictionary.GetArray("Contents"); ok {
 		return pageContentsArray

@@ -2,17 +2,30 @@ package pdf
 
 import "github.com/mawicks/PDFiG/containers"
 
-type Array struct {
+type ReadOnlyArray interface {
+	Object
+	Size() int
+	At(i int) Object
+}
+
+type Array interface {
+	ReadOnlyArray
+	Add(o Object)
+	PushFront(o Object)
+	Append(op Array)
+}
+
+type array struct {
 	array containers.ArrayStack
 }
 
-// Constructor for Name object
-func NewArray() *Array {
-	return &Array{containers.StackArrayDecorator{containers.NewDynamicArray(4)}}
+// Constructor for standard implementation of Array
+func NewArray() Array {
+	return &array{containers.StackArrayDecorator{containers.NewDynamicArray(4)}}
 }
 
-func (a *Array) Clone() Object {
-	newArray := NewArray()
+func (a *array) Clone() Object {
+	newArray := NewArray().(*array)
 	size := a.Size()
 	for i := 0; i<size; i++ {
 		o := a.At(i)
@@ -21,33 +34,33 @@ func (a *Array) Clone() Object {
 	return newArray
 }
 
-func (a *Array) Dereference() Object {
+func (a *array) Dereference() Object {
 	return a
 }
 
-func (a *Array) Add(o Object) {
+func (a *array) Add(o Object) {
 	a.array.PushBack(o)
 }
 
-func (a *Array) PushFront(o Object) {
+func (a *array) PushFront(o Object) {
 	a.array.PushFront(o)
 }
 
-func (a *Array) Append(op *Array) {
+func (a *array) Append(op Array) {
 	for i:=0; i<op.Size(); i++ {
 		a.Add(op.At(i))
 	}
 }
 
-func (a *Array) Size() int {
+func (a *array) Size() int {
 	return int(a.array.Size())
 }
 
-func (a *Array) At(i int) Object {
+func (a *array) At(i int) Object {
 	return (*a.array.At(uint(i))).(Object)
 }
 
-func (a *Array) Serialize(w Writer, file ...File) {
+func (a *array) Serialize(w Writer, file ...File) {
 	w.WriteByte('[')
 	size := a.Size()
 	for i := 0; i < size; i++ {

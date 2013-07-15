@@ -11,7 +11,7 @@ type ReadOnlyDictionary interface {
 	// GetArray() attempts to retrieve the dictionary entry as an Array,
 	// dereferencing as necessary.  The boolean returns value indicates
 	// whether the entry exists with the expected name and type.
-	GetArray(key string) (*Array, bool)
+	GetArray(key string) (Array, bool)
 
 	// GetBoolean() attempts to retrieve the dictionary entry as a Boolean
 	// dereferencing as necessary.  The boolean second return value indicates
@@ -111,12 +111,12 @@ func (d *dictionary) Get(key string) Object {
 // GetArray() attempts to retrieve the dictionary entry as an Array,
 // dereferencing as necessary.  The boolean returns value indicates
 // whether the entry exists with the expected name and type.
-func (d *dictionary) GetArray(key string) (*Array,bool) {
+func (d *dictionary) GetArray(key string) (Array,bool) {
 	value := d.Get(key)
 	if value == nil {
 		return nil, false
 	}
-	if array,ok := value.Dereference().(*Array); ok {
+	if array,ok := value.Dereference().(Array); ok {
 		return array,true
 	}
 	return nil, false

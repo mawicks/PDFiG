@@ -26,7 +26,7 @@ type Document struct {
 	// the pages array.  Other elements in the pages array are
 	// Indirect references to a Page dictionary returned by
 	// page.Close() on a page obtained with NewPage()
-	pages *Array
+	pages Array
 
 	// procSetIndirect is nil if there are no new pages.
 	procSetIndirect *Indirect

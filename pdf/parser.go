@@ -289,8 +289,8 @@ func scanHexString (scanner Scanner,b byte) *String {
 	return NewBinaryString(buffer)
 }
 
-func (p *Parser) scanArray (file... File) *Array {
-	var array *Array = NewArray()
+func (p *Parser) scanArray (file... File) Array {
+	var array Array = NewArray()
 
 	b,err := nextNonWhiteByte(p.scanner)
 	for ; p.queuedObject != nil || (err == nil && b != ']'); b,err=p.scanner.ReadByte() {
