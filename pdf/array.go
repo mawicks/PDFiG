@@ -5,17 +5,13 @@ import "github.com/mawicks/PDFiG/containers"
 type ProtectedArray interface {
 	Object
 	Size() int
-	// The object returned by At() is protected if and only if 
-	// array is protected.  In other words, an object
-	// retrieved from an unprotected array is guaranteed not
-	// to be protected.
 	At(i int) Object
 }
 
 type Array interface {
 	ProtectedArray
 	// Note that all objects added via Add(), PushFront(), or
-	// Append() are Unprotected() before adding them so that owners
+	// Append() are Unprotect() before adding them so that owners
 	// of the Array also own objects within it.
 	Add(o Object)
 	PushFront(o Object)
@@ -36,49 +32,49 @@ func (a *array) Clone() Object {
 	newArray := NewArray().(*array)
 	size := a.Size()
 	for i := 0; i<size; i++ {
-		o := a.At(i)
-		newArray.array.PushBack(o.Clone())
+		newArray.array.PushBack(a.At(i).Clone())
 	}
 	return newArray
 }
 
-// Return value of Clone() can safely be cast to Array.
+// Return value of Dereference can safely be cast to Array.
 func (a *array) Dereference() Object {
 	return a
 }
 
-// Return value of Protected() can safely be cast to ProtectedArray but not to
-// Array.
-func (a *array) Protected() Object {
+// Return value of Protect() can safely be cast to ProtectedArray but
+// not to Array.
+func (a *array) Protect() Object {
 	return protectedArray{a}
 }
 
-// Return value of Unprotected() can safely be cast to ProtectedArray
-// or Array.
-func (a *array) Unprotected() Object {
+// Return value of Unprotect() can safely be cast to Array.
+func (a *array) Unprotect() Object {
 	return a
-}
-
-func (a *array) Add(o Object) {
-	a.array.PushBack(o.Unprotected())
-}
-
-func (a *array) PushFront(o Object) {
-	a.array.PushFront(o.Unprotected())
-}
-
-func (a *array) Append(op ProtectedArray) {
-	for i:=0; i<op.Size(); i++ {
-		a.Add(op.At(i).Unprotected())
-	}
 }
 
 func (a *array) Size() int {
 	return int(a.array.Size())
 }
 
+// The reference returned by At() retains the protection of the object
+// being referenced.
 func (a *array) At(i int) Object {
 	return (*a.array.At(uint(i))).(Object)
+}
+
+func (a *array) Add(o Object) {
+	a.array.PushBack(o.Unprotect())
+}
+
+func (a *array) PushFront(o Object) {
+	a.array.PushFront(o.Unprotect())
+}
+
+func (a *array) Append(op ProtectedArray) {
+	for i:=0; i<op.Size(); i++ {
+		a.Add(op.At(i).Unprotect())
+	}
 }
 
 func (a *array) Serialize(w Writer, file ...File) {
@@ -94,59 +90,47 @@ func (a *array) Serialize(w Writer, file ...File) {
 	w.WriteByte(']')
 }
 
-
 type protectedArray struct {
 	a Array
 }
 
-// Return value of Clone() can safely be cast to ProtectedArray.
-func (roa protectedArray) Clone() Object {
-	return roa
+// Return value of Clone() can safely be cast to Array
+func (pa protectedArray) Clone() Object {
+	return pa.a.Clone()
 }
 
 // Return value of Dereferene() can safely be cast to ProtectedArray.
-func (roa protectedArray) Dereference() Object {
-	return roa
+func (pa protectedArray) Dereference() Object {
+	return pa
 }
 
-// Return value of Protected() can safely be cast to ProtectedArray.
-func (roa protectedArray) Protected() Object {
-	return roa
+// Return value of Protect() can safely be cast to ProtectedArray.
+func (pa protectedArray) Protect() Object {
+	return pa
 }
 
-// Return value of Protected() can safely be cast to ProtectedArray.
-func (roa protectedArray) Unprotected() Object {
-	return roa.a.Clone()
+// Return value of Unprotect() can safely be cast to Array.
+func (pa protectedArray) Unprotect() Object {
+	newArray := NewArray().(*array)
+	size := pa.a.Size()
+	for i := 0; i<size; i++ {
+		// Note that pa.At(i) is protected, so contained
+		// objects remain protected.
+		newArray.array.PushBack(pa.At(i))
+	}
+	return newArray
 }
 
-func (roa protectedArray) Size() int {
-	return roa.a.Size()
+func (pa protectedArray) Size() int {
+	return pa.a.Size()
 }
 
-func (roa protectedArray) At(i int) Object {
-	return roa.a.At(i).Protected()
+// Returned value of At() is always the protected version of the
+// object's interface.
+func (pa protectedArray) At(i int) Object {
+	return pa.a.At(i).Protect()
 }
 
-func (roa protectedArray) Serialize(w Writer, file ...File) {
-	roa.a.Serialize(w, file...)
+func (pa protectedArray) Serialize(w Writer, file ...File) {
+	pa.a.Serialize(w, file...)
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

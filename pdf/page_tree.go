@@ -25,13 +25,13 @@ func existingPageTree(file File) *pageTree {
 		panic (errors.New(`/Pages entry missing or is not an indirect reference`))
 	}
 
-	pageTreeRootReference = i.Unprotected().(Indirect)
+	pageTreeRootReference = i.Unprotect().(Indirect)
 
 	if d = catalog.GetDictionary("Pages"); d == nil {
 		panic (errors.New(`Missing or invalid Page tree root dictionary`))
 	}
 
-	pageTreeRoot = d.Unprotected().(Dictionary)
+	pageTreeRoot = d.Unprotect().(Dictionary)
 
 	if pageCount,ok = pageTreeRoot.GetInt("Count"); !ok {
 		panic (errors.New(`/Count value is not an integer`))

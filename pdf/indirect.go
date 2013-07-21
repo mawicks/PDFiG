@@ -149,11 +149,11 @@ func (i *indirect) Dereference() Object {
 	return object.Dereference()
 }
 
-func (i *indirect) Protected() Object {
+func (i *indirect) Protect() Object {
 	return protectedIndirect{i}
 }
 
-func (i *indirect) Unprotected() Object {
+func (i *indirect) Unprotect() Object {
 	return i
 }
 
@@ -254,11 +254,11 @@ func (roi protectedIndirect) Serialize(w Writer, file... File) {
 	roi.i.Serialize(w, file...)
 }
 
-func (roi protectedIndirect) Protected() Object {
+func (roi protectedIndirect) Protect() Object {
 	return roi
 }
 
-func (roi protectedIndirect) Unprotected() Object {
+func (roi protectedIndirect) Unprotect() Object {
 	return roi.i.Clone()
 }
 

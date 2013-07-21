@@ -30,11 +30,11 @@ func (b TrueBoolean) Dereference() Object {
 	return b
 }
 
-func (b TrueBoolean) Protected() Object {
+func (b TrueBoolean) Protect() Object {
 	return b
 }
 
-func (b TrueBoolean) Unprotected() Object {
+func (b TrueBoolean) Unprotect() Object {
 	return b
 }
 
@@ -52,11 +52,11 @@ func (b FalseBoolean) Dereference() Object {
 	return b
 }
 
-func (b FalseBoolean) Protected() Object {
+func (b FalseBoolean) Protect() Object {
 	return b
 }
 
-func (b FalseBoolean) Unprotected() Object {
+func (b FalseBoolean) Unprotect() Object {
 	return b
 }
 

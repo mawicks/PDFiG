@@ -403,7 +403,7 @@ func (f *file) SetInfo(info DocumentInfo) {
 func (f *file) Trailer() ProtectedDictionary {
 	// Return a protected interface so nobody can alter the real
 	// dictionary
-	return f.trailerDictionary.Protected().(ProtectedDictionary)
+	return f.trailerDictionary.Protect().(ProtectedDictionary)
 }
 
 // Using pdf.file.Seek() rather than calling pdf.file.file.Seek()

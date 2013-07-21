@@ -66,13 +66,13 @@ func (s *stream) Dereference() Object {
 	return s
 }
 
-// Return value of Protected can safely be cast to ProtectedStream.
-func (s *stream) Protected() Object {
+// Return value of Protect can safely be cast to ProtectedStream.
+func (s *stream) Protect() Object {
 	return protectedStream{s}
 }
 
-// Return value of Protected can safely be cast to Stream or ProtectedStream.
-func (s *stream) Unprotected() Object {
+// Return value of Protect can safely be cast to Stream
+func (s *stream) Unprotect() Object {
 	return s
 }
 
@@ -184,36 +184,36 @@ type protectedStream struct {
 }
 
 // Return value of Clone() can safely be cast to ProtectedStream.
-func (ros protectedStream) Clone() Object {
-	return ros
+func (ps protectedStream) Clone() Object {
+	return ps
 }
 
 // Return value of Dereference() can safely be cast to ProtectedStream.
-func (ros protectedStream) Dereference() Object {
-	return ros
+func (ps protectedStream) Dereference() Object {
+	return ps
 }
 
-// Return value of Protected() can safely be cast to ProtectedStream.
-func (ros protectedStream) Protected() Object {
-	return ros
+// Return value of Protect() can safely be cast to ProtectedStream.
+func (ps protectedStream) Protect() Object {
+	return ps
 }
 
-// Return value of Unprotected() can safely be cast to Stream or
+// Return value of Unprotect() can safely be cast to Stream or
 // ProtectedStream.
-func (ros protectedStream) Unprotected() Object {
-	return ros.s.Clone()
+func (ps protectedStream) Unprotect() Object {
+	return ps.s.Clone()
 }
 
-func (ros protectedStream) Reader() io.Reader {
-	return ros.s.Reader()
+func (ps protectedStream) Reader() io.Reader {
+	return ps.s.Reader()
 }
 
-func (ros protectedStream) Serialize(w Writer, file ...File) {
-	ros.s.Serialize(w, file...)
+func (ps protectedStream) Serialize(w Writer, file ...File) {
+	ps.s.Serialize(w, file...)
 }
 
-func (ros protectedStream) Write(bytes []byte) (int,error) {
-	return ros.s.Write(bytes)
+func (ps protectedStream) Write(bytes []byte) (int,error) {
+	return ps.s.Write(bytes)
 }
 
 

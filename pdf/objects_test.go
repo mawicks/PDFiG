@@ -35,17 +35,17 @@ func checkObjectBasic(t *testing.T, descr string, o pdf.Object, file pdf.File, e
 func checkObject(t *testing.T, descr string, o pdf.Object, file pdf.File, expect... string) {
 	checkObjectBasic(t, descr, o, file, expect...)
 
-	// Make sure that Clone(), Dereference(), Protected(), and Unprotected() can be called without
+	// Make sure that Clone(), Dereference(), Protect(), and Unprotect() can be called without
 	// errors and without changing the serialization.
 	checkObjectBasic(t, descr + " (Clone())", o.Clone(), file, expect...)
 	checkObjectBasic(t, descr + " (Dereference())", o.Dereference(), file, expect...)
-	checkObjectBasic(t, descr + " (Protected())", o.Protected(), file, expect...)
-	checkObjectBasic(t, descr + " (Unprotected())", o.Unprotected(), file, expect...)
-	// Make sure that Unprotected() can be called on objects with
+	checkObjectBasic(t, descr + " (Protect())", o.Protect(), file, expect...)
+	checkObjectBasic(t, descr + " (Unprotect())", o.Unprotect(), file, expect...)
+	// Make sure that Unprotect() can be called on objects with
 	// protected wrappers without changing the serialization, and
 	// vice-versa.
-	checkObjectBasic(t, descr + " (Protected() & Unprotected())", o.Protected().Unprotected(), file, expect...)
-	checkObjectBasic(t, descr + " (Unprotected()& Protected())", o.Unprotected().Protected(), file, expect...)
+	checkObjectBasic(t, descr + " (Protect() & Unprotect())", o.Protect().Unprotect(), file, expect...)
+	checkObjectBasic(t, descr + " (Unprotect()& Protect())", o.Unprotect().Protect(), file, expect...)
 }
 
 // Make sure ObjectStringDecorator delegates the Serialize method
@@ -147,9 +147,9 @@ func TestArray(t *testing.T) {
 
 	// Make sure that clone() produces a copy unaffected by future operations on a.
 	c := a.Clone()
-	pa := a.Protected().(pdf.ProtectedArray)
+	pa := a.Protect().(pdf.ProtectedArray)
 	if _,ok := pa.(pdf.Array); ok {
-		t.Error ("Protected array can be cast back to Array")
+		t.Error ("Protect array can be cast back to Array")
 	}
 
 	// Make sure that additions to nested arrays are reflected in enclosing array
@@ -171,8 +171,8 @@ func TestArray(t *testing.T) {
 	checkObject(t, "Append to Array", a, nil, "[1 [2 3 4] 1 [2]]")
 	checkObject(t, "Append to Array", pa, nil, "[1 [2 3 4] 1 [2]]")
 
-	// Check that Unprotected() protected arrays can be modified.
-	upa := pa.Unprotected().(pdf.Array)
+	// Check that Unprotect() protected arrays can be modified.
+	upa := pa.Unprotect().(pdf.Array)
 	upa.Add(pdf.NewNumeric(5))
 	checkObject(t, "Add to unprotected Array", upa, nil, "[1 [2 3 4] 1 [2] 5]")
 
@@ -195,10 +195,22 @@ func TestArray(t *testing.T) {
 func TestDictionaryGetters (t *testing.T) {
 	d := pdf.NewDictionary()
 
+	// Verify that GetArray() works
+	d.Add("a", pdf.NewArray())
+	if a := d.GetArray("a"); a == nil || toString(a) != "[]" {
+		t.Error(`GetArray() failed to retrieve valid value`)
+	}
+
 	// Verify that GetBoolean() works.
 	d.Add("a", pdf.NewBoolean(false))
 	if b,ok := d.GetBoolean("a"); !ok || b {
 		t.Error(`GetBoolean failed to retrieve valid value`)
+	}
+
+	// Verify that GetDictionary() works
+	d.Add("a", pdf.NewDictionary())
+	if a := d.GetDictionary("a"); a == nil || toString(a) != "<<>>" {
+		t.Error(`GetDictionary() failed to retrieve valid value`)
 	}
 	
 	// Verify that GetInt() works.
@@ -207,16 +219,23 @@ func TestDictionaryGetters (t *testing.T) {
 		t.Error(`GetInt() failed to retrieve valid value`)
 	}
 
+	// Verify that GetName() works.
+	d.Add("a", pdf.NewName("namevalue"))
+	if n,ok := d.GetName("a"); !ok || n != "namevalue" {
+		t.Error(`GeName() failed to retrieve valid value`)
+	}
+
 	// Verify that GetReal() works.
 	d.Add("a", pdf.NewNumeric(3.14))
 	if x,ok := d.GetReal("a"); !ok || x!=3.14 {
 		t.Error(`GetReal() failed to retrieve valid value`);
 	}
 
-	// Verify that GetName() works.
-	d.Add("a", pdf.NewName("namevalue"))
-	if n,ok := d.GetName("a"); !ok || n != "namevalue" {
-		t.Error(`GeName() failed to retrieve valid value`)
+	// Verify that GetStream() works.
+	d.Add("a", pdf.NewStream())
+	if s := d.GetStream("a"); s == nil || toString(s) != "<</Length 0>>\nstream\n\nendstream" {
+		t.Error(`GetStream() failed to retrieve valid value`);
+		t.Error(toString(s))
 	}
 
 	// Verify that GetString() works.
@@ -233,6 +252,10 @@ func TestDictionaryGetters (t *testing.T) {
 	if d.CheckNameValue("c", "string") {
 		t.Error(`CheckNameValue returned true on non-name`)
 	}
+
+	if d.Size() != 1 {
+		t.Error (`Size() test failed`)
+	}
 }
 
 func TestDictionary(t *testing.T) {
@@ -243,7 +266,7 @@ func TestDictionary(t *testing.T) {
 	checkObject(t, "Dictionary.Add() test", d, nil, "<</a 1>>")
 
 	cd := d.Clone()
-	pd := d.Protected().(pdf.ProtectedDictionary)
+	pd := d.Protect().(pdf.ProtectedDictionary)
 
 	if _,ok := pd.(pdf.Dictionary); ok {
 		t.Error("Protected dictionary can be cast back to Dictionary")
@@ -265,7 +288,7 @@ func TestDictionary(t *testing.T) {
 	// Make sure clone hasn't changed.
 	checkObject(t, "Dictionary.Clone() test", cd, nil, "<</a 1>>")
 
-	upd := pd.Unprotected().(pdf.Dictionary)
+	upd := pd.Unprotect().(pdf.Dictionary)
 	upd.Remove("b")
 	checkObject(t, "Remove from unprotected dictionary", upd, nil, "<</a 1>>")
 	checkObject(t, "Protected dictionary after remove from unprotected counterpart", pd, nil, "<</a 1 /b [2 3]>>", "<</b [2 3] /a 1>>")

@@ -31,17 +31,17 @@ func (n *RealNumeric) Dereference() Object {
 	return n
 }
 
-// Numerics are always immutable so the return value of Protected() can
+// Numerics are always immutable so the return value of Protect() can
 // safely be cast back to Numeric or RealNumeric.
-func (n *RealNumeric) Protected() Object {
+func (n *RealNumeric) Protect() Object {
 	// Numerics are intended to be immutable, so return a pointer
 	// to the same instance
 	return n
 }
 
-// Numerics are immutable so the return value of Unprotected() can
+// Numerics are immutable so the return value of Unprotect() can
 // safely be cast back to Numeric or RealNumeric.
-func (n *RealNumeric) Unprotected() Object {
+func (n *RealNumeric) Unprotect() Object {
 	// Numerics are intended to be immutable, so return a pointer
 	// to the same instance
 	return n
@@ -65,17 +65,17 @@ func (n *IntNumeric) Dereference() Object {
 	return n
 }
 
-// Numerics are always immutable so the return value of Protected() can
+// Numerics are always immutable so the return value of Protect() can
 // safely be cast back to Numeric or IntNumeric
-func (n *IntNumeric) Protected() Object {
+func (n *IntNumeric) Protect() Object {
 	// Numerics are intended to be immutable, so return a pointer
 	// to the same instance
 	return n
 }
 
-// Numerics are always immutable so the return value of Unprotected() can
+// Numerics are always immutable so the return value of Unprotect() can
 // safely be cast back to Numeric or IntNumeric
-func (n *IntNumeric) Unprotected() Object {
+func (n *IntNumeric) Unprotect() Object {
 	// Numerics are intended to be immutable, so return a pointer
 	// to the same instance
 	return n

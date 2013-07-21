@@ -8,13 +8,13 @@ import "unicode/utf16"
 // PDF "String" object
 // Implements:
 //	pdf.Object
-type ProtectedString interface {
+type ProtectString interface {
 	Object
 	Bytes() []byte
 }
 
 type String interface {
-	ProtectedString
+	ProtectString
 	SetSerializer(func(String,Writer))
 }
 
@@ -58,15 +58,15 @@ func (s *stringImpl) Dereference() Object {
 	return s
 }
 
-// Return value of Protected() can safely be cast to ProtectedString
+// Return value of Protect() can safely be cast to ProtectString
 // but not String.
-func (s *stringImpl) Protected() Object {
+func (s *stringImpl) Protect() Object {
 	return &readOnlyString{s}
 }
 
-// Return value of Unprotected() can safely be cast to String or
-// ProtectedString.
-func (s *stringImpl) Unprotected() Object {
+// Return value of Unprotect() can safely be cast to String or
+// ProtectString.
+func (s *stringImpl) Unprotect() Object {
 	return s
 }
 
@@ -90,15 +90,15 @@ func (ros readOnlyString) Dereference() Object {
 	return ros
 }
 
-// Return value of Protected() can safely be cast to ProtectedString
+// Return value of Protect() can safely be cast to ProtectString
 // but not String.
-func (ros readOnlyString) Protected() Object {
+func (ros readOnlyString) Protect() Object {
 	return ros
 }
 
-// Return value of Unprotected() can safely be cast to String or
-// ProtectedString.
-func (ros readOnlyString) Unprotected() Object {
+// Return value of Unprotect() can safely be cast to String or
+// ProtectString.
+func (ros readOnlyString) Unprotect() Object {
 	return ros.s.Clone()
 }
 

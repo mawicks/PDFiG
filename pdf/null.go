@@ -24,15 +24,15 @@ func (n *Null) Dereference() Object {
 	return n
 }
 
-// Null is an immutable singleton, so the return value of Protected() can
+// Null is an immutable singleton, so the return value of Protect() can
 // safely be cast back to Null.
-func (n *Null) Protected() Object {
+func (n *Null) Protect() Object {
 	return n
 }
 
-// Protected and unprotected interfaces are the same for null.
+// Protect and unprotected interfaces are the same for null.
 // Simply return the instance.
 // The return value can safely be cast back to Null.
-func (n *Null) Unprotected() Object {
+func (n *Null) Unprotect() Object {
 	return n
 }
