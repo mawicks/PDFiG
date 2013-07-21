@@ -16,7 +16,7 @@ func TestParser (t *testing.T) {
 		if (err != nil) {
 			t.Errorf(`Scan() of "%s" returned error: %v`, source, err)
 		}
-		testOneObject (t, fmt.Sprintf(`Scan of "%s"`, pdf.AsciiFromBytes([]byte(source))), o, mockFile, expected)
+		checkObject (t, fmt.Sprintf(`Scan of "%s"`, pdf.AsciiFromBytes([]byte(source))), o, mockFile, expected)
 	}
 
 	testParseIndirect := func(objectNumber pdf.ObjectNumber, source string, expected string) {
@@ -25,7 +25,7 @@ func TestParser (t *testing.T) {
 		if (err != nil) {
 			t.Errorf(`Scan() of "%s" returned error: %v`, source, err)
 		}
-		testOneObject (t, fmt.Sprintf(`Scan of "%s"`, pdf.AsciiFromBytes([]byte(source))), o, mockFile, expected)
+		checkObject (t, fmt.Sprintf(`Scan of "%s"`, pdf.AsciiFromBytes([]byte(source))), o, mockFile, expected)
 	}
 
 	testParseFail := func(source string, prefix string) {

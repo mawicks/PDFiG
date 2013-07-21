@@ -8,14 +8,14 @@ import (
 // Implements:
 // 	pdf.Object
 
-type ReadOnlyIndirect interface {
+type ProtectedIndirect interface {
 	Object
 	ObjectNumber(f File) ObjectNumber
 	BoundToFile(f File) bool
 }
 
 type Indirect interface {
-	ReadOnlyIndirect
+	ProtectedIndirect
 	Write(o Object) Indirect
 }
 
@@ -149,6 +149,14 @@ func (i *indirect) Dereference() Object {
 	return object.Dereference()
 }
 
+func (i *indirect) Protected() Object {
+	return protectedIndirect{i}
+}
+
+func (i *indirect) Unprotected() Object {
+	return i
+}
+
 // Serialize() writes a serial representation (as defined by the PDF
 // specification) of the object to the Writer.  Indirect references
 // are resolved and numbered as if they were being written to the
@@ -228,3 +236,55 @@ func (i *indirect) BoundToFile(f File) bool {
 	_,exists := i.fileBindings[f]
 	return exists
 }
+
+
+type protectedIndirect struct {
+	i Indirect
+}
+
+func (roi protectedIndirect) Clone() Object {
+	return roi
+}
+
+func (roi protectedIndirect) Dereference() Object {
+	return roi.i
+}
+
+func (roi protectedIndirect) Serialize(w Writer, file... File) {
+	roi.i.Serialize(w, file...)
+}
+
+func (roi protectedIndirect) Protected() Object {
+	return roi
+}
+
+func (roi protectedIndirect) Unprotected() Object {
+	return roi.i.Clone()
+}
+
+func (roi protectedIndirect) ObjectNumber(f File) ObjectNumber {
+	return roi.i.ObjectNumber(f)
+}
+
+func (roi protectedIndirect) BoundToFile(f File) bool {
+	return roi.i.BoundToFile(f)
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

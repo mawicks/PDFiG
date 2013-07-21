@@ -61,11 +61,11 @@ func (f *mockFile) Info() Dictionary {
 	return nil
 }
 
-func (f *mockFile) Catalog() Dictionary {
+func (f *mockFile) Catalog() ProtectedDictionary {
 	return nil
 }
 
-func (f *mockFile) Trailer() Dictionary {
+func (f *mockFile) Trailer() ProtectedDictionary {
 	return nil
 }
 

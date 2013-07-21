@@ -10,8 +10,9 @@ type pageTree struct {
 
 func existingPageTree(file File) *pageTree {
 	var (
-		catalog, pageTreeRoot Dictionary
-		d ReadOnlyDictionary
+		catalog, d ProtectedDictionary
+		pageTreeRoot Dictionary
+		i ProtectedIndirect
 		pageTreeRootReference Indirect
 		pageCount int
 		ok bool )
@@ -20,14 +21,17 @@ func existingPageTree(file File) *pageTree {
 		panic (errors.New(`Document has no catalog or catalog dictionary type is not "Catalog"`))
 	}
 
-	if pageTreeRootReference,ok = catalog.GetIndirect("Pages"); !ok {
+	if i = catalog.GetIndirect("Pages"); i == nil {
 		panic (errors.New(`/Pages entry missing or is not an indirect reference`))
 	}
 
-	if d,ok = catalog.GetDictionary("Pages"); !ok {
-		panic (errors.New(`Page tree root object is not a dictionary`))
+	pageTreeRootReference = i.Unprotected().(Indirect)
+
+	if d = catalog.GetDictionary("Pages"); d == nil {
+		panic (errors.New(`Missing or invalid Page tree root dictionary`))
 	}
-	pageTreeRoot = d.(Dictionary)
+
+	pageTreeRoot = d.Unprotected().(Dictionary)
 
 	if pageCount,ok = pageTreeRoot.GetInt("Count"); !ok {
 		panic (errors.New(`/Count value is not an integer`))
@@ -53,10 +57,10 @@ func copyDictionaryEntries(dst, src Dictionary, list []string) {
 // match the one in the file.
 func pageFromTree (node Dictionary, n uint) *ExistingPage {
 	var (
-		kids Array
+		kids ProtectedArray
 		ok bool )
 
-	if kids,ok = node.GetArray("Kids"); !ok {
+	if kids = node.GetArray("Kids"); kids == nil {
 		panic (errors.New(`Page tree node has no "Kids" array`))
 	}
 

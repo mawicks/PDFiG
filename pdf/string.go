@@ -8,18 +8,19 @@ import "unicode/utf16"
 // PDF "String" object
 // Implements:
 //	pdf.Object
-
-type String interface {
+type ProtectedString interface {
 	Object
 	Bytes() []byte
-	SetNormalOutput()
-	SetHexOutput()
-	SetAsciiOutput()
 }
 
-type string_impl struct {
+type String interface {
+	ProtectedString
+	SetSerializer(func(String,Writer))
+}
+
+type stringImpl struct {
 	value      []byte
-	serializer func(t *string_impl, w Writer)
+	serializer func(s String, w Writer)
 }
 
 // Constructor for Name object
@@ -35,28 +36,74 @@ func NewTextString(s string) String {
 			result = append(result, byte(w>>8), byte(w&0xff))
 		}
 	}
-	return &string_impl{result, normalSerializer}
+	return &stringImpl{result, NormalStringSerializer}
 }
 
 func NewBinaryString(s []byte) String {
-	return &string_impl{s, normalSerializer}
+	return &stringImpl{s, NormalStringSerializer}
 }
 
-func (s *string_impl) Bytes() (result []byte) {
-	return s.value
+func (s *stringImpl) Bytes() (result []byte) {
+	newSlice := make([]byte, len(s.value))
+	copy (newSlice, s.value)
+	return newSlice
 }
 
-func (s *string_impl) Clone() Object {
+func (s *stringImpl) Clone() Object {
 	newString := *s
 	return &newString
 }
 
-func (s *string_impl) Dereference() Object {
+func (s *stringImpl) Dereference() Object {
 	return s
 }
 
-func (s *string_impl) Serialize(w Writer, file ...File) {
+// Return value of Protected() can safely be cast to ProtectedString
+// but not String.
+func (s *stringImpl) Protected() Object {
+	return &readOnlyString{s}
+}
+
+// Return value of Unprotected() can safely be cast to String or
+// ProtectedString.
+func (s *stringImpl) Unprotected() Object {
+	return s
+}
+
+func (s *stringImpl) Serialize(w Writer, file ...File) {
 	s.serializer(s, w)
+}
+
+type readOnlyString struct {
+	s String
+}
+
+func (ros readOnlyString) Bytes() []byte {
+	return ros.s.Bytes()
+}
+
+func (ros readOnlyString) Clone() Object {
+	return ros
+}
+
+func (ros readOnlyString) Dereference() Object {
+	return ros
+}
+
+// Return value of Protected() can safely be cast to ProtectedString
+// but not String.
+func (ros readOnlyString) Protected() Object {
+	return ros
+}
+
+// Return value of Unprotected() can safely be cast to String or
+// ProtectedString.
+func (ros readOnlyString) Unprotected() Object {
+	return ros.s.Clone()
+}
+
+func (ros readOnlyString) Serialize(w Writer, file ...File) {
+	ros.s.Serialize(w, file...)
 }
 
 func stringMinimalEscapeByte(b byte) (result []byte) {
@@ -69,9 +116,9 @@ func stringMinimalEscapeByte(b byte) (result []byte) {
 	return result
 }
 
-func normalSerializer(s *string_impl, w Writer) {
+func NormalStringSerializer(s String, w Writer) {
 	w.WriteByte('(')
-	for _, b := range s.value {
+	for _, b := range s.Bytes() {
 		w.Write(stringMinimalEscapeByte(b))
 	}
 	w.WriteByte(')')
@@ -138,50 +185,25 @@ func GeneralAsciiEscapeByte(b byte) (result []byte) {
 	return result
 }
 
-func asciiSerializer(s *string_impl, w Writer) {
+func AsciiStringSerializer(s String, w Writer) {
 	w.WriteByte('(')
-	for _, b := range []byte(s.value) {
+	for _, b := range s.Bytes() {
 		w.Write(stringAsciiEscapeByte(b))
 	}
 	w.WriteByte(')')
 	return
 }
 
-func hexSerializer(s *string_impl, w Writer) {
+func HexStringSerializer(s String, w Writer) {
 	w.WriteByte('<')
-	for _, b := range []byte(s.value) {
+	for _, b := range s.Bytes() {
 		w.WriteByte(HexDigit(b / 16))
 		w.WriteByte(HexDigit(b % 16))
 	}
 	w.WriteByte('>')
 }
 
-func (s *string_impl) SetNormalOutput() {
-	s.serializer = normalSerializer
+func (s *stringImpl) SetSerializer (serializer func(String,Writer)) {
+	s.serializer = serializer
 }
-
-func (s *string_impl) SetHexOutput() {
-	s.serializer = hexSerializer
-}
-
-func (s *string_impl) SetAsciiOutput() {
-	s.serializer = asciiSerializer
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 

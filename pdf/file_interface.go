@@ -47,7 +47,7 @@ type File interface {
 	// Catalog() returns a copy of the Info dictionary.  Caller
 	// may modify the copy and use SetCatalog() to replace the
 	// file's info dictionary
-	Catalog() Dictionary
+	Catalog() ProtectedDictionary
 
 	// SetCatalog() sets the catalog dictionary
 	SetCatalog(Dictionary)
@@ -57,7 +57,7 @@ type File interface {
 
 	// Trailer() returns a copy of the current contents of the
 	// trailer dictionary
-	Trailer() Dictionary
+	Trailer() ProtectedDictionary
 
 	// DeleteObject() deletes the specified object from the file.
 	// It must be an indirect object.

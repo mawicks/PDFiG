@@ -31,6 +31,22 @@ func (n *RealNumeric) Dereference() Object {
 	return n
 }
 
+// Numerics are always immutable so the return value of Protected() can
+// safely be cast back to Numeric or RealNumeric.
+func (n *RealNumeric) Protected() Object {
+	// Numerics are intended to be immutable, so return a pointer
+	// to the same instance
+	return n
+}
+
+// Numerics are immutable so the return value of Unprotected() can
+// safely be cast back to Numeric or RealNumeric.
+func (n *RealNumeric) Unprotected() Object {
+	// Numerics are intended to be immutable, so return a pointer
+	// to the same instance
+	return n
+}
+
 func (n *RealNumeric) Serialize(w Writer, file ...File) {
 	w.WriteString(strconv.FormatFloat(float64(n.value), 'f', -1, 32))
 }
@@ -46,6 +62,22 @@ func (n *IntNumeric) Clone() Object {
 }
 
 func (n *IntNumeric) Dereference() Object {
+	return n
+}
+
+// Numerics are always immutable so the return value of Protected() can
+// safely be cast back to Numeric or IntNumeric
+func (n *IntNumeric) Protected() Object {
+	// Numerics are intended to be immutable, so return a pointer
+	// to the same instance
+	return n
+}
+
+// Numerics are always immutable so the return value of Unprotected() can
+// safely be cast back to Numeric or IntNumeric
+func (n *IntNumeric) Unprotected() Object {
+	// Numerics are intended to be immutable, so return a pointer
+	// to the same instance
 	return n
 }
 

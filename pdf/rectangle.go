@@ -1,7 +1,7 @@
 package pdf
 
 type Rectangle struct {
-	ReadOnlyArray
+	ProtectedArray
 }
 
 func NewRectangle(llx, lly, urx, ury float64) *Rectangle {

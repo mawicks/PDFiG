@@ -30,12 +30,12 @@ func (pd *PageDictionary) CloneDictionary() Dictionary {
 func (pd *PageDictionary) Reader() io.Reader {
 	// If the contents consist of a single stream, return its
 	// stream reader.
-	if pageStream,ok := pd.dictionary.GetStream("Contents"); ok {
+	if pageStream := pd.dictionary.GetStream("Contents"); pageStream != nil {
 		return pageStream.Reader()
 	}
 	// Otherwise, the contents should be an array of streams to be
 	// concatenated.
-	if pageStreamArray,ok := pd.dictionary.GetArray("Contents"); ok {
+	if pageStreamArray := pd.dictionary.GetArray("Contents"); pageStreamArray != nil {
 		n := pageStreamArray.Size()
 		if n > 0 {
 			readers := make([]io.Reader, 2*n-1)
@@ -68,16 +68,16 @@ func (pd *PageDictionary) Reader() io.Reader {
 // The dictionary's Contents field should be either an array or an
 // indirect object.
 func (pd *PageDictionary) ensureContentsIsArray() Array {
-
-	if pageContentsArray,ok := pd.dictionary.GetArray("Contents"); ok {
-		return pageContentsArray
+	if pageContentsArray := pd.dictionary.GetArray("Contents"); pageContentsArray != nil {
+		// Since pd.dictionary is unprotected, so is pageContentsArray.
+		return pageContentsArray.(Array)
 	}
 
-	if contents, ok := pd.dictionary.GetIndirect("Contents"); ok {
+	if contents := pd.dictionary.GetIndirect("Contents"); contents != nil {
 		contentsArray := NewArray()
 		contentsArray.Add(contents)
 		pd.dictionary.Add("Contents", contentsArray)
-		return contentsArray
+		return contentsArray.(Array)
 	}
 	
 	// Dictionary's Contents field is neither an array nor an

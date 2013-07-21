@@ -14,8 +14,35 @@ type Writer interface {
 type Object interface {
 	// Clone() copies the object in such a way that it can be
 	// returned from or passed to a function without losing
-	// control of its internal data structures.
+	// control of its internal data structures.  The returned
+	// value can safely be cast to the interface type whose
+	// Clone() method was invoked.
 	Clone() Object
+
+	// If the target is an indirect reference, Dereference()
+	// returns an object that is not an indirect reference.
+	// Otherwise it returns the target.
+	Dereference() Object
+
+	// Most PDF Objects are expected to have two interfaces: a
+	// protected and an unprotected interfaces.  This is for cases
+	// where a class returns an object but wants to be certain the
+	// client cannot alter the object.  Protected() returns a
+	// protected interface instance. The protected interface
+	// implements a subset of the methods available for the
+	// unprotected version of the interface.  The return value can
+	// safely be cast to the documented protected version of the
+	// interface whose Protected() method was invoked.
+	Protected() Object
+
+	// Unprotected() returns an unprotected interface instance.
+	// Unprotected interface implementations typically return
+	// themselves.  Protected interface implementations will
+	// return a Clone() of the protected instance.  The return
+	// value can safely be cast to the documented unprotected
+	// version of the interface whose Unprotected() method was
+	// invoked.
+	Unprotected() Object
 
 	// Serialize() write a serial byte representation (as defined
 	// by the PDF specification) of the object to the Writer.
@@ -27,10 +54,6 @@ type Object interface {
 	// Objects can be unserialized using Parser.Scan().
 	Serialize(Writer, ...File)
 
-	// If the target is an indirect reference, Dereference()
-	// returns an object that is not an indirect reference.
-	// Otherwise it returns the target.
-	Dereference() Object
 }
 
 // ObjectStringDecorator adds the String() method to Object; delegating all other methods to object.

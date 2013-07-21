@@ -8,7 +8,7 @@ import (
 // Implements:
 // 	pdf.Object
 
-type ReadOnlyStream interface {
+type ProtectedStream interface {
 	Object
 	Reader() (result io.Reader)
 }
@@ -17,10 +17,9 @@ type ReadOnlyStream interface {
 //	io.Writer
 
 type Stream interface {
-	ReadOnlyStream
+	ProtectedStream
 	io.Writer
 	AddFilter(filter StreamFilterFactory)
-	Add(key string, o Object)
 	Remove(key string)
 }
 
@@ -67,14 +66,20 @@ func (s *stream) Dereference() Object {
 	return s
 }
 
-func (s *stream) Add(key string, o Object) {
-	s.dictionary.Add(key, o)
+// Return value of Protected can safely be cast to ProtectedStream.
+func (s *stream) Protected() Object {
+	return protectedStream{s}
+}
+
+// Return value of Protected can safely be cast to Stream or ProtectedStream.
+func (s *stream) Unprotected() Object {
+	return s
 }
 
 func (s *stream) Reader() (result io.Reader) {
 	result = bytes.NewReader(s.buffer.Bytes())
-	if filters,ok := s.dictionary.GetArray("Filter"); ok {
-		parms,_ := s.dictionary.GetArray("DecodeParms")
+	if filters := s.dictionary.GetArray("Filter"); filters != nil {
+		parms := s.dictionary.GetArray("DecodeParms")
 		for i:=0; i<filters.Size(); i++ {
 			if n,ok := filters.At(i).(Name); ok {
 				var d Dictionary
@@ -89,7 +94,7 @@ func (s *stream) Reader() (result io.Reader) {
 			}
 		}
 	} else if n,ok := s.dictionary.GetName("Filter"); ok {
-		d,_ := s.dictionary.GetDictionary("DecodeParms")
+		d := s.dictionary.GetDictionary("DecodeParms")
 		if sff := FilterFactory(n,d); sff != nil {
 			result = sff.NewDecoder(result)
 		} else {
@@ -128,9 +133,9 @@ func (s *stream) Serialize(w Writer, file ...File) {
 			}
 		}
 
-		if f,ok := s.dictionary.GetArray("Filter"); ok {
-			filters.Append(f)
-			if d,ok := s.dictionary.GetArray("DecodeParms"); ok {
+		if f := s.dictionary.GetArray("Filter"); f != nil {
+			filters.Append(f.(Array))
+			if d := s.dictionary.GetArray("DecodeParms"); d != nil {
 				decodeParameters.Append(d)
 				needDecodeParameters = true
 			} else if needDecodeParameters {
@@ -173,3 +178,54 @@ func (s *stream) Serialize(w Writer, file ...File) {
 	w.Write(streamBuffer.Bytes())
 	w.WriteString("\nendstream")
 }
+
+type protectedStream struct {
+	s Stream
+}
+
+// Return value of Clone() can safely be cast to ProtectedStream.
+func (ros protectedStream) Clone() Object {
+	return ros
+}
+
+// Return value of Dereference() can safely be cast to ProtectedStream.
+func (ros protectedStream) Dereference() Object {
+	return ros
+}
+
+// Return value of Protected() can safely be cast to ProtectedStream.
+func (ros protectedStream) Protected() Object {
+	return ros
+}
+
+// Return value of Unprotected() can safely be cast to Stream or
+// ProtectedStream.
+func (ros protectedStream) Unprotected() Object {
+	return ros.s.Clone()
+}
+
+func (ros protectedStream) Reader() io.Reader {
+	return ros.s.Reader()
+}
+
+func (ros protectedStream) Serialize(w Writer, file ...File) {
+	ros.s.Serialize(w, file...)
+}
+
+func (ros protectedStream) Write(bytes []byte) (int,error) {
+	return ros.s.Write(bytes)
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+

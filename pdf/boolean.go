@@ -30,6 +30,14 @@ func (b TrueBoolean) Dereference() Object {
 	return b
 }
 
+func (b TrueBoolean) Protected() Object {
+	return b
+}
+
+func (b TrueBoolean) Unprotected() Object {
+	return b
+}
+
 // Since TrueBoolean and FalseBoolean are empty structs, value targets
 // should be efficient.
 func (b TrueBoolean) Serialize(w Writer, file ...File) {
@@ -41,6 +49,14 @@ func (b FalseBoolean) Clone() Object {
 }
 
 func (b FalseBoolean) Dereference() Object {
+	return b
+}
+
+func (b FalseBoolean) Protected() Object {
+	return b
+}
+
+func (b FalseBoolean) Unprotected() Object {
 	return b
 }
 

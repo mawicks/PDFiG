@@ -380,7 +380,7 @@ func (f *file) dictionaryToTrailer(name string, d Dictionary) {
 
 // Catalog() returns the current document catalog or nil if one doesn't
 // exist (either from a pre-existing file or from file.SetCatalog())
-func (f *file) Catalog() Dictionary {
+func (f *file) Catalog() ProtectedDictionary {
 	return f.dictionaryFromTrailer("Root")
 }
 
@@ -400,9 +400,10 @@ func (f *file) SetInfo(info DocumentInfo) {
 }
 
 // Trailer() returns the current trailer, which is never nil
-func (f *file) Trailer() Dictionary {
-	// Return a clone so nobody can alter the real dictionary
-	return f.trailerDictionary.Clone().(Dictionary)
+func (f *file) Trailer() ProtectedDictionary {
+	// Return a protected interface so nobody can alter the real
+	// dictionary
+	return f.trailerDictionary.Protected().(ProtectedDictionary)
 }
 
 // Using pdf.file.Seek() rather than calling pdf.file.file.Seek()

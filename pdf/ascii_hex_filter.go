@@ -12,7 +12,7 @@ const ( asciiHexDecoderName = "ASCIIHexDecode" )
 
 func init () {
 	RegisterFilterFactoryFactory(asciiHexDecoderName,
-		func(ReadOnlyDictionary) StreamFilterFactory { return new(AsciiHexFilter) })
+		func(ProtectedDictionary) StreamFilterFactory { return new(AsciiHexFilter) })
 }
 
 func (filter *AsciiHexFilter) Name() string {

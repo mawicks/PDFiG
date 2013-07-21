@@ -34,6 +34,21 @@ func (n *name) Dereference() Object {
 	return n
 }
 
+// Names are immutable so the return value of Protected() can be cast back to Name.
+func (n *name) Protected() Object {
+	// Names are treated as immutable, so return a pointer
+	// to the same instance
+	return n
+}
+
+// Names are immutable so the return value of Unprotected() can be cast back to Name.
+func (n *name) Unprotected() Object {
+	// Names are treated as immutable, so return a pointer
+	// to the same instance
+	return n
+}
+
+
 func (n *name) Serialize(w Writer, file ...File) {
 	w.WriteByte('/')
 	for _, b := range []byte(n.name) {
