@@ -161,11 +161,8 @@ func (d *dictionary) GetBoolean(key string) (bool,bool) {
 	if value == nil {
 		return false, false
 	}
-	if _,ok := value.Dereference().(TrueBoolean); ok {
-		return true,true
-	}
-	if _,ok := value.Dereference().(FalseBoolean); ok {
-		return false,true
+	if b,ok := value.Dereference().(Boolean); ok {
+		return b.Value(),true
 	}
 	return false,false
 }
