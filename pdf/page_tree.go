@@ -93,7 +93,7 @@ func pageFromTree (node Dictionary, n uint) *ExistingPage {
 			n -= uint(count)
 		case "Page":
 			if n == 0 {
-				return &ExistingPage{&PageDictionary{kid,true},kidReference}
+				return &ExistingPage{&PageDictionary{kid.Protect().(ProtectedDictionary),kid,true},kidReference}
 			}
 			n -= 1
 		default:

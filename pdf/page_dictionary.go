@@ -8,7 +8,13 @@ import (
 
 // A PageDictionary wraps a Dictionary to simplify access and to limit
 // the operations to those that are valid for a page dictionary.
+// Since it delegates to ProtectedDictionary, clients can treat it as
+// if it were a dictionary.  It is assumed that the ProtectedDictionary
+// member has the "dictionary" member as its underlying dictionary.
+// Clients acess the ProtectedDictionary but internal methods
+// manipulate the underlying dictionary.
 type PageDictionary struct {
+	ProtectedDictionary
 	dictionary Dictionary
 	hasParent bool
 }
@@ -16,7 +22,7 @@ type PageDictionary struct {
 func NewPageDictionary() *PageDictionary {
 	pd := NewDictionary()
 	pd.Add("Type", NewName("Page"))
-	return &PageDictionary{pd,false}
+	return &PageDictionary{pd.Protect().(ProtectedDictionary),pd,false}
 }
 
 func (pd *PageDictionary) CloneDictionary() Dictionary {
