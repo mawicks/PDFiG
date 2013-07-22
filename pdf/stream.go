@@ -185,7 +185,7 @@ type protectedStream struct {
 
 // Return value of Clone() can safely be cast to ProtectedStream.
 func (ps protectedStream) Clone() Object {
-	return ps
+	return ps.s.Clone()
 }
 
 // Return value of Dereference() can safely be cast to ProtectedStream.
@@ -211,21 +211,3 @@ func (ps protectedStream) Reader() io.Reader {
 func (ps protectedStream) Serialize(w Writer, file ...File) {
 	ps.s.Serialize(w, file...)
 }
-
-func (ps protectedStream) Write(bytes []byte) (int,error) {
-	return ps.s.Write(bytes)
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-

@@ -192,123 +192,170 @@ func TestArray(t *testing.T) {
 	checkObject(t, "Array test", c, nil, "[1 [2]]")
 }
 
-func TestDictionaryGetters (t *testing.T) {
-	d := pdf.NewDictionary()
-
-	// Verify that GetArray() works
-	d.Add("a", pdf.NewArray())
-	if a := d.GetArray("a"); a == nil || toString(a) != "[]" {
+// Check for specific types stored under specific names.  This
+// function requires that the dictionary has been populated with
+// specific types under pre-defined keys.
+func checkAllGetters (t *testing.T, d pdf.ProtectedDictionary) {
+	// Verify that type-specific getters work on both correct and incorrect type.
+	// GetArray()
+	if a := d.GetArray("string"); a != nil {
+		t.Error(`GetArray() returned non-nil when it shouldn't`)
+	}
+	if a := d.GetArray("array"); a == nil || toString(a) != "[]" {
 		t.Error(`GetArray() failed to retrieve valid value`)
 	}
 
-	// Verify that GetBoolean() works.
-	d.Add("a", pdf.NewBoolean(false))
-	if b,ok := d.GetBoolean("a"); !ok || b {
+	// GetBoolean()
+	if _,ok := d.GetBoolean("array"); ok {
+		t.Error(`GetBoolean() returned 'ok' when it shouldn't`)
+	}
+	if b,ok := d.GetBoolean("boolean"); !ok || b {
 		t.Error(`GetBoolean failed to retrieve valid value`)
 	}
 
-	// Verify that GetDictionary() works
-	d.Add("a", pdf.NewDictionary())
-	if a := d.GetDictionary("a"); a == nil || toString(a) != "<<>>" {
+	// GetDictionary()
+	if a := d.GetDictionary("boolean"); a != nil {
+		t.Error(`GetDictionary() returned non-nil when it shouldn't`)
+	}
+	if a := d.GetDictionary("dictionary"); a == nil || toString(a) != "<<>>" {
 		t.Error(`GetDictionary() failed to retrieve valid value`)
 	}
 	
-	// Verify that GetInt() works.
-	d.Add("a", pdf.NewNumeric(1))
-	if i,ok := d.GetInt("a"); !ok || i!=1 {
+	// GetInt()
+	if _,ok := d.GetInt("dictionary"); ok {
+		t.Error(`GetInt() returned 'ok' when it shouldn't`)
+	}
+	if i,ok := d.GetInt("int"); !ok || i!=1 {
 		t.Error(`GetInt() failed to retrieve valid value`)
 	}
 
-	// Verify that GetName() works.
-	d.Add("a", pdf.NewName("namevalue"))
-	if n,ok := d.GetName("a"); !ok || n != "namevalue" {
+	// GetName()
+	if _,ok := d.GetName("int"); ok {
+		t.Error(`GetName() returned 'ok' when it shouldn't`)
+	}
+	if n,ok := d.GetName("name"); !ok || n != "namevalue" {
 		t.Error(`GeName() failed to retrieve valid value`)
 	}
 
-	// Verify that GetReal() works.
-	d.Add("a", pdf.NewNumeric(3.14))
-	if x,ok := d.GetReal("a"); !ok || x!=3.14 {
+	// GetReal()
+	if _,ok := d.GetReal("name"); ok {
+		t.Error(`GetReal() returned 'ok' when it shouldn't`)
+	}
+	if x,ok := d.GetReal("real"); !ok || x!=3.14 {
 		t.Error(`GetReal() failed to retrieve valid value`);
 	}
 
-	// Verify that GetStream() works.
-	d.Add("a", pdf.NewStream())
-	if s := d.GetStream("a"); s == nil || toString(s) != "<</Length 0>>\nstream\n\nendstream" {
+	// GetStream()
+	if a := d.GetStream("real"); a != nil {
+		t.Error(`GetStream() returned non-nil when it shouldn't`)
+	}
+	if s := d.GetStream("stream"); s == nil || toString(s) != "<</Length 0>>\nstream\n\nendstream" {
 		t.Error(`GetStream() failed to retrieve valid value`);
 		t.Error(toString(s))
 	}
 
-	// Verify that GetString() works.
-	d.Add("a", pdf.NewTextString("string"))
-	if n,ok := d.GetString("a"); !ok || string(n) != "string" {
+	// GetString()
+	if _,ok := d.GetString("stream"); ok {
+		t.Error(`GetString() returned 'ok' when it shouldn't`)
+	}
+	if n,ok := d.GetString("string"); !ok || string(n) != "string" {
 		t.Error(`GetString() failed to retrieve valid value`)
 	}
 
+	// CheckNameValue()
 	if d.CheckNameValue("doesntexist", "value") {
 		t.Error(`CheckNameValue returned true on empty dictionary`)
 	}
 
-	d.Add("a", pdf.NewTextString("string"))
 	if d.CheckNameValue("c", "string") {
 		t.Error(`CheckNameValue returned true on non-name`)
 	}
 
-	if d.Size() != 1 {
+	if d.Size() != 8 {
 		t.Error (`Size() test failed`)
 	}
 }
 
-func TestDictionary(t *testing.T) {
+func TestDictionaryGetters (t *testing.T) {
+	d := pdf.NewDictionary()
+	d.Add("array", pdf.NewArray())
+	d.Add("boolean", pdf.NewBoolean(false))
+	d.Add("dictionary", pdf.NewDictionary())
+	d.Add("int", pdf.NewNumeric(1))
+	d.Add("name", pdf.NewName("namevalue"))
+	d.Add("real", pdf.NewNumeric(3.14))
+	d.Add("stream", pdf.NewStream())
+	d.Add("string", pdf.NewTextString("string"))
+
+	// Check both protected and unprotected interfaces for the same dictionary.
+	checkAllGetters(t, d)
+	checkAllGetters(t, d.Protect().(pdf.ProtectedDictionary))
+}
+
+func TestDictionaryOperations(t *testing.T) {
+	// Verify that an empty dictionary is serialized as <<>>.
 	d := pdf.NewDictionary()
 	checkObject(t, "NewDictionary", d, nil, "<<>>")
 
+	// Verify that a dictionary with one entry is serialized correctly
 	d.Add("a", pdf.NewNumeric(1))
 	checkObject(t, "Dictionary.Add() test", d, nil, "<</a 1>>")
 
-	cd := d.Clone()
+	// Cloned dictionary should contain <</a 1>>
+	// Also make sure clone can be cast to pdf.Dictionary
+	cd := d.Clone().(pdf.Dictionary)
 	pd := d.Protect().(pdf.ProtectedDictionary)
 
+	// Verify protection
 	if _,ok := pd.(pdf.Dictionary); ok {
 		t.Error("Protected dictionary can be cast back to Dictionary")
 	}
 
-	// Can't test beyond two entries very easily because the order of entries is not specified
-	// and the number of permutations makes it not worth the effort with our simple checkObject() function.
-	sa := pdf.NewArray()
-	sa.Add(pdf.NewNumeric(2))
-	d.Add("b", sa)
+	ca := pdf.NewArray()
+	ca.Add(pdf.NewNumeric(2))
+
+	// Verify that a dictionary with two entries is serialized correctly.
+	d.Add("b", ca)
 	checkObject(t, "Dictionary.Remove() test", d, nil, "<</a 1 /b [2]>>", "<</b [2] /a 1>>")
-	// Verify that pd is tracking d
+	// Verify that pd tracks d.
 	checkObject(t, "Dictionary.Remove() test", pd, nil, "<</a 1 /b [2]>>", "<</b [2] /a 1>>")
 
-	saref := d.GetArray("b").(pdf.Array)
-	saref.Add(pdf.NewNumeric(3))
-	checkObject(t, "Dictionary.Remove() test", d, nil, "<</a 1 /b [2 3]>>", "<</b [2 3] /a 1>>")
+	// Verify that modifications made using a reference to the
+	// contained array are reflected in the containing dictionary.
+	caref := d.GetArray("b").(pdf.Array)
+	caref.Add(pdf.NewNumeric(3))
 
-	// Make sure clone hasn't changed.
+	checkObject(t, "Add to array reference", d, nil, "<</a 1 /b [2 3]>>", "<</b [2 3] /a 1>>")
+	// Verify that pd still tracks d
+	checkObject(t, "Add to array reference", pd, nil, "<</a 1 /b [2 3]>>", "<</b [2 3] /a 1>>")
+
+	// Verify that the clone hasn't changed.
 	checkObject(t, "Dictionary.Clone() test", cd, nil, "<</a 1>>")
 
+	// Verify that unprotecting a protected dictionary produces a
+	// modifiable dictionary and that changing it leaves the
+	// original dictionary unchanged.
 	upd := pd.Unprotect().(pdf.Dictionary)
 	upd.Remove("b")
 	checkObject(t, "Remove from unprotected dictionary", upd, nil, "<</a 1>>")
-	checkObject(t, "Protected dictionary after remove from unprotected counterpart", pd, nil, "<</a 1 /b [2 3]>>", "<</b [2 3] /a 1>>")
+	checkObject(t, "Original protected dictionary after removing from unprotected counterpart", pd, nil, "<</a 1 /b [2 3]>>", "<</b [2 3] /a 1>>")
 
 	// Begin removing entries to test Remove() method.
 	d.Remove("a")
 	checkObject(t, "Dictionary.Remove() test", d, nil, "<</b [2 3]>>")
+
+	// Verify that the clone is unchanged.
 	checkObject(t, "Dictionary.Clone() test", cd, nil, "<</a 1>>")
 
 	d.Remove("b")
 	checkObject(t, "Dictionary.Remove() test", d, nil, "<<>>")
-
-	// d is empty now.
-
 }
 
 func TestStream(t *testing.T) {
 	s := pdf.NewStream()
 	fmt.Fprint(s, "foo")
 	checkObject(t, "NewStream", s, nil, "<</Length 3>>\nstream\nfoo\nendstream")
+
 	// Ensure stream can be serialized more than once (i.e., that reading the internal buffer doesn't
 	// affect the current read position.
 	checkObject(t, "NewStream", s, nil, "<</Length 3>>\nstream\nfoo\nendstream")
