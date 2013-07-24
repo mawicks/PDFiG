@@ -58,7 +58,7 @@ func (p *Page) AddFont (font Font) string {
 	return name
 }
 
-func (p *Page) SetParent(i Indirect) {
+func (p *Page) SetParent(i LimitedIndirect) {
 	p.dictionary.SetParent(i)
 }
 

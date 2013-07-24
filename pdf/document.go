@@ -44,8 +44,7 @@ type Document struct {
 	// the page boxes is set).  Both are initialized using a newly
 	// generated page tree if a new document is opened.  They are
 	// not nil.
-	pageTreeRoot Dictionary
-	pageTreeRootIndirect Indirect
+	pageTreeRoot *IndirectDictionary
 
 	// pageCount is initialized with the pre-existing page count.
 	pageCount uint
@@ -74,24 +73,22 @@ func (d *Document) makeNewPageTree() {
 	d.pages = NewArray()
 	d.procSetIndirect = NewIndirect(d.file)
 
-	newPageTreeRoot := NewDictionary()
+	newPageTreeRoot := NewIndirectDictionary(d.file)
 	newPageTreeRoot.Add("Type", NewName("Pages"))
 	newPageTreeRoot.Add("Count", NewIntNumeric(int(d.pageCount)))
 	newPageTreeRoot.Add("Kids", d.pages)
 
-	newPageTreeRootIndirect := NewIndirect(d.file)
 	// If there is a pre-existing page tree insert the
 	// whole thing as the first element of the pages array,
 	// which is the /Kids array.
 	if d.existing {
-		d.pages.Add(d.pageTreeRootIndirect)
+		d.pages.Add(d.pageTreeRoot)
 		// Link the old page tree to the new one. and
-		d.pageTreeRoot.Add("Parent", newPageTreeRootIndirect)
+		d.pageTreeRoot.Add("Parent", newPageTreeRoot)
 		// Write out the revised version
-		d.pageTreeRootIndirect.Write(d.pageTreeRoot)
+		d.pageTreeRoot.Write()
 	}
 	d.pageTreeRoot = newPageTreeRoot
-	d.pageTreeRootIndirect = newPageTreeRootIndirect
 
 	// SetMediaBox() must be called after d.pageTreeRoot
 	// is initialized For now, this is a default to be
@@ -120,7 +117,6 @@ func OpenDocument(filename string, mode int) *Document {
 
 		existingPageTree := existingPageTree(d.file)
 		d.pageTreeRoot = existingPageTree.root
-		d.pageTreeRootIndirect = existingPageTree.rootReference
 		d.pageCount = existingPageTree.pageCount
 		out := bufio.NewWriter(os.Stdout)
 		out.WriteString("Pre-existing page tree root: ")
@@ -143,15 +139,15 @@ func (d *Document) release() {
 	d.pages = nil
 	d.currentPage = nil
 	d.pageTreeRoot = nil
-	d.pageTreeRootIndirect = nil
 	d.procSetIndirect = nil
 }
 
 func (d *Document) finishCatalog() {
-	if d.pageTreeRootIndirect != nil {
+	if d.pageTreeRoot != nil {
 		catalog := NewDictionary()
 		catalog.Add("Type", NewName("Catalog"))
-		catalog.Add("Pages", d.pageTreeRootIndirect)
+// TODO TODO 
+		catalog.Add("Pages", d.pageTreeRoot)
 		d.file.SetCatalog(catalog)
 	}
 }
@@ -172,7 +168,7 @@ func (d *Document) finishDocumentInfo() {
 
 func (d *Document) finishPageTree() {
 	if d.pageTreeRoot != nil {
-		d.pageTreeRootIndirect.Write(d.pageTreeRoot)
+		d.pageTreeRoot.Write()
 	}
 }
 
@@ -202,7 +198,7 @@ func (d *Document) NewPage() *Page {
 	if !d.readyForNewPages {
 		d.makeNewPageTree()
 	}
-	d.currentPage.SetParent(d.pageTreeRootIndirect)
+	d.currentPage.SetParent(d.pageTreeRoot)
 	d.currentPage.setProcSet(d.procSetIndirect)
 
 	return d.currentPage

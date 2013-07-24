@@ -136,7 +136,7 @@ func (pd *PageDictionary) SetResources(ir Indirect) {
 // passed indirect reference.  The client is responsible for ensuring
 // that the indirect reference is a valid page dictionary or pages node
 // reference.
-func (pd *PageDictionary) SetParent(ip Indirect) {
+func (pd *PageDictionary) SetParent(ip LimitedIndirect) {
 	if ip == nil {
 		panic ("Indirect object is nil")
 	}

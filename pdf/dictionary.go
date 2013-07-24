@@ -39,12 +39,10 @@ type ProtectedDictionary interface {
 	GetDictionary(key string) ProtectedDictionary
 
 	// GetIndirect() attempts to retrieve the dictionary entry as
-	// a ProtectedIndirect object (no dereferencing is attempted).
-	// The return value is nil if the entry doesn't exist or isn't
-	// a ProtectedIndirect.  ProtectedIndirect is a subset of the
-	// Indirect interface.  The returned ProtectedIndirect may or
-	// may not implement the full Indirect interface.
-	GetIndirect(key string) ProtectedIndirect
+	// an Indirect object (no dereferencing is attempted).  The
+	// return value is nil if the entry doesn't exist or isn't an
+	// Indirect.
+	GetIndirect(key string) Indirect
 
 	// GetInt() attempts to retrieve the dictionary entry as an
 	// integer, dereferencing as necessary.  The boolean return
@@ -186,13 +184,12 @@ func (d *dictionary) GetDictionary(key string) ProtectedDictionary {
 // GetIndirect() attempts to retrieve the dictionary entry as a an
 // Indirect object (no dereferencing is attempted).  The retun value is nil
 // if the key doesn't exist or the value isn't compatible with Indirect.
-// The returned ProtectedIndirect may safely be cast to Indirect.
-func (d *dictionary) GetIndirect(key string) ProtectedIndirect {
+func (d *dictionary) GetIndirect(key string) Indirect {
 	value := d.Get(key)
 	if value == nil {
 		return nil
 	}
-	if indirect,ok := value.(ProtectedIndirect); ok {
+	if indirect,ok := value.(Indirect); ok {
 		return indirect
 	}
 	return nil
@@ -376,9 +373,9 @@ func (pd protectedDictionary) GetDictionary(key string) ProtectedDictionary {
 	return nil
 }
 
-func (pd protectedDictionary) GetIndirect(key string) ProtectedIndirect {
+func (pd protectedDictionary) GetIndirect(key string) Indirect {
 	if i := pd.d.GetIndirect(key); i != nil {
-		return i.Protect().(ProtectedIndirect)
+		return i.Protect().(Indirect)
 	}
 	return nil
 }

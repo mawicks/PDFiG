@@ -3,17 +3,15 @@ package pdf
 import ("errors")
 
 type pageTree struct {
-	root Dictionary
-	rootReference Indirect
+	root *IndirectDictionary
 	pageCount uint
 }
 
 func existingPageTree(file File) *pageTree {
 	var (
-		catalog, d ProtectedDictionary
-		pageTreeRoot Dictionary
-		i ProtectedIndirect
-		pageTreeRootReference Indirect
+		catalog ProtectedDictionary
+		d Dictionary
+		i Indirect
 		pageCount int
 		ok bool )
 
@@ -25,19 +23,19 @@ func existingPageTree(file File) *pageTree {
 		panic (errors.New(`/Pages entry missing or is not an indirect reference`))
 	}
 
-	pageTreeRootReference = i.Unprotect().(Indirect)
+//	pageTreeRootReference = i.Unprotect().(Indirect)
 
-	if d = catalog.GetDictionary("Pages"); d == nil {
+	if d,ok = i.Dereference().(Dictionary); !ok {
 		panic (errors.New(`Missing or invalid Page tree root dictionary`))
 	}
 
-	pageTreeRoot = d.Unprotect().(Dictionary)
+	pageTreeIndirectDictionary := &IndirectDictionary{d,i.Unprotect().(Indirect)}
 
-	if pageCount,ok = pageTreeRoot.GetInt("Count"); !ok {
+	if pageCount,ok = pageTreeIndirectDictionary.GetInt("Count"); !ok {
 		panic (errors.New(`/Count value is not an integer`))
 	}
 
-	return &pageTree{pageTreeRoot,pageTreeRootReference,uint(pageCount)}
+	return &pageTree{pageTreeIndirectDictionary,uint(pageCount)}
 }
 
 func copyDictionaryEntries(dst, src Dictionary, list []string) {

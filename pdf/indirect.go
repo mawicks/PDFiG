@@ -8,14 +8,14 @@ import (
 // Implements:
 // 	pdf.Object
 
-type ProtectedIndirect interface {
+type LimitedIndirect interface {
 	Object
 	ObjectNumber(f File) ObjectNumber
 	BoundToFile(f File) bool
 }
 
 type Indirect interface {
-	ProtectedIndirect
+	LimitedIndirect
 	Write(o Object) Indirect
 }
 
@@ -150,7 +150,7 @@ func (i *indirect) Dereference() Object {
 }
 
 func (i *indirect) Protect() Object {
-	return protectedIndirect{i}
+	return i
 }
 
 func (i *indirect) Unprotect() Object {
@@ -236,55 +236,4 @@ func (i *indirect) BoundToFile(f File) bool {
 	_,exists := i.fileBindings[f]
 	return exists
 }
-
-
-type protectedIndirect struct {
-	i Indirect
-}
-
-func (roi protectedIndirect) Clone() Object {
-	return roi
-}
-
-func (roi protectedIndirect) Dereference() Object {
-	return roi.i
-}
-
-func (roi protectedIndirect) Serialize(w Writer, file... File) {
-	roi.i.Serialize(w, file...)
-}
-
-func (roi protectedIndirect) Protect() Object {
-	return roi
-}
-
-func (roi protectedIndirect) Unprotect() Object {
-	return roi.i.Clone()
-}
-
-func (roi protectedIndirect) ObjectNumber(f File) ObjectNumber {
-	return roi.i.ObjectNumber(f)
-}
-
-func (roi protectedIndirect) BoundToFile(f File) bool {
-	return roi.i.BoundToFile(f)
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
