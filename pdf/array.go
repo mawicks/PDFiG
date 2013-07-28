@@ -1,6 +1,8 @@
 package pdf
 
-import "github.com/mawicks/PDFiG/containers"
+import (
+	"github.com/mawicks/PDFiG/containers"
+)
 
 type ProtectedArray interface {
 	Object

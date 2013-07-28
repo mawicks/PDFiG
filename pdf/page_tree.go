@@ -3,7 +3,7 @@ package pdf
 import ("errors")
 
 type pageTree struct {
-	root *IndirectDictionary
+	root *DictionaryWithReference
 	pageCount uint
 }
 
@@ -29,13 +29,13 @@ func existingPageTree(file File) *pageTree {
 		panic (errors.New(`Missing or invalid Page tree root dictionary`))
 	}
 
-	pageTreeIndirectDictionary := &IndirectDictionary{d,i.Unprotect().(Indirect)}
+	pageTreeDictionaryWithReference := &DictionaryWithReference{d,i.Unprotect().(Indirect)}
 
-	if pageCount,ok = pageTreeIndirectDictionary.GetInt("Count"); !ok {
+	if pageCount,ok = pageTreeDictionaryWithReference.GetInt("Count"); !ok {
 		panic (errors.New(`/Count value is not an integer`))
 	}
 
-	return &pageTree{pageTreeIndirectDictionary,uint(pageCount)}
+	return &pageTree{pageTreeDictionaryWithReference,uint(pageCount)}
 }
 
 func copyDictionaryEntries(dst, src Dictionary, list []string) {
@@ -91,7 +91,7 @@ func pageFromTree (node Dictionary, n uint) *ExistingPage {
 			n -= uint(count)
 		case "Page":
 			if n == 0 {
-				return &ExistingPage{&PageDictionary{kid.Protect().(ProtectedDictionary), kid, true}, kidReference}
+				return &ExistingPage{&PageDictionary{kid.Protect().(ProtectedDictionary), &DictionaryWithReference{kid, kidReference}, true}}
 			}
 			n -= 1
 		default:
@@ -100,3 +100,13 @@ func pageFromTree (node Dictionary, n uint) *ExistingPage {
 	}
 	return nil
 }
+
+
+
+
+
+
+
+
+
+

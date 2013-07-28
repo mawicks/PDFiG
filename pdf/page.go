@@ -1,6 +1,8 @@
 package pdf
 
 import ("errors"
+	"fmt"
+	"os"
 	"strconv")
 
 type Page struct {
@@ -16,7 +18,7 @@ type Page struct {
 
 // There is no constructor here.  Pages are created by a PageFactory.New().
 
-func (p *Page) Finish() Indirect {
+func (p *Page) Finish() LimitedIndirect {
 	if (p.fontResources != nil) {
 		p.resources.Add("Font", p.fontResources)
 		p.fontResources = nil
@@ -28,10 +30,11 @@ func (p *Page) Finish() Indirect {
 	p.dictionary.SetContents(NewIndirect(p.fileList...).Write(p.contents))
 	p.contents = nil
 
-	indirect := p.dictionary.Write(NewIndirect(p.fileList...))
-	p.dictionary = nil
-
-	return indirect
+	// TODO: Don't reach into dictionary.
+	p.dictionary.dictionary.Write()
+	fmt.Fprintf(os.Stdout, "Finish() returning %v\n", p.dictionary.dictionary)
+	fmt.Fprintf(os.Stdout, "Finish() p.dictionary is %v\n", p.dictionary)
+	return p.dictionary.dictionary
 }
 
 func (p *Page) AddFont (font Font) string {

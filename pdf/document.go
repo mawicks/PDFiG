@@ -44,7 +44,7 @@ type Document struct {
 	// the page boxes is set).  Both are initialized using a newly
 	// generated page tree if a new document is opened.  They are
 	// not nil.
-	pageTreeRoot *IndirectDictionary
+	pageTreeRoot *DictionaryWithReference
 
 	// pageCount is initialized with the pre-existing page count.
 	pageCount uint
@@ -73,7 +73,7 @@ func (d *Document) makeNewPageTree() {
 	d.pages = NewArray()
 	d.procSetIndirect = NewIndirect(d.file)
 
-	newPageTreeRoot := NewIndirectDictionary(d.file)
+	newPageTreeRoot := NewDictionaryWithReference(d.file)
 	newPageTreeRoot.Add("Type", NewName("Pages"))
 	newPageTreeRoot.Add("Count", NewIntNumeric(int(d.pageCount)))
 	newPageTreeRoot.Add("Kids", d.pages)

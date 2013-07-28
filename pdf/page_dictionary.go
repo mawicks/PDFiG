@@ -1,6 +1,7 @@
 package pdf
 
 import (
+	"fmt"
 	"bytes"
 	"errors"
 	"io"
@@ -15,12 +16,12 @@ import (
 // manipulate the underlying dictionary.
 type PageDictionary struct {
 	ProtectedDictionary
-	dictionary Dictionary
+	dictionary *DictionaryWithReference
 	hasParent bool
 }
 
-func NewPageDictionary() *PageDictionary {
-	pd := NewDictionary()
+func NewPageDictionary(file... File) *PageDictionary {
+	pd := NewDictionaryWithReference(file...)
 	pd.Add("Type", NewName("Page"))
 	return &PageDictionary{pd.Protect().(ProtectedDictionary),pd,false}
 }
@@ -168,10 +169,20 @@ func (pd *PageDictionary) SetArtBox(llx, lly, urx, ury float64) {
 	pd.setBox("ArtBox", llx, lly, urx, ury)
 }
 
-func (pd *PageDictionary) Write(id Indirect) Indirect {
+func (pd *PageDictionary) Write() {
+	fmt.Printf ("PageDictionary.Write()\n")
 	if !pd.hasParent {
 		panic("PageDictionary has no Parent")
 	}
-	id.Write(pd.dictionary)
-	return id
+	pd.dictionary.Write()
 }
+
+
+
+
+
+
+
+
+
+
