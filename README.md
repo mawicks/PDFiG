@@ -26,6 +26,6 @@ low-level manipulation of PDF files and does not necessarily produce a
 file that can be read by a PDF reader without adding additional
 document structure.
 
-Although the library is continues to be a work in progress, it is
+Although the library continues to be a work in progress, it is
 currently useful for producing PDF files, and it minimally
 supports reading and revising existing PDF files.
